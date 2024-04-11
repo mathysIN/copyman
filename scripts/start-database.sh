@@ -29,6 +29,7 @@ fi
 
 # import env variables from .env
 set -a
+cd ..
 source .env
 
 DB_PASSWORD=$(echo "$DATABASE_URL" | awk -F':' '{print $3}' | awk -F'@' '{print $1}')

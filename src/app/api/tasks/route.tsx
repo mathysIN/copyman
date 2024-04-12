@@ -40,3 +40,21 @@ export async function PATCH(req: Request) {
     return new Response("Failed to update", { status: 500 });
   }
 }
+
+export async function DELETE(req: Request) {
+  const data = await req.json();
+  const session = await getSessionWithCookies(cookies());
+  if (!session) return new Response("Unauthorized", { status: 401 });
+  const { taskId } = data;
+  const response = await db
+    .delete(tasks)
+    .where(eq(tasks.id, taskId))
+    .execute()
+    .catch(() => {});
+
+  if (response) {
+    return new Response("Deleted", { status: 200 });
+  } else {
+    return new Response("Failed to delete", { status: 500 });
+  }
+}

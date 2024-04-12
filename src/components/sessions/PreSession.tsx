@@ -12,9 +12,11 @@ export function PreSession() {
     >
       <label className="text-xl">Create/Join session</label>
       <span className="flex flex-row space-x-[1px] rounded-xl border-blue-600 bg-white p-2 text-black">
-        <span>#</span>
+        <span className="px-1">#</span>
+        <div className="h-1" />
         <input
           name="session"
+          type="password"
           value={value}
           onChange={(e) => setValue(e.target.value)}
           className="outline-none"

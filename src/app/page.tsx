@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { cookies } from "next/headers";
-import { PreSession } from "~/components/PreSession";
-import { ActiveSession } from "~/components/ActiveSession";
+import { PreSession } from "~/components/sessions/PreSession";
+import { ActiveSession } from "~/components/sessions/ActiveSession";
 import { db } from "~/server/db";
 import { contentType, sessions, tasks, tasksType } from "~/server/db/schema";
 
@@ -29,8 +29,9 @@ export default async function HomePage() {
     <main className="relative flex min-h-screen flex-col  bg-[#287d7c] text-white">
       <div className="mx-auto flex flex-col items-center py-8">
         <h1 className="text-4xl font-bold ">Copyman</h1>
+        <p className="text-lg">A bad unsecured pastebin for my projects</p>
       </div>
-      <div className="h-24" />
+      <div className="h-8" />
       <div className="flex flex-col items-center justify-center ">
         {!session && <PreSession />}
         {session && (

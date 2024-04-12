@@ -1,9 +1,11 @@
+"use client";
+
 import type { tasksType } from "~/server/db/schema";
 
 export function AddNewTask({
   onNewTask = () => {},
 }: {
-  onNewTask?: (task: tasksType) => void;
+  onNewTask?: (task: tasksType) => any;
 }) {
   const addTask = (name: string) => {
     fetch("/api/tasks", {

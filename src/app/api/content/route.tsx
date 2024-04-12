@@ -1,4 +1,4 @@
-import { put } from "@vercel/blob";
+import { put, del } from "@vercel/blob";
 import { eq } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
@@ -22,12 +22,13 @@ export async function POST(request: Request): Promise<NextResponse> {
   const response = await db
     .insert(contents)
     .values({
+      pathname: filename,
       sessionId: session.id,
       contentURL: blob.url,
     })
     .returning();
 
-  return NextResponse.json(blob, { status: 200 });
+  return NextResponse.json(response[0], { status: 200 });
 }
 
 export async function DELETE(request: Request): Promise<NextResponse> {
@@ -45,7 +46,10 @@ export async function DELETE(request: Request): Promise<NextResponse> {
 
   const response = await db
     .delete(contents)
-    .where(eq(contents.id, parseInt(contentId)));
+    .where(eq(contents.id, parseInt(contentId)))
+    .returning();
 
-  return NextResponse.json(response, { status: 200 });
+  if (response[0]) del(response[0].contentURL);
+
+  return NextResponse.json(response[0], { status: 200 });
 }

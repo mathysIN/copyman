@@ -40,10 +40,11 @@ export const tasks = createTable("task", {
 
 export const contents = createTable("content", {
   id: serial("id").primaryKey(),
-  contentURL: varchar("content_url", { length: 256 }),
+  contentURL: varchar("content_url", { length: 256 }).notNull(),
   createdAt: timestamp("created_at")
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
+  pathname: varchar("pathname", { length: 256 }),
   sessionId: serial("session_id").references(() => sessions.id),
 });
 

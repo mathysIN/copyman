@@ -21,7 +21,7 @@ export function Task({ task }: { task: tasksType }) {
 
   const editTask = (newValue: string) => {
     fetch("/api/tasks", {
-      method: "POST",
+      method: "PATCH",
       body: JSON.stringify({ name: newValue, taskId: task.id }),
     }).then(() => {
       setTimerId(null);

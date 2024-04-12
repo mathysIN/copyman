@@ -38,6 +38,15 @@ export const tasks = createTable("task", {
   sessionId: serial("session_id").references(() => sessions.id),
 });
 
+export const contents = createTable("content", {
+  id: serial("id").primaryKey(),
+  contentURL: varchar("content_url", { length: 256 }),
+  createdAt: timestamp("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  sessionId: serial("session_id").references(() => sessions.id),
+});
+
 export const sessions = createTable("session", {
   id: serial("id").primaryKey(),
   token: varchar("token", { length: 256 }).notNull().unique(),
@@ -46,3 +55,7 @@ export const sessions = createTable("session", {
     .notNull(),
   updatedAt: timestamp("updatedAt"),
 });
+
+export type sessionType = typeof sessions.$inferSelect;
+export type tasksType = typeof tasks.$inferSelect;
+export type contentType = typeof contents.$inferSelect;

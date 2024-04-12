@@ -1,4 +1,4 @@
-import { tasksType } from "~/server/db/schema";
+import type { tasksType } from "~/server/db/schema";
 
 export function AddNewTask({
   onNewTask = () => {},

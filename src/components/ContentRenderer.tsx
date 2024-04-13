@@ -1,8 +1,8 @@
 
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowUpFromBracket, faArrowUpRightFromSquare, faLink, faTrash } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowUpRightFromSquare, faLink, faTrash } from '@fortawesome/free-solid-svg-icons';
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { contentType } from "~/server/db/schema";
 
 const ContentRenderer = ({

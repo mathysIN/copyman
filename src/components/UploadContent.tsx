@@ -1,8 +1,5 @@
 "use client";
 
-import { $schema } from ".eslintrc.cjs";
-import { faPlus } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useState, useRef } from "react";
 import type { contentType } from "~/server/db/schema";
 import { UploadButton } from "~/utils/uploadthing";
@@ -15,8 +12,6 @@ export default function UploadContent({
   onNewContent?: (content: contentType) => any;
 }) {
   const inputFileRef = useRef<HTMLInputElement>(null);
-  const [blob, setBlob] = useState<any | null>(null);
-  const [currentFile, setCurrentFile] = useState<File | undefined>();
   return (
     <form
       onSubmit={async (event) => {
@@ -27,7 +22,6 @@ export default function UploadContent({
         }
 
         const file = inputFileRef.current.files[0];
-        setCurrentFile(file);
 
         if (!file) return;
 
@@ -37,7 +31,6 @@ export default function UploadContent({
         });
 
         inputFileRef.current.value = "";
-        setCurrentFile(undefined);
 
         const newBlob = (await response.json()) as contentType;
 

@@ -2,7 +2,7 @@
 
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { tasksType } from "~/server/db/schema";
 
 const REQUEST_DELAY = 800;

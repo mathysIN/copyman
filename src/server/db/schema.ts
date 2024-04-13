@@ -46,6 +46,7 @@ export const contents = createTable("content", {
     .notNull(),
   pathname: varchar("pathname", { length: 256 }),
   sessionId: serial("session_id").references(() => sessions.id),
+  fileKey: varchar("file_key", { length: 256 }).notNull(),
 });
 
 export const sessions = createTable("session", {

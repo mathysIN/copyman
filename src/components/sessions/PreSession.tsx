@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
 
 export function PreSession() {
@@ -24,6 +26,9 @@ export function PreSession() {
         />
       </span>
       <button type="submit" />
+      <div className="h-8" />
+
+      <Link href="/"><Image src="/logo.png" width={150} height={150} alt="logo" /></Link>
     </form>
   );
 }

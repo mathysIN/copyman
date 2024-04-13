@@ -3,9 +3,11 @@
 import { $schema } from ".eslintrc.cjs";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import type { PutBlobResult } from "@vercel/blob";
 import { useState, useRef } from "react";
 import type { contentType } from "~/server/db/schema";
+import { UploadButton } from "~/utils/uploadthing";
+
+type contentTypeWithTimestamp = Omit<contentType, 'createdAt'> & { createdAt: number };
 
 export default function UploadContent({
   onNewContent = () => { },
@@ -13,7 +15,7 @@ export default function UploadContent({
   onNewContent?: (content: contentType) => any;
 }) {
   const inputFileRef = useRef<HTMLInputElement>(null);
-  const [blob, setBlob] = useState<PutBlobResult | null>(null);
+  const [blob, setBlob] = useState<any | null>(null);
   const [currentFile, setCurrentFile] = useState<File | undefined>();
   return (
     <form
@@ -42,29 +44,25 @@ export default function UploadContent({
         onNewContent(newBlob);
       }}
     >
-      <div className="flex flex-row items-center gap-2">
-        <label htmlFor="input_file" className="cursor-pointer">
-          <FontAwesomeIcon icon={faPlus} />
-        </label>
-        <label htmlFor="input_file" className="cursor-pointer">
-          <p className="cursor-pointer">{currentFile ? currentFile.name : "Selectionner un fichier"}</p>
-        </label>
-        <input
-          name="file"
-          ref={inputFileRef}
-          type="file"
-          required
-          className="hidden"
-          id="input_file"
-          onInput={(e) => setCurrentFile(e.currentTarget.files?.[0])}
+      <div>
+        <UploadButton
+          endpoint="imageUploader"
+          className="rounded-xl bg-white text-black"
+          appearance={{ container: { color: "black" }, button: { color: "black" } }}
+          onClientUploadComplete={(res) => {
+            const response = res[0];
+            if (!response) return;
+            const _content: contentTypeWithTimestamp = response.serverData.content;
+            const content: contentType = {
+              ..._content,
+              createdAt: new Date(_content.createdAt),
+            }
+            onNewContent(content);
+          }}
+          onUploadError={(error: Error) => {
+            alert(`ERROR! ${error.message}`);
+          }}
         />
-        <button
-          type="submit"
-          className={`${!currentFile && "opacity-75 cursor-not-allowed"} flex flex-col gap-2 rounded-xl bg-white px-2 py-2 text-black`}
-          disabled={!currentFile}
-        >
-          Envoyer
-        </button>
       </div>
     </form>
   );

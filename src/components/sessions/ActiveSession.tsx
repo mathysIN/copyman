@@ -1,5 +1,7 @@
 "use client";
 
+import { faDoorOpen } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useState } from "react";
 import { AddNewTask } from "~/components/AddNewTask";
 import ContentRenderer from "~/components/ContentRenderer";
@@ -21,37 +23,29 @@ export function ActiveSession({
   const [cachedContents, setCachedContents] =
     useState<contentType[]>(sessionContents);
   return (
-    <div className="w-96">
+    <div className="w-4/5 pb-10">
       <div className="flex flex-col items-center justify-center">
-        <h1 className={`cursor-pointer`} onClick={() => setHidden(!hidden)}>
-          #
-          {hidden
-            ? new Array(session.token.length).fill("*").join("")
-            : session.token}
-        </h1>
-        <span className="text-gray-200">id: {session.id}</span>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="h-6 w-6 cursor-pointer text-red-500"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          onClick={() => {
+        <div className="flex flex-row items-center gap-4 text-xl">
+          <h1 className={`cursor-pointer`} onClick={() => setHidden(!hidden)}>
+            #
+            {hidden
+              ? new Array(session.token.length).fill("*").join("")
+              : session.token}
+          </h1>
+          <button onClick={() => {
             document.cookie = `session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
             window.location.href = "/";
-          }}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M6 18L18 6M6 6l12 12"
-          />
-        </svg>
+          }}>
+            <FontAwesomeIcon icon={faDoorOpen} />
+          </button>
+
+        </div>
+
+        <span className="text-gray-200">Créé le {new Date(session.createdAt).toLocaleDateString()}</span>
       </div>
       <div className="h-8" />
-      <div className="flex flex-col justify-center gap-16 sm:flex-row">
-        <div className="flex flex-col gap-y-2">
+      <div className="flex flex-col sm:px-16  items-stretch justify-center gap-16 sm:flex-row">
+        <div className="flex flex-col gap-y-2 basis-0 grow">
           <h2>Trucs</h2>{" "}
           <UploadContent
             onNewContent={(content) =>
@@ -70,7 +64,7 @@ export function ActiveSession({
             />
           ))}
         </div>
-        <div className="flex flex-col gap-y-2">
+        <div className="flex flex-col basis-0 grow gap-y-2">
           <h2>Autres trucs</h2>
           <AddNewTask
             onNewTask={(task) => setCachedTasks([task, ...cachedTasks])}

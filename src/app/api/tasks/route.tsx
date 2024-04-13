@@ -29,10 +29,10 @@ export async function PATCH(req: Request) {
   const { name, content, taskId } = data;
   const response = await db
     .update(tasks)
-    .set({ name, content })
+    .set({ name, content, updatedAt: new Date(Date.now()) })
     .where(eq(tasks.id, taskId))
     .execute()
-    .catch(() => {});
+    .catch(() => { });
 
   if (response) {
     return new Response("Updated", { status: 200 });
@@ -50,7 +50,7 @@ export async function DELETE(req: Request) {
     .delete(tasks)
     .where(eq(tasks.id, taskId))
     .execute()
-    .catch(() => {});
+    .catch(() => { });
 
   if (response) {
     return new Response("Deleted", { status: 200 });

@@ -10,7 +10,7 @@ export function PreSession() {
       action="/api/sessions"
       className="flex flex-col items-center justify-center gap-2"
     >
-      <label className="text-xl">Create/Join session</label>
+      <label className="text-xl">Créer/Rejoindre une session</label>
       <span className="flex flex-row space-x-[1px] rounded-xl border-blue-600 bg-white p-2 text-black">
         <span className="px-1">#</span>
         <div className="h-1" />

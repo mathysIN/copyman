@@ -3,7 +3,7 @@
 import type { tasksType } from "~/server/db/schema";
 
 export function AddNewTask({
-  onNewTask = () => {},
+  onNewTask = () => { },
 }: {
   onNewTask?: (task: tasksType) => any;
 }) {
@@ -23,7 +23,7 @@ export function AddNewTask({
   return (
     <div className="flex flex-col gap-2 rounded-xl bg-white px-2 py-2 text-black">
       <input
-        placeholder="Add new task"
+        placeholder="Nouvelle note"
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             addTask(e.currentTarget.value);

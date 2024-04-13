@@ -1,12 +1,14 @@
 "use client";
 
 import { $schema } from ".eslintrc.cjs";
+import { faPlus } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { PutBlobResult } from "@vercel/blob";
 import { useState, useRef } from "react";
-import { contentType } from "~/server/db/schema";
+import type { contentType } from "~/server/db/schema";
 
 export default function UploadContent({
-  onNewContent = () => {},
+  onNewContent = () => { },
 }: {
   onNewContent?: (content: contentType) => any;
 }) {
@@ -40,22 +42,12 @@ export default function UploadContent({
         onNewContent(newBlob);
       }}
     >
-      <div className="flex flex-row items-center justify-center gap-2">
-        <label htmlFor="input_file">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6 cursor-pointer text-red-500"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 4v16m8-8H4"
-            ></path>
-          </svg>
+      <div className="flex flex-row items-center gap-2">
+        <label htmlFor="input_file" className="cursor-pointer">
+          <FontAwesomeIcon icon={faPlus} />
+        </label>
+        <label htmlFor="input_file" className="cursor-pointer">
+          <p className="cursor-pointer">{currentFile ? currentFile.name : "Selectionner un fichier"}</p>
         </label>
         <input
           name="file"
@@ -66,12 +58,12 @@ export default function UploadContent({
           id="input_file"
           onInput={(e) => setCurrentFile(e.currentTarget.files?.[0])}
         />
-        <p>{currentFile ? currentFile.name : "No file selected"}</p>
         <button
           type="submit"
-          className="flex flex-col gap-2 rounded-xl bg-white px-2 py-2 text-black"
+          className={`${!currentFile && "opacity-75 cursor-not-allowed"} flex flex-col gap-2 rounded-xl bg-white px-2 py-2 text-black`}
+          disabled={!currentFile}
         >
-          Upload
+          Envoyer
         </button>
       </div>
     </form>

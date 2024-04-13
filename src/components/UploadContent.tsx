@@ -4,10 +4,12 @@ import { useState, useRef } from "react";
 import type { contentType } from "~/server/db/schema";
 import { UploadButton } from "~/utils/uploadthing";
 
-type contentTypeWithTimestamp = Omit<contentType, 'createdAt'> & { createdAt: number };
+type contentTypeWithTimestamp = Omit<contentType, "createdAt"> & {
+  createdAt: number;
+};
 
 export default function UploadContent({
-  onNewContent = () => { },
+  onNewContent = () => {},
 }: {
   onNewContent?: (content: contentType) => any;
 }) {
@@ -37,19 +39,23 @@ export default function UploadContent({
         onNewContent(newBlob);
       }}
     >
-      <div>
+      <div className="h-16">
         <UploadButton
           endpoint="imageUploader"
-          className="rounded-xl bg-white text-black"
-          appearance={{ container: { color: "black" }, button: { color: "black" } }}
+          className="h-full rounded-xl bg-white text-black"
+          appearance={{
+            container: { color: "black" },
+            button: { color: "black" },
+          }}
           onClientUploadComplete={(res) => {
             const response = res[0];
             if (!response) return;
-            const _content: contentTypeWithTimestamp = response.serverData.content;
+            const _content: contentTypeWithTimestamp =
+              response.serverData.content;
             const content: contentType = {
               ..._content,
               createdAt: new Date(_content.createdAt),
-            }
+            };
             onNewContent(content);
           }}
           onUploadError={(error: Error) => {

@@ -28,7 +28,7 @@ export const posts = createTable(
 
 export const tasks = createTable("task", {
   id: serial("id").primaryKey(),
-  name: varchar("name", { length: 256 }),
+  name: text("name").notNull(),
   content: text("content"),
   completed: boolean("completed").default(false),
   createdAt: timestamp("created_at")

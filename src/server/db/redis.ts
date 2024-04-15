@@ -1,7 +1,10 @@
 import { Redis, RedisConfigNodejs } from "@upstash/redis";
 import { UUID, randomUUID } from "crypto";
+import { RequestCookies } from "next/dist/compiled/@edge-runtime/cookies";
+import { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 import { O } from "node_modules/@upstash/redis/zmscore-07021e27";
 import { env } from "~/env";
+import { hashPassword, validatePassword } from "~/utils/password";
 import { ExcludeMatchingProperties } from "~/utils/types";
 
 const globalForDb = globalThis as unknown as {
@@ -175,6 +178,29 @@ export class Session {
 
   async getAllContent() {
     return contents.getall(this.withSessionKey(REDIS_CONTENT_PREFIX, "*"));
+  }
+
+  async setPassword(password?: string) {
+    if (!password) return sessions.hdel(this.sessionId, "password");
+
+    return sessions.hmset(this.sessionId, {
+      password: hashPassword(password),
+    });
+  }
+
+  async verifyPassword(password: string) {
+    if (!this.password) return true;
+    return validatePassword(password, this.password);
+  }
+
+  hasPassword() {
+    return !!this.password;
+  }
+
+  async verifyPasswordFromCookie(
+    cookie: RequestCookies | ReadonlyRequestCookies,
+  ) {
+    return this.verifyPassword(cookie.get("password")?.value ?? "");
   }
 
   toJSON(): SessionType {

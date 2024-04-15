@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 type Params = {
   session: string;
+  password: string;
 };
 
 export async function GET(request: Request, context: { params: Params }) {

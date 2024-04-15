@@ -23,10 +23,17 @@ export const ourFileRouter = {
     .middleware(async ({ req }) => {
       const session = await getSessionWithCookies(req.cookies);
       if (!session) throw new UploadThingError("Unauthorized");
-      return { sessionId: session.sessionId, session };
+      return {
+        sessionId: session.sessionId,
+        session,
+        password: session.password,
+      };
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      const session = await getSessionWithSessionId(metadata.sessionId);
+      const session = await getSessionWithSessionId(
+        metadata.sessionId,
+        metadata.password,
+      );
       if (!session) throw new UploadThingError("Unauthorized");
       const content = await session.createNewAttachment({
         attachmentPath: file.name,

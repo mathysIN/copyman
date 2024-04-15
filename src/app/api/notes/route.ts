@@ -1,22 +1,23 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { db } from "~/server/db";
-import { tasks } from "~/server/db/schema";
 import { getSessionWithCookies } from "~/utils/authenticate";
-import { eq } from "drizzle-orm";
+import { randomUUID } from "crypto";
+import {
+  NoteType,
+  contents,
+  sessions,
+  withSessionKey,
+} from "~/server/db/redis";
 
 export async function POST(req: Request) {
   const data = await req.json();
   const session = await getSessionWithCookies(cookies());
   if (!session) return new Response("Unauthorized", { status: 401 });
-  const { name, content } = data;
-  const response = await db
-    .insert(tasks)
-    .values({ name, content, sessionId: session.id })
-    .returning();
-
-  if (response && response[0]) {
-    return NextResponse.json(response[0], { status: 200 });
+  const { content } = data;
+  const newNote = { content };
+  const response = await session.createNewNote(newNote).catch(() => {});
+  if (response) {
+    return NextResponse.json(response, { status: 200 });
   } else {
     return new Response("Failed to create", { status: 500 });
   }
@@ -26,14 +27,13 @@ export async function PATCH(req: Request) {
   const data = await req.json();
   const session = await getSessionWithCookies(cookies());
   if (!session) return new Response("Unauthorized", { status: 401 });
-  const { name, content, taskId } = data;
-  const response = await db
-    .update(tasks)
-    .set({ name, content, updatedAt: new Date(Date.now()) })
-    .where(eq(tasks.id, taskId))
-    .execute()
-    .catch(() => { });
+  const { content, taskId } = data;
 
+  if (!(await session.getContent(taskId))) {
+    return new Response("Not found", { status: 404 });
+  }
+
+  const response = await session.updateNote(taskId, { content: content });
   if (response) {
     return new Response("Updated", { status: 200 });
   } else {
@@ -46,11 +46,8 @@ export async function DELETE(req: Request) {
   const session = await getSessionWithCookies(cookies());
   if (!session) return new Response("Unauthorized", { status: 401 });
   const { taskId } = data;
-  const response = await db
-    .delete(tasks)
-    .where(eq(tasks.id, taskId))
-    .execute()
-    .catch(() => { });
+
+  const response = await session.deleteContent(taskId);
 
   if (response) {
     return new Response("Deleted", { status: 200 });

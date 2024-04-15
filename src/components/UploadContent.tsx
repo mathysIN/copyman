@@ -1,17 +1,13 @@
 "use client";
 
 import { useState, useRef } from "react";
-import type { contentType } from "~/server/db/schema";
+import { AttachmentType, ContentType } from "~/server/db/redis";
 import { UploadButton } from "~/utils/uploadthing";
-
-type contentTypeWithTimestamp = Omit<contentType, "createdAt"> & {
-  createdAt: number;
-};
 
 export default function UploadContent({
   onNewContent = () => {},
 }: {
-  onNewContent?: (content: contentType) => any;
+  onNewContent?: (content: AttachmentType) => any;
 }) {
   const inputFileRef = useRef<HTMLInputElement>(null);
   return (
@@ -34,7 +30,7 @@ export default function UploadContent({
 
         inputFileRef.current.value = "";
 
-        const newBlob = (await response.json()) as contentType;
+        const newBlob = (await response.json()) as AttachmentType;
 
         onNewContent(newBlob);
       }}
@@ -50,12 +46,7 @@ export default function UploadContent({
           onClientUploadComplete={(res) => {
             const response = res[0];
             if (!response) return;
-            const _content: contentTypeWithTimestamp =
-              response.serverData.content;
-            const content: contentType = {
-              ..._content,
-              createdAt: new Date(_content.createdAt),
-            };
+            const content: AttachmentType = response.serverData;
             onNewContent(content);
           }}
           onUploadError={(error: Error) => {

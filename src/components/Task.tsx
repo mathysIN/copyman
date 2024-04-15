@@ -3,18 +3,18 @@
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useState } from "react";
-import type { tasksType } from "~/server/db/schema";
+import { NoteType } from "~/server/db/redis";
 
 const REQUEST_DELAY = 800;
 
 export function Task({
-  task,
+  content,
   onDeleteTask = () => {},
 }: {
-  task: tasksType;
-  onDeleteTask: (taskId: number) => any;
+  content: NoteType;
+  onDeleteTask: (taskId: string) => any;
 }) {
-  const [value, setValue] = useState(task.name ?? "");
+  const [value, setValue] = useState(content.content ?? "");
   const [timerId, setTimerId] = useState<NodeJS.Timeout | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -28,9 +28,9 @@ export function Task({
   };
 
   const editTask = (newValue: string) => {
-    fetch("/api/tasks", {
+    fetch("/api/notes", {
       method: "PATCH",
-      body: JSON.stringify({ name: newValue, taskId: task.id }),
+      body: JSON.stringify({ content: newValue, taskId: content.id }),
     }).then(() => {
       setTimerId(null);
     });
@@ -38,7 +38,7 @@ export function Task({
 
   return (
     <div
-      key={task.id}
+      key={content.id}
       className="flex flex-row gap-2 rounded-md border-2 border-gray-300 bg-white px-2 py-2 text-black"
     >
       <textarea
@@ -48,11 +48,11 @@ export function Task({
       ></textarea>
       <button
         onClick={() => {
-          fetch("/api/tasks", {
+          fetch("/api/notes", {
             method: "DELETE",
-            body: JSON.stringify({ taskId: task.id }),
+            body: JSON.stringify({ taskId: content.id }),
           }).then(() => {
-            onDeleteTask(task.id);
+            onDeleteTask(content.id);
           });
         }}
         className="min-w-min text-red-400"

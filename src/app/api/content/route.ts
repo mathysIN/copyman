@@ -1,8 +1,5 @@
-import { eq } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { db } from "~/server/db";
-import { contents } from "~/server/db/schema";
 import { getSessionWithCookies } from "~/utils/authenticate";
 import { utapi } from "~/server/uploadthing";
 
@@ -19,18 +16,22 @@ export async function DELETE(request: Request): Promise<NextResponse> {
       { status: 400 },
     );
 
-  const response = await db
-    .delete(contents)
-    .where(eq(contents.id, parseInt(contentId)))
-    .returning();
+  const content = await session.getContent(contentId);
 
-  if (!response[0])
+  if (!content)
+    return NextResponse.json({ message: "Content not found" }, { status: 404 });
+
+  const response = await session.deleteContent(contentId);
+
+  if (!response)
     return NextResponse.json(
       { message: "Failed to delete content" },
       { status: 500 },
     );
 
-  utapi.deleteFiles([response[0].fileKey]);
+  if (content.type === "attachment") {
+    utapi.deleteFiles(content.fileKey);
+  }
 
-  return NextResponse.json(response[0], { status: 200 });
+  return NextResponse.json(content, { status: 200 });
 }

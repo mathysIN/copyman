@@ -1,18 +1,17 @@
 import { redirect } from "next/navigation";
+import { sessions } from "~/server/db/redis";
 import { cookies } from "next/headers";
-import { db } from "~/server/db";
-import { sessions } from "~/server/db/schema";
 
 export async function POST(req: Request) {
   const data = await req.formData();
   const sessionId = data.get("session")?.toString();
   if (sessionId) {
-    await db
-      .insert(sessions)
-      .values({ token: sessionId })
-      .execute()
+    await sessions
+      .hmnew(sessionId, {
+        sessionId: sessionId,
+        createdAt: Date.now().toString(),
+      })
       .catch(() => {});
-    cookies().set("session", sessionId);
   }
-  return redirect("/");
+  redirect(`/${sessionId}`);
 }

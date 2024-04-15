@@ -1,20 +1,20 @@
 "use client";
 
-import type { tasksType } from "~/server/db/schema";
+import { ContentType, NoteType } from "~/server/db/redis";
 
 export function AddNewTask({
-  onNewTask = () => {},
+  onNewContent = () => {},
 }: {
-  onNewTask?: (task: tasksType) => any;
+  onNewContent?: (task: NoteType) => any;
 }) {
-  const addTask = (name: string) => {
-    fetch("/api/tasks", {
+  const addTask = (content: string) => {
+    fetch("/api/notes", {
       method: "POST",
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ content: content } as NoteType),
     }).then((res) => {
       if (res.ok) {
         res.json().then((task) => {
-          onNewTask(task);
+          onNewContent(task);
         });
       }
     });

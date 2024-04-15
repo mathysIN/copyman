@@ -6,14 +6,14 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 import { useEffect, useState } from "react";
-import type { contentType } from "~/server/db/schema";
+import type { AttachmentType } from "~/server/db/redis";
 
 const ContentRenderer = ({
   content,
   onContentDelete = () => {},
 }: {
-  content: contentType;
-  onContentDelete: (contentId: number) => any;
+  content: AttachmentType;
+  onContentDelete: (contentId: string) => any;
 }) => {
   const [contentType, setContentType] = useState<
     "video" | "image" | "audio" | null
@@ -34,7 +34,7 @@ const ContentRenderer = ({
 
   // Update the content type state when the component mounts
   useEffect(() => {
-    setContentType(getContentType(content.contentURL));
+    setContentType(getContentType(content.attachmentURL));
   }, [content]);
 
   // Render different content based on the content type
@@ -43,7 +43,7 @@ const ContentRenderer = ({
       case "video":
         return (
           <video
-            src={content.contentURL}
+            src={content.attachmentURL}
             controls
             className="absolute inset-0 h-full w-full object-cover"
           />
@@ -51,7 +51,7 @@ const ContentRenderer = ({
       case "image":
         return (
           <img
-            src={content.contentURL}
+            src={content.attachmentURL}
             alt="Content"
             className="absolute inset-0 h-full w-full rounded-lg object-cover"
           />
@@ -59,13 +59,13 @@ const ContentRenderer = ({
       case "audio":
         return (
           <audio
-            src={content.contentURL}
+            src={content.attachmentURL}
             controls
             className="absolute inset-0 h-full w-full object-cover"
           />
         );
       default:
-        return <p>{content.pathname}</p>;
+        return <p>{content.attachmentPath}</p>;
     }
   };
 
@@ -89,11 +89,11 @@ const ContentRenderer = ({
       <div className="flex flex-row items-center gap-4">
         <div key={content.id} className="z-10 flex gap-x-2">
           <button
-            onClick={() => navigator.clipboard.writeText(content.contentURL)}
+            onClick={() => navigator.clipboard.writeText(content.attachmentURL)}
           >
             <FontAwesomeIcon icon={faLink} />
           </button>
-          <a href={content.contentURL} target="_blank">
+          <a href={content.attachmentURL} target="_blank">
             <button className="text-gray-900">
               <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
             </button>
@@ -111,7 +111,7 @@ const ContentRenderer = ({
         </div>
 
         <p className="center flex-1 overflow-scroll whitespace-nowrap text-right  align-middle text-sm text-gray-500 sm:w-64">
-          {content.pathname}
+          {content.attachmentPath}
         </p>
       </div>
     </div>

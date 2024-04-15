@@ -7,21 +7,23 @@ import { AddNewTask } from "~/components/AddNewTask";
 import ContentRenderer from "~/components/ContentRenderer";
 import { Task } from "~/components/Task";
 import UploadContent from "~/components/UploadContent";
-import type { contentType, sessionType, tasksType } from "~/server/db/schema";
+import {
+  AttachmentType,
+  ContentType,
+  NoteType,
+  SessionType,
+} from "~/server/db/redis";
 
 export function ActiveSession({
   session,
-  sessionTasks,
   sessionContents,
 }: {
-  session: sessionType;
-  sessionTasks: tasksType[];
-  sessionContents: contentType[];
+  session: SessionType;
+  sessionContents: ContentType[];
 }) {
   const [hidden, setHidden] = useState(true);
-  const [cachedTasks, setCachedTasks] = useState<tasksType[]>(sessionTasks);
   const [cachedContents, setCachedContents] =
-    useState<contentType[]>(sessionContents);
+    useState<ContentType[]>(sessionContents);
   return (
     <div className="w-4/5 pb-10">
       <div className="flex flex-col items-center justify-center">
@@ -29,55 +31,68 @@ export function ActiveSession({
           <h1 className={`cursor-pointer`} onClick={() => setHidden(!hidden)}>
             #
             {hidden
-              ? new Array(session.token.length).fill("*").join("")
-              : session.token}
+              ? new Array(session.sessionId.length).fill("*").join("")
+              : session.sessionId}
           </h1>
-          <button onClick={() => {
-            document.cookie = `session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-            window.location.href = "/";
-          }}>
+          <button
+            onClick={() => {
+              document.cookie = `session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+              window.location.href = "/";
+            }}
+          >
             <FontAwesomeIcon icon={faDoorOpen} />
           </button>
-
         </div>
 
-        <span className="text-gray-200">Créé le {new Date(session.createdAt).toLocaleDateString()}</span>
+        <span className="text-gray-200">
+          Créé le {new Date(parseInt(session.createdAt)).toLocaleDateString()}
+        </span>
       </div>
       <div className="h-8" />
-      <div className="flex flex-col sm:px-16  items-stretch justify-center gap-16 sm:flex-row">
-        <div className="flex flex-col gap-y-2 basis-0 grow">
+      <div className="flex flex-col items-stretch  justify-center gap-16 sm:flex-row sm:px-16">
+        <div className="flex grow basis-0 flex-col gap-y-2">
           <h2>Trucs</h2>{" "}
           <UploadContent
             onNewContent={(content) =>
               setCachedContents([content, ...cachedContents])
             }
           />
-          {cachedContents.map((content) => (
-            <ContentRenderer
-              key={content.id}
-              content={content}
-              onContentDelete={() =>
-                setCachedContents(
-                  cachedContents.filter((c) => c.id !== content.id),
-                )
-              }
-            />
-          ))}
+          {cachedContents
+            .filter(
+              (c: ContentType): c is AttachmentType => c.type == "attachment",
+            )
+            .map((content) => (
+              <ContentRenderer
+                key={content.id}
+                content={content}
+                onContentDelete={() =>
+                  setCachedContents(
+                    cachedContents.filter((c) => c.id !== content.id),
+                  )
+                }
+              />
+            ))}
         </div>
-        <div className="flex flex-col basis-0 grow gap-y-2">
+        <div className="flex grow basis-0 flex-col gap-y-2">
           <h2>Autres trucs</h2>
           <AddNewTask
-            onNewTask={(task) => setCachedTasks([task, ...cachedTasks])}
+            onNewContent={(content) =>
+              setCachedContents([content, ...cachedContents])
+            }
           />
-          {cachedTasks.map((task) => (
-            <Task
-              key={task.id}
-              task={task}
-              onDeleteTask={() => {
-                setCachedTasks(cachedTasks.filter((t) => t.id !== task.id));
-              }}
-            />
-          ))}
+          {cachedContents
+            .filter((c: ContentType): c is NoteType => c.type == "note")
+            .map((task) => (
+              <Task
+                key={task.id}
+                content={task}
+                onDeleteTask={() => {
+                  setCachedContents(
+                    cachedContents.filter((c) => c.id !== task.id),
+                  );
+                }}
+              />
+            ))}
         </div>
       </div>
     </div>

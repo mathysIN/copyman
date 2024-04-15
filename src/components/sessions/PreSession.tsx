@@ -22,13 +22,15 @@ export function PreSession() {
           value={value}
           onChange={(e) => setValue(e.target.value)}
           className="outline-none"
-          placeholder="token"
+          placeholder="session"
         />
       </span>
       <button type="submit" />
       <div className="h-8" />
 
-      <Link href="/"><Image src="/logo.png" width={150} height={150} alt="logo" /></Link>
+      <Link href="/">
+        <Image src="/logo.png" width={150} height={150} alt="logo" />
+      </Link>
     </form>
   );
 }

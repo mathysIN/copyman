@@ -35,19 +35,14 @@ const config = {
     "@typescript-eslint/ban-types": "off",
     "prefer-const": ["error", { destructuring: "all" }],
     "@typescript-eslint/no-for-in-array": "off",
+    "@typescript-eslint/restrict-template-expressions": "off",
     "@typescript-eslint/no-explicit-any": "off",
     "@typescript-eslint/no-empty-function": "off",
     "@typescript-eslint/no-floating-promises": "off",
     "@typescript-eslint/no-unsafe-argument": "off",
     "@typescript-eslint/prefer-optional-chain": "off",
-    "@typescript-eslint/no-misused-promises": [
-      "error",
-      {
-        checksVoidReturn: {
-          attributes: false,
-        },
-      },
-    ],
+    "@typescript-eslint/no-misused-promises": "off",
+    "@typescript-eslint/dot-notation": "off",
     "drizzle/enforce-delete-with-where": [
       "error",
       {

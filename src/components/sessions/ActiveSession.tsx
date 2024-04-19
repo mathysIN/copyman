@@ -30,10 +30,13 @@ import {
 export function ActiveSession({
   session,
   sessionContents,
+  hasPassword: _hasPassword,
 }: {
   session: SessionType;
   sessionContents: ContentType[];
+  hasPassword: boolean;
 }) {
+  const [hasPassword, setHasPassword] = useState(_hasPassword);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [passwordModalLoading, setPasswordModalLoading] = useState(false);
   const [passwordModalContent, setPasswordModalContent] = useState("");
@@ -57,11 +60,17 @@ export function ActiveSession({
             onOpenChange={(state) => setPasswordModalOpen(state)}
           >
             <DialogTrigger asChild className="cursor-pointer">
-              <FontAwesomeIcon icon={faLock} />
+              <FontAwesomeIcon
+                icon={faLock}
+                className={`${hasPassword && "text-yellow-400"}`}
+              />
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
-                <DialogTitle>Modifier le mot de passe</DialogTitle>
+                <DialogTitle>
+                  {hasPassword && "Modifier le mot de passe existant"}
+                  {!hasPassword && "Créer un nouveau mot de passe"}
+                </DialogTitle>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
@@ -89,12 +98,7 @@ export function ActiveSession({
                       body: JSON.stringify({
                         password: passwordModalContent,
                       }),
-                    }).then(() => {
-                      // set cookie for 10 years
-                      document.cookie = `password=${passwordModalContent}; expires=${new Date(
-                        Date.now() + 10 * 365 * 24 * 60 * 60 * 1000,
-                      )}; path=/;`;
-                    });
+                    }).then(() => setHasPassword(!!passwordModalContent));
                     setPasswordModalLoading(false);
                     setPasswordModalOpen(false);
                   }}

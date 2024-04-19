@@ -206,7 +206,6 @@ export class Session {
   toJSON(): SessionType {
     return {
       sessionId: this.sessionId,
-      password: this.password,
       createdAt: this.createdAt,
     };
   }

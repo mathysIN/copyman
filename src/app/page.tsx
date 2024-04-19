@@ -36,6 +36,7 @@ export default async function HomePage() {
         {session && (
           <ActiveSession
             session={session.toJSON()}
+            hasPassword={session.hasPassword()}
             sessionContents={sessionContents}
           />
         )}

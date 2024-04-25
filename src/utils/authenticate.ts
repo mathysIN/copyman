@@ -1,6 +1,7 @@
 import type { RequestCookies } from "next/dist/compiled/@edge-runtime/cookies";
 import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 import { Session, sessions } from "~/server/db/redis";
+import cookie from "cookie";
 
 const BANNED_SESSIONS = ["admin", "favicon.ico"];
 
@@ -11,6 +12,16 @@ export async function getSessionWithCookies(
   const sessionId = cookies.get("session")?.value;
   if (!sessionId) return null;
   return getSession(sessionId, cookies.get("password")?.value, ignorePassword);
+}
+
+export async function getSessionWithCookieString(
+  cookies: string,
+  ignorePassword = false,
+) {
+  const _cookies = cookie.parse(cookies);
+  const sessionId = _cookies["session"];
+  if (!sessionId) return null;
+  return getSession(sessionId, _cookies["password"], ignorePassword);
 }
 
 export async function getSessionWithSessionId(

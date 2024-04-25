@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     /* Base Options: */
+    "outDir": "dist",
     "esModuleInterop": true,
     "skipLibCheck": true,
     "target": "es2022",

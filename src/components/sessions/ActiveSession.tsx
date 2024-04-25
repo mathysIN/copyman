@@ -3,7 +3,7 @@
 import { faDoorOpen, faLock } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AddNewTask } from "~/components/AddNewTask";
 import ContentRenderer from "~/components/ContentRenderer";
 import { Task } from "~/components/Task";
@@ -11,7 +11,6 @@ import UploadContent from "~/components/UploadContent";
 import { Button } from "~/components/ui/button";
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogFooter,
   DialogHeader,
@@ -20,6 +19,8 @@ import {
 } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import { socket } from "~/lib/client/socket";
+import { ConnectionStart } from "~/server";
 import {
   AttachmentType,
   ContentType,
@@ -36,6 +37,39 @@ export function ActiveSession({
   sessionContents: ContentType[];
   hasPassword: boolean;
 }) {
+  const [isConnected, setIsConnected] = useState(false);
+  const [transport, setTransport] = useState("N/A");
+
+  useEffect(() => {
+    setIsConnected(socket.connected);
+    console.log({ connected: socket.connected });
+    if (socket.connected) {
+      onConnect();
+    }
+    socket.emit("connection_start");
+
+    function onConnect() {
+      socket.emit("connection_start");
+
+      socket.emit("message", "bruh");
+      socket.emit("message", "bruh");
+    }
+
+    function onDisconnect() {
+      setIsConnected(false);
+      setTransport("N/A");
+    }
+
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+
+    return () => {
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.disconnect();
+    };
+  }, [socket]);
+
   const [hasPassword, setHasPassword] = useState(_hasPassword);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [passwordModalLoading, setPasswordModalLoading] = useState(false);
@@ -121,6 +155,16 @@ export function ActiveSession({
             <FontAwesomeIcon icon={faDoorOpen} />
           </button>
         </div>
+        <span>{isConnected ? "connected" : "no conntected"}</span>
+        <button
+          onClick={() => {
+            alert("bruh");
+            socket.emit("my_event", { a: 1 });
+            socket.emit("message", "bruh");
+          }}
+        >
+          fuck
+        </button>
         <span className="text-gray-200">
           Créé le {new Date(parseInt(session.createdAt)).toLocaleDateString()}
         </span>

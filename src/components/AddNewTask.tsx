@@ -27,8 +27,11 @@ export function AddNewTask({
         className="h-full"
         onKeyDown={(e) => {
           if (e.key === "Enter") {
-            addTask(e.currentTarget.value);
-            e.currentTarget.value = "";
+            const target = e.currentTarget;
+            const content = target.value;
+            if (!content) return;
+            addTask(content);
+            setTimeout(() => (target.value = ""), 0);
           }
         }}
       />

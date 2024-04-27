@@ -1,6 +1,10 @@
 "use client";
 
-import { faDoorOpen, faLock } from "@fortawesome/free-solid-svg-icons";
+import {
+  faDoorOpen,
+  faLock,
+  faWarning,
+} from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -19,6 +23,12 @@ import {
 } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
 import { socket } from "~/lib/client/socket";
 import { ConnectionStart } from "~/server";
 import {
@@ -40,35 +50,42 @@ export function ActiveSession({
   const [isConnected, setIsConnected] = useState(false);
   const [transport, setTransport] = useState("N/A");
 
+  function onConnect() {
+    setIsConnected(true);
+  }
+
+  function onDisconnect() {
+    setIsConnected(false);
+    setTransport("N/A");
+  }
+
+  function onNewContent(content: ContentType, emit = true) {
+    if (emit) socket.emit("addContent", content);
+    setCachedContents([content, ...cachedContents]);
+  }
+
+  function onContentDelete(contentId: string, emit = true) {
+    if (emit) socket.emit("deleteContent", contentId);
+    setCachedContents(cachedContents.filter((c) => c.id !== contentId));
+  }
+
   useEffect(() => {
     setIsConnected(socket.connected);
-    console.log({ connected: socket.connected });
     if (socket.connected) {
       onConnect();
     }
-    socket.emit("connection_start");
 
-    function onConnect() {
-      socket.emit("connection_start");
+    socket.on("addContent", (content) => {
+      onNewContent(content, false);
+    });
 
-      socket.emit("message", "bruh");
-      socket.emit("message", "bruh");
-    }
-
-    function onDisconnect() {
-      setIsConnected(false);
-      setTransport("N/A");
-    }
+    socket.on("deleteContent", (contentId) => {
+      onContentDelete(contentId, false);
+    });
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
-
-    return () => {
-      socket.off("connect", onConnect);
-      socket.off("disconnect", onDisconnect);
-      socket.disconnect();
-    };
-  }, [socket]);
+  }, [onNewContent]);
 
   const [hasPassword, setHasPassword] = useState(_hasPassword);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
@@ -155,63 +172,57 @@ export function ActiveSession({
             <FontAwesomeIcon icon={faDoorOpen} />
           </button>
         </div>
-        <span>{isConnected ? "connected" : "no conntected"}</span>
-        <button
-          onClick={() => {
-            alert("bruh");
-            socket.emit("my_event", { a: 1 });
-            socket.emit("message", "bruh");
-          }}
-        >
-          fuck
-        </button>
         <span className="text-gray-200">
           Créé le {new Date(parseInt(session.createdAt)).toLocaleDateString()}
         </span>
+        {!isConnected && (
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger>
+                <div className="flex flex-row items-center justify-center space-x-2">
+                  <FontAwesomeIcon icon={faWarning} />
+                  <span className="text-red-400">
+                    Le client est deconnecté du socket.
+                  </span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>
+                  Les changements en direct sont désactivés. Rafraichissez la
+                  page pour voir les changements d'autres clients connectés.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
       </div>
       <div className="h-8" />
-      <div className="flex flex-col items-stretch  justify-center gap-16 sm:flex-row sm:px-16">
-        <div className="flex grow basis-0 flex-col gap-y-2">
-          <h2>Trucs</h2>{" "}
-          <UploadContent
-            onNewContent={(content) =>
-              setCachedContents([content, ...cachedContents])
-            }
-          />
+      <div className="relative flex flex-col items-stretch justify-center gap-16 sm:flex-row sm:px-16">
+        <div className="flex flex-[50%] flex-col gap-y-2">
+          <h2>Trucs</h2>
+          <UploadContent onNewContent={onNewContent} />
           {cachedContents
             .filter(
-              (c: ContentType): c is AttachmentType => c.type == "attachment",
+              (c: ContentType): c is AttachmentType => c.type === "attachment",
             )
             .map((content) => (
               <ContentRenderer
                 key={content.id}
                 content={content}
-                onContentDelete={() =>
-                  setCachedContents(
-                    cachedContents.filter((c) => c.id !== content.id),
-                  )
-                }
+                onContentDelete={onContentDelete}
               />
             ))}
         </div>
-        <div className="flex grow basis-0 flex-col gap-y-2">
+        <div className=" flex flex-[50%] flex-col gap-y-2">
           <h2>Autres trucs</h2>
-          <AddNewTask
-            onNewContent={(content) =>
-              setCachedContents([content, ...cachedContents])
-            }
-          />
+          <AddNewTask onNewContent={onNewContent} />
           {cachedContents
-            .filter((c: ContentType): c is NoteType => c.type == "note")
+            .filter((c: ContentType): c is NoteType => c.type === "note")
             .map((task) => (
               <Task
                 key={task.id}
                 content={task}
-                onDeleteTask={() => {
-                  setCachedContents(
-                    cachedContents.filter((c) => c.id !== task.id),
-                  );
-                }}
+                onDeleteTask={onContentDelete}
               />
             ))}
         </div>

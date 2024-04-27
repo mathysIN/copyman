@@ -6,6 +6,8 @@ import {
   getSessionWithCookieString,
   getSessionWithCookies,
 } from "~/utils/authenticate";
+import { ContentType } from "~/server/db/redis";
+import { Roboto_Mono } from "next/font/google";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
@@ -14,13 +16,14 @@ const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
 
 export interface ServerToClientEvents {
-  noArg: () => void;
-  basicEmit: (a: number, b: string, c: Buffer) => void;
-  withAck: (d: string, callback: (e: number) => void) => void;
+  addContent: (content: ContentType) => void;
+  deleteContent: (contentId: string) => void;
 }
 
 export interface ClientToServerEvents {
   hello: () => void;
+  addContent: (content: ContentType) => void;
+  deleteContent: (contentId: string) => void;
 }
 
 export interface InterServerEvents {
@@ -31,6 +34,8 @@ export interface ConnectionStart {
   sessionId: string;
   password?: string;
 }
+
+const rooms = new Map<string, Set<string>>();
 
 app.prepare().then(() => {
   const httpServer = createServer(handler);
@@ -48,8 +53,45 @@ app.prepare().then(() => {
       true,
     );
     if (!session) return;
-    console.log(session);
-    socket.id;
+    if (!rooms.has(session.sessionId)) {
+      rooms.set(session.sessionId, new Set());
+    }
+    rooms.get(session.sessionId)?.add(socket.id);
+
+    socket.on("disconnect", () => {
+      rooms.get(session.sessionId)?.delete(socket.id);
+      for (const room of rooms) {
+        room[1]?.delete(socket.id);
+      }
+    });
+
+    socket.on("addContent", async (content) => {
+      const session = await getSessionWithCookieString(
+        socket.handshake.headers.cookie ?? "",
+        true,
+      );
+      if (!session) return;
+      const room = rooms.get(session.sessionId);
+      if (!room) return;
+      for (const id of room) {
+        if (id === socket.id) continue;
+        io.to(id).emit("addContent", content);
+      }
+    });
+
+    socket.on("deleteContent", async (contentId) => {
+      const session = await getSessionWithCookieString(
+        socket.handshake.headers.cookie ?? "",
+        true,
+      );
+      if (!session) return;
+      const room = rooms.get(session.sessionId);
+      if (!room) return;
+      for (const id of room) {
+        if (id === socket.id) continue;
+        io.to(id).emit("deleteContent", contentId);
+      }
+    });
   });
 
   httpServer

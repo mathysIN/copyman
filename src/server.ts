@@ -1,13 +1,8 @@
 import { createServer } from "node:http";
 import next from "next";
 import { Server } from "socket.io";
-import cookie from "cookie";
-import {
-  getSessionWithCookieString,
-  getSessionWithCookies,
-} from "~/utils/authenticate";
+import { getSessionWithCookieString } from "~/utils/authenticate";
 import { ContentType } from "~/server/db/redis";
-import { Roboto_Mono } from "next/font/google";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
@@ -18,12 +13,19 @@ const handler = app.getRequestHandler();
 export interface ServerToClientEvents {
   addContent: (content: ContentType) => void;
   deleteContent: (contentId: string) => void;
+  updatedContent: (content: ContentType) => void;
+  roomInsight: (room: RoomInsight) => void;
 }
+
+type RoomInsight = {
+  connectedCount: number;
+};
 
 export interface ClientToServerEvents {
   hello: () => void;
   addContent: (content: ContentType) => void;
   deleteContent: (contentId: string) => void;
+  updatedContent: (content: ContentType) => void;
 }
 
 export interface InterServerEvents {
@@ -56,10 +58,29 @@ app.prepare().then(() => {
     if (!rooms.has(session.sessionId)) {
       rooms.set(session.sessionId, new Set());
     }
-    rooms.get(session.sessionId)?.add(socket.id);
+    const sockets = rooms.get(session.sessionId);
+    if (sockets) {
+      sockets.add(socket.id);
+      setTimeout(
+        () =>
+          io
+            .to(socket.id)
+            .emit("roomInsight", { connectedCount: sockets.size }),
+        1000,
+      ); // i cant make this work for some reason
+      for (const id of sockets) {
+        io.to(id).emit("roomInsight", { connectedCount: sockets.size });
+      }
+    }
 
     socket.on("disconnect", () => {
-      rooms.get(session.sessionId)?.delete(socket.id);
+      const sockets = rooms.get(session.sessionId);
+      if (sockets) {
+        sockets.delete(socket.id);
+        for (const id of sockets) {
+          io.to(id).emit("roomInsight", { connectedCount: sockets.size });
+        }
+      }
       for (const room of rooms) {
         room[1]?.delete(socket.id);
       }
@@ -71,9 +92,9 @@ app.prepare().then(() => {
         true,
       );
       if (!session) return;
-      const room = rooms.get(session.sessionId);
-      if (!room) return;
-      for (const id of room) {
+      const sockets = rooms.get(session.sessionId);
+      if (!sockets) return;
+      for (const id of sockets) {
         if (id === socket.id) continue;
         io.to(id).emit("addContent", content);
       }
@@ -85,11 +106,25 @@ app.prepare().then(() => {
         true,
       );
       if (!session) return;
-      const room = rooms.get(session.sessionId);
-      if (!room) return;
-      for (const id of room) {
+      const sockets = rooms.get(session.sessionId);
+      if (!sockets) return;
+      for (const id of sockets) {
         if (id === socket.id) continue;
         io.to(id).emit("deleteContent", contentId);
+      }
+    });
+
+    socket.on("updatedContent", async (content) => {
+      const session = await getSessionWithCookieString(
+        socket.handshake.headers.cookie ?? "",
+        true,
+      );
+      if (!session) return;
+      const sockets = rooms.get(session.sessionId);
+      if (!sockets) return;
+      for (const id of sockets) {
+        if (id === socket.id) continue;
+        io.to(id).emit("updatedContent", content);
       }
     });
   });

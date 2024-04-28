@@ -30,7 +30,6 @@ import {
   TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { socket } from "~/lib/client/socket";
-import { ConnectionStart } from "~/server";
 import {
   AttachmentType,
   ContentType,
@@ -48,6 +47,7 @@ export function ActiveSession({
   hasPassword: boolean;
 }) {
   const [isConnected, setIsConnected] = useState(false);
+  const [roomSize, setRoomSize] = useState(0);
   const [transport, setTransport] = useState("N/A");
 
   function onConnect() {
@@ -69,11 +69,29 @@ export function ActiveSession({
     setCachedContents(cachedContents.filter((c) => c.id !== contentId));
   }
 
+  function onContentUpdate(content: ContentType, emit = true) {
+    if (emit) socket.emit("updatedContent", content);
+    else {
+      const index = cachedContents.findIndex((c) => c.id == content.id);
+      if (!index && !cachedContents[index]) throw "Client unsynced with server";
+      setCachedContents(
+        cachedContents.map((c) => {
+          if (c.id == content.id) {
+            return content;
+          }
+          return c;
+        }),
+      );
+    }
+  }
+
   useEffect(() => {
     setIsConnected(socket.connected);
     if (socket.connected) {
       onConnect();
     }
+
+    socket.on("updatedContent", (content) => onContentUpdate(content, false));
 
     socket.on("addContent", (content) => {
       onNewContent(content, false);
@@ -81,6 +99,12 @@ export function ActiveSession({
 
     socket.on("deleteContent", (contentId) => {
       onContentDelete(contentId, false);
+    });
+
+    socket.on("roomInsight", (room) => {
+      console.log("roomInsight");
+      console.log({ room });
+      setRoomSize(room.connectedCount);
     });
 
     socket.on("connect", onConnect);
@@ -116,7 +140,7 @@ export function ActiveSession({
                 className={`${hasPassword && "text-yellow-400"}`}
               />
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[480px]">
               <DialogHeader>
                 <DialogTitle>
                   {hasPassword && "Modifier le mot de passe existant"}
@@ -157,7 +181,9 @@ export function ActiveSession({
                   {passwordModalLoading && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  Sauvegarder
+                  {passwordModalContent
+                    ? "Sauvegarder"
+                    : "Retirer le mot de passe"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -174,6 +200,7 @@ export function ActiveSession({
         </div>
         <span className="text-gray-200">
           Créé le {new Date(parseInt(session.createdAt)).toLocaleDateString()}
+          {isConnected && <> - {roomSize} connectés</>}
         </span>
         {!isConnected && (
           <TooltipProvider delayDuration={200}>
@@ -188,8 +215,8 @@ export function ActiveSession({
               </TooltipTrigger>
               <TooltipContent>
                 <p>
-                  Les changements en direct sont désactivés. Rafraichissez la
-                  page pour voir les changements d'autres clients connectés.
+                  {`Les changements en direct sont désactivés. Rafraichissez la
+                  page pour voir les changements d'autres clients connectés.`}
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -223,6 +250,7 @@ export function ActiveSession({
                 key={task.id}
                 content={task}
                 onDeleteTask={onContentDelete}
+                onUpdateTask={onContentUpdate}
               />
             ))}
         </div>

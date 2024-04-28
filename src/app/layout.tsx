@@ -1,5 +1,3 @@
-const runtime = "edge";
-
 import "~/styles/globals.css";
 
 import { Inter } from "next/font/google";

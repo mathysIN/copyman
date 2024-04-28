@@ -6,10 +6,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function extractLinksFromString(input: string): string[] {
+export function extractLinksFromString(input: string): Set<string> {
   const regex = /(https?:\/\/[^\s]+)/g;
-  const links = input.match(regex);
-  return links || [];
+  const links = input.match(regex) ?? [];
+  return new Set(links);
 }
 
 export type LinkMetadata = {
@@ -26,9 +26,9 @@ export async function getLinkMetadata(
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, "text/html");
 
-    const title = doc.querySelector("title")?.textContent?.trim() || "";
+    const title = doc.querySelector("title")?.textContent?.trim() ?? "";
     const description =
-      doc.querySelector('meta[name="description"]')?.getAttribute("content") ||
+      doc.querySelector('meta[name="description"]')?.getAttribute("content") ??
       "";
 
     return { title, description };
@@ -41,4 +41,16 @@ export async function getLinkMetadataFromClient(url: string) {
   return (await fetch(`/api/metadata?url=${url}`))
     .json()
     .catch(() => {}) as any as urlMetadata.Result | null;
+}
+
+export function areSetEqual<T>(set1: Set<T>, set2: Set<T>): boolean {
+  if (set1.size !== set2.size) {
+    return false;
+  }
+  for (const elem of set1) {
+    if (!set2.has(elem)) {
+      return false;
+    }
+  }
+  return true;
 }

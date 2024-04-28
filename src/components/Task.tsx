@@ -2,17 +2,14 @@
 
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { link } from "fs";
 import { useEffect, useState } from "react";
 import {
-  LinkMetadata,
+  areSetEqual,
   extractLinksFromString,
-  getLinkMetadata,
   getLinkMetadataFromClient,
 } from "~/lib/utils";
 import type { NoteType } from "~/server/db/redis";
-import type urlMetadata from "url-metadata";
-import Image from "next/image";
+import TextareaAutosize from "react-textarea-autosize";
 
 const REQUEST_DELAY = 800;
 
@@ -27,15 +24,51 @@ type LinksWithMeta = {
 export function Task({
   content,
   onDeleteTask = () => {},
+  onUpdateTask = () => {},
 }: {
   content: NoteType;
   onDeleteTask: (taskId: string) => any;
+  onUpdateTask: (task: NoteType) => any;
 }) {
   const [value, setValue] = useState(content.content ?? "");
   const [timerId, setTimerId] = useState<NodeJS.Timeout | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [modifying, setModifying] = useState(false);
+  const [extractedLinks, setExtractedLinks] = useState<Set<string>>();
   const [linksWithMeta, setLinksWithMetaData] = useState<LinksWithMeta[]>([]);
+
+  useEffect(() => {
+    const newValue = content.content ?? "";
+    setValue(newValue);
+    renderLinks(newValue);
+  }, [content]);
+
+  async function renderLinks(value: string) {
+    const links = extractLinksFromString(value);
+    if (extractedLinks && areSetEqual(links, extractedLinks)) return;
+    setExtractedLinks(links);
+
+    const _linksWithMeta: LinksWithMeta[] = [];
+    for (const link of links) {
+      const metadata = await getLinkMetadataFromClient(link);
+      if (
+        metadata &&
+        ((metadata["image"] && metadata["url"]) ||
+          (metadata["favicons"] && metadata["favicons"][0])) &&
+        metadata["title"]
+      )
+        _linksWithMeta.push({
+          link: link,
+          metadata: {
+            title: metadata["title"],
+            image: metadata["image"]
+              ? metadata["url"] + metadata["image"]
+              : metadata["favicons"][0]["href"],
+          },
+        });
+    }
+    setLinksWithMetaData(_linksWithMeta);
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setModifying(true);
@@ -44,46 +77,30 @@ export function Task({
     if (timerId) {
       clearTimeout(timerId);
     }
-    const newTimerId = setTimeout(() => editTask(newValue), REQUEST_DELAY);
+    const newTimerId = setTimeout(
+      () => handleChangeEnd(newValue),
+      REQUEST_DELAY,
+    );
     setTimerId(newTimerId);
   };
 
-  const editTask = (newValue: string) => {
+  const handleChangeEnd = async (newValue: string) => {
     setModifying(false);
+
+    onUpdateTask({
+      ...content,
+      content: newValue,
+    });
+
     fetch("/api/notes", {
       method: "PATCH",
       body: JSON.stringify({ content: newValue, taskId: content.id }),
     }).then(() => {
       setTimerId(null);
     });
+
+    renderLinks(newValue);
   };
-
-  const links = extractLinksFromString(value);
-
-  useEffect(() => {
-    (async () => {
-      const _linksWithMeta: LinksWithMeta[] = [];
-      for (const link of links) {
-        const metadata = await getLinkMetadataFromClient(link);
-        if (
-          metadata &&
-          ((metadata["image"] && metadata["url"]) ||
-            (metadata["favicons"] && metadata["favicons"][0])) &&
-          metadata["title"]
-        )
-          _linksWithMeta.push({
-            link: link,
-            metadata: {
-              title: metadata["title"],
-              image: metadata["image"]
-                ? metadata["url"] + metadata["image"]
-                : metadata["favicons"][0]["href"],
-            },
-          });
-      }
-      setLinksWithMetaData(_linksWithMeta);
-    })();
-  }, [value]);
 
   return (
     <div
@@ -91,12 +108,12 @@ export function Task({
       className={`${deleting && "animate-pulse cursor-wait opacity-75"} flex flex-col gap-2 rounded-md border-2 border-gray-300 bg-white px-2 py-2 text-black`}
     >
       <div className="flex flex-row gap-2">
-        <textarea
-          disabled={deleting}
-          value={value}
+        <TextareaAutosize
           onChange={handleChange}
-          className={`${deleting && "cursor-wait"} h-fit flex-grow`}
-        ></textarea>
+          value={value}
+          className={`${deleting && "cursor-wait"} textarea h-fit flex-grow`}
+          maxRows={20}
+        />
         <button
           disabled={deleting}
           className={`${deleting && "cursor-wait"} min-w-min text-red-400`}
@@ -120,6 +137,7 @@ export function Task({
       <div className="flex flex-row flex-wrap">
         {linksWithMeta.map((link) => (
           <a
+            key={link.link}
             href={link.link}
             target="_blank"
             className="flex flex-row items-center gap-2 rounded-lg border-2 bg-neutral-800 px-2 py-1 text-white"

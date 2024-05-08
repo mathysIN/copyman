@@ -8,6 +8,4 @@ import {
   ServerToClientEvents,
 } from "~/server";
 
-export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(
-  "ws://localhost:3000",
-);
+export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io();

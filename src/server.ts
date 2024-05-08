@@ -8,6 +8,7 @@ import {
 } from "~/utils/authenticate";
 import { ContentType } from "~/server/db/redis";
 import { Roboto_Mono } from "next/font/google";
+import "dotenv/config";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";

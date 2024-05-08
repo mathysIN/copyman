@@ -188,8 +188,8 @@ export function ActiveSession({
               </TooltipTrigger>
               <TooltipContent>
                 <p>
-                  Les changements en direct sont désactivés. Rafraichissez la
-                  page pour voir les changements d'autres clients connectés.
+                  {`Les changements en direct sont désactivés. Rafraichissez la
+                  page pour voir les changements d'autres clients connectés.`}
                 </p>
               </TooltipContent>
             </Tooltip>

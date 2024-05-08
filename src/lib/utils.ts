@@ -9,7 +9,7 @@ export function cn(...inputs: ClassValue[]) {
 export function extractLinksFromString(input: string): string[] {
   const regex = /(https?:\/\/[^\s]+)/g;
   const links = input.match(regex);
-  return links || [];
+  return links ?? [];
 }
 
 export type LinkMetadata = {
@@ -26,9 +26,9 @@ export async function getLinkMetadata(
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, "text/html");
 
-    const title = doc.querySelector("title")?.textContent?.trim() || "";
+    const title = doc.querySelector("title")?.textContent?.trim() ?? "";
     const description =
-      doc.querySelector('meta[name="description"]')?.getAttribute("content") ||
+      doc.querySelector('meta[name="description"]')?.getAttribute("content") ??
       "";
 
     return { title, description };

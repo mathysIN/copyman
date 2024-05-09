@@ -177,7 +177,11 @@ export class Session {
   }
 
   async getAllContent() {
-    return contents.getall(this.withSessionKey(REDIS_CONTENT_PREFIX, "*"));
+    return (
+      await contents.getall(this.withSessionKey(REDIS_CONTENT_PREFIX, "*"))
+    ).sort((a, b) => {
+      return parseInt(b.createdAt) - parseInt(a.createdAt);
+    });
   }
 
   async setPassword(password?: string) {

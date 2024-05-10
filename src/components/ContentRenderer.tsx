@@ -15,6 +15,7 @@ const ContentRenderer = ({
   content: AttachmentType;
   onContentDelete: (contentId: string) => any;
 }) => {
+  const [deleting, setDeleting] = useState(false);
   const [contentType, setContentType] = useState<
     "video" | "image" | "audio" | null
   >(null);
@@ -70,7 +71,9 @@ const ContentRenderer = ({
   };
 
   return (
-    <div className="space-y h-fit rounded-md border-2 border-gray-300 bg-white p-2 text-gray-900">
+    <div
+      className={`${deleting && "animate-pulse cursor-wait opacity-75"} space-y h-fit rounded-md border-2 border-gray-300 bg-white p-2 text-gray-900`}
+    >
       {contentType && (
         <>
           <div
@@ -100,10 +103,12 @@ const ContentRenderer = ({
           </a>
           <button
             className="text-red-400"
-            onClick={() => {
-              fetch(`/api/content?contentId=${content.id}`, {
+            onClick={async () => {
+              setDeleting(true);
+              await fetch(`/api/content?contentId=${content.id}`, {
                 method: "DELETE",
               }).then(() => onContentDelete(content.id));
+              setDeleting(false);
             }}
           >
             <FontAwesomeIcon icon={faTrash} />

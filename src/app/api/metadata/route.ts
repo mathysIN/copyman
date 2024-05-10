@@ -6,7 +6,9 @@ type MetadataParams = {
   url?: string;
 };
 
-const cachedMetadata = new ExpiryMap<string, urlMetadata.Result>(1000 * 60 * 5);
+const cachedMetadata = new ExpiryMap<string, urlMetadata.Result>(
+  1000 * 60 * 10,
+);
 
 // FIXME: This shit really needs ratelimiting
 export async function GET(req: Request, context: { params: MetadataParams }) {
@@ -17,7 +19,7 @@ export async function GET(req: Request, context: { params: MetadataParams }) {
   if (cachedMetadata.has(url)) {
     metadata = cachedMetadata.get(url);
   } else {
-    metadata = await urlMetadata(url);
+    metadata = await urlMetadata(url).catch(() => {});
     if (metadata) cachedMetadata.set(url, metadata);
   }
   if (!metadata) {

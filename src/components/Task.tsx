@@ -1,6 +1,6 @@
 "use client";
 
-import { faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faLink, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useState } from "react";
 import {
@@ -16,7 +16,7 @@ const REQUEST_DELAY = 800;
 type LinksWithMeta = {
   link: string;
   metadata: {
-    image: string;
+    image?: string;
     title: string;
   };
 };
@@ -49,8 +49,22 @@ export function Task({
     setExtractedLinks(links);
 
     const _linksWithMeta: LinksWithMeta[] = [];
+    [].map(() => {
+      return {};
+    });
+    setLinksWithMetaData(
+      Array.from(links).map((link) => {
+        return {
+          link: link,
+          metadata: {
+            title: new URL(link).hostname,
+          },
+        };
+      }),
+    );
     for (const link of links) {
       const metadata = await getLinkMetadataFromClient(link);
+
       if (
         metadata &&
         ((metadata["image"] && metadata["url"]) ||
@@ -64,6 +78,13 @@ export function Task({
             image: metadata["image"]
               ? metadata["url"] + metadata["image"]
               : metadata["favicons"][0]["href"],
+          },
+        });
+      else
+        _linksWithMeta.push({
+          link: link,
+          metadata: {
+            title: new URL(link).hostname,
           },
         });
     }
@@ -143,7 +164,12 @@ export function Task({
             className="flex flex-row items-center gap-2 rounded-lg border-2 bg-neutral-800 px-2 py-1 text-white"
           >
             <p>{link.metadata.title}</p>
-            <img src={link.metadata.image} width={20} height={20} alt="" />
+            {link.metadata.image && (
+              <img src={link.metadata.image} width={20} height={20} alt="" />
+            )}
+            {!link.metadata.image && (
+              <FontAwesomeIcon icon={faLink} height={20} width={20} />
+            )}
           </a>
         ))}
       </div>

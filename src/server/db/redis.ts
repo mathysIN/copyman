@@ -49,8 +49,9 @@ class RedisWithPrefix<T extends {}> {
   }
 
   async hmnew(key: string, value: NonNullable<T>) {
-    if (!(await this.hgetall(key)))
+    if (!(await this.exists(key))) {
       return this.client.hmset(`${this.prefix}:${key}`, value);
+    }
   }
 
   async hmset(key: string, kv: Partial<T>) {

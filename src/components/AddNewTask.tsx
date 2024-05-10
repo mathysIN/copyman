@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { ContentType, NoteType } from "~/server/db/redis";
 
 export function AddNewTask({
@@ -7,8 +8,11 @@ export function AddNewTask({
 }: {
   onNewContent?: (task: NoteType) => any;
 }) {
-  const addTask = (content: string) => {
-    fetch("/api/notes", {
+  const [loading, setLoading] = useState(false);
+
+  const addTask = async (content: string) => {
+    setLoading(true);
+    await fetch("/api/notes", {
       method: "POST",
       body: JSON.stringify({ content: content } as NoteType),
     }).then((res) => {
@@ -18,11 +22,15 @@ export function AddNewTask({
         });
       }
     });
+    setLoading(false);
   };
 
   return (
-    <div className="flex h-16 flex-col gap-2 rounded-xl bg-white px-2 py-2 text-black">
+    <div
+      className={`${loading && "animate-pulse cursor-wait opacity-75"} flex h-16 flex-col gap-2 rounded-xl bg-white px-2 py-2 text-black`}
+    >
       <textarea
+        disabled={loading}
         placeholder="Nouvelle note"
         className="h-full"
         onKeyDown={(e) => {

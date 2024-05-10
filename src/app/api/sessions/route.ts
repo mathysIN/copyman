@@ -8,17 +8,13 @@ import {
 import { NextResponse } from "next/server";
 import { hashPassword } from "~/utils/password";
 
-type Params = {
-  sessionId?: string;
-};
-
-export async function GET(req: Request, context: { params: Params }) {
-  const sessionId = context?.params?.sessionId;
-  const password = cookies().get("password")?.value;
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const sessionId = url.searchParams.get("sessionId");
+  const password = url.searchParams.get("password");
   let session;
   if (sessionId)
     session = await getSessionWithSessionId(sessionId, undefined, true);
-  else session = await getSessionWithCookies(cookies(), true);
   if (!session)
     return NextResponse.json({ createNewSession: true }, { status: 200 });
   if (password) {
@@ -49,7 +45,7 @@ export async function POST(req: Request) {
     cookies().set("password", hashPassword(password), {
       expires: Date.now() + 10 * 365 * 24 * 60 * 60 * 1000,
     });
-  redirect(`/${sessionId}`);
+  return redirect(`/${sessionId}`);
 }
 
 export async function PATCH(req: Request) {

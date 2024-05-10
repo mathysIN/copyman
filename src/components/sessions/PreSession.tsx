@@ -4,13 +4,17 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import type { SessionType } from "~/server/db/redis";
+import { useSearchParams } from "next/navigation";
 
 export function PreSession() {
   const formRef = useRef<HTMLFormElement>(null);
+  const searchParams = useSearchParams();
   const [sessionValue, setSessionValue] = useState("");
   const [passwordValue, setPasswordValue] = useState("");
   const [needPassword, setNeedPassword] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState(
+    searchParams.get("msg") ?? "",
+  );
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -73,6 +77,7 @@ export function PreSession() {
           className="outline-none"
           placeholder="session"
         />
+        <input name="create" defaultValue="true" hidden />
       </span>
       {needPassword && (
         <span className="flex flex-row space-x-[1px] rounded-xl border-blue-600 bg-white p-2 text-black">

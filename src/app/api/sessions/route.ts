@@ -7,6 +7,7 @@ import {
 } from "~/utils/authenticate";
 import { NextResponse } from "next/server";
 import { hashPassword } from "~/utils/password";
+import { isValidSessionId } from "~/lib/utils";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -32,14 +33,29 @@ export async function POST(req: Request) {
   const data = await req.formData();
   const sessionId = data.get("session")?.toString()?.toLowerCase();
   const password = data.get("password")?.toString();
+  const create = data.get("create")?.toString();
+
   if (sessionId) {
-    await sessions
-      .hmnew(sessionId, {
-        sessionId: sessionId,
-        createdAt: Date.now().toString(),
-        password: data.get("password")?.toString(),
-      })
-      .catch(() => {});
+    cookies().set("sessionId", sessionId, {
+      expires: Date.now() + 10 * 365 * 24 * 60 * 60 * 1000,
+    });
+    if (!isValidSessionId(sessionId))
+      return redirect("/?msg=invalid_session_id");
+
+    const sessionData: {
+      sessionId: string;
+      createdAt: string;
+      password?: string;
+    } = {
+      sessionId: sessionId,
+      createdAt: Date.now().toString(),
+    };
+
+    if (password !== undefined) {
+      sessionData.password = password;
+    }
+
+    await sessions.hmnew(sessionId, sessionData).catch(() => {});
   }
   if (password)
     cookies().set("password", hashPassword(password), {

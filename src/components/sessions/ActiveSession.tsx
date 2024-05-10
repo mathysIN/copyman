@@ -30,6 +30,7 @@ import {
   TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { socket } from "~/lib/client/socket";
+import { deleteAllCookies } from "~/lib/utils";
 import {
   AttachmentType,
   ContentType,
@@ -190,8 +191,7 @@ export function ActiveSession({
           </Dialog>
           <button
             onClick={() => {
-              document.cookie = `session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-              document.cookie = `password=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+              deleteAllCookies();
               window.location.href = "/";
             }}
           >

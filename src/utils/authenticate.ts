@@ -3,7 +3,7 @@ import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension
 import { Session, sessions } from "~/server/db/redis";
 import cookie from "cookie";
 
-const BANNED_SESSIONS = ["admin", "favicon.ico"];
+const BANNED_SESSIONS = ["admin", "favicon.ico", "socket.io"];
 
 export async function getSessionWithCookies(
   cookies: RequestCookies | ReadonlyRequestCookies,
@@ -28,21 +28,24 @@ export async function getSessionWithSessionId(
   sessionId: string,
   password?: string,
   ignorePassword = false,
+  createIfNull = false,
 ): Promise<Session | null> {
-  return getSession(sessionId, password, ignorePassword);
+  return getSession(sessionId, password, ignorePassword, createIfNull);
 }
 
 async function getSession(
   sessionId: string,
   password?: string,
   ignorePassword = false,
-  createIfNull = true,
+  createIfNull = false,
 ): Promise<Session | null> {
   const sessionIdLower = sessionId.toLowerCase();
+  console.log({ createIfNull });
   if (BANNED_SESSIONS.includes(sessionIdLower)) return null;
   let response = await sessions.hgetall(sessionIdLower);
   if (!response && !createIfNull) return null;
   if (!response && createIfNull) {
+    console.log("creating new session");
     const newSession = {
       sessionId: sessionIdLower,
       createdAt: Date.now().toString(),

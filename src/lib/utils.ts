@@ -54,3 +54,17 @@ export function areSetEqual<T>(set1: Set<T>, set2: Set<T>): boolean {
   }
   return true;
 }
+
+export function isValidSessionId(s: string): boolean {
+  return /^[a-zA-Z0-9_]*$/.test(s);
+}
+
+export function deleteAllCookies() {
+  const cookies = document.cookie.split(";");
+
+  for (const cookie of cookies) {
+    const eqPos = cookie.indexOf("=");
+    const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+    document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT";
+  }
+}

@@ -103,8 +103,6 @@ export function ActiveSession({
     });
 
     socket.on("roomInsight", (room) => {
-      console.log("roomInsight");
-      console.log({ room });
       setRoomSize(room.connectedCount);
     });
 

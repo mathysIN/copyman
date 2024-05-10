@@ -40,12 +40,10 @@ async function getSession(
   createIfNull = false,
 ): Promise<Session | null> {
   const sessionIdLower = sessionId.toLowerCase();
-  console.log({ createIfNull });
   if (BANNED_SESSIONS.includes(sessionIdLower)) return null;
   let response = await sessions.hgetall(sessionIdLower);
   if (!response && !createIfNull) return null;
   if (!response && createIfNull) {
-    console.log("creating new session");
     const newSession = {
       sessionId: sessionIdLower,
       createdAt: Date.now().toString(),

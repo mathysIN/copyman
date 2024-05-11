@@ -68,3 +68,20 @@ export function deleteAllCookies() {
     document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT";
   }
 }
+
+export function stringToHash(str: string) {
+  let hash = 0;
+  if (str.length === 0) return hash;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash &= hash;
+  }
+  return hash;
+}
+
+export function removeFileExtension(filename: string) {
+  var parts = filename.split(".");
+  parts.pop();
+  return parts.join(".");
+}

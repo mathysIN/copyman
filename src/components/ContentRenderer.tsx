@@ -5,8 +5,24 @@ import {
   faTrash,
 } from "@fortawesome/free-solid-svg-icons";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AttachmentType } from "~/server/db/redis";
+import { removeFileExtension, stringToHash } from "~/lib/utils";
+
+const GRADIENTS = [
+  "bg-gradient-to-r from-green-400 to-blue-500",
+  "bg-gradient-to-r from-pink-500 to-yellow-500",
+  "bg-gradient-to-r from-yellow-400 to-red-500",
+  "bg-gradient-to-r from-indigo-400 to-purple-500",
+  "bg-gradient-to-r from-red-400 to-pink-500",
+  "bg-gradient-to-r from-blue-400 to-green-500",
+  "bg-gradient-to-r from-purple-400 to-indigo-500",
+  "bg-gradient-to-r from-teal-400 to-blue-500",
+  "bg-gradient-to-r from-orange-400 to-red-500",
+  "bg-gradient-to-r from-cyan-400 to-blue-500",
+  "bg-gradient-to-r from-rose-400 to-pink-500",
+  "bg-gradient-to-r from-lime-400 to-green-500",
+];
 
 const ContentRenderer = ({
   content,
@@ -19,6 +35,7 @@ const ContentRenderer = ({
   const [contentType, setContentType] = useState<
     "video" | "image" | "audio" | null
   >(null);
+  const [audioPlaying, setAudioPlaying] = useState(false);
 
   // Function to determine the content type based on the URL
   const getContentType = (url: string) => {
@@ -58,12 +75,26 @@ const ContentRenderer = ({
           />
         );
       case "audio":
+        const index =
+          Math.abs(stringToHash(content.attachmentURL)) % GRADIENTS.length;
+        const randomGradient = GRADIENTS[index];
         return (
-          <audio
-            src={content.attachmentURL}
-            controls
-            className="absolute inset-0 h-full w-full object-cover"
-          />
+          <>
+            <p
+              className={`${randomGradient} absolute bottom-0 left-0 right-0 top-0 z-20 mx-auto my-auto flex h-max w-max items-center justify-center bg-clip-text font-extrabold text-white`}
+            >
+              <p className="overflow-hidden text-center text-4xl">
+                {removeFileExtension(content.attachmentPath)}
+              </p>
+            </p>
+            <audio
+              onPlay={() => setAudioPlaying(true)}
+              onPause={() => setAudioPlaying(false)}
+              src={content.attachmentURL}
+              controls
+              className={`${randomGradient} ${audioPlaying && "animate-gradient"} absolute inset-0 h-full w-full bg-opacity-25 bg-[length:200%_auto] object-cover`}
+            ></audio>
+          </>
         );
       default:
         return <p>{content.attachmentPath}</p>;

@@ -81,7 +81,7 @@ export function stringToHash(str: string) {
 }
 
 export function removeFileExtension(filename: string) {
-  var parts = filename.split(".");
+  const parts = filename.split(".");
   parts.pop();
   return parts.join(".");
 }

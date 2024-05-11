@@ -81,7 +81,7 @@ const ContentRenderer = ({
         return (
           <>
             <p
-              className={`${randomGradient} absolute bottom-0 left-0 right-0 top-0 z-20 mx-auto my-auto flex h-max w-max items-center justify-center bg-clip-text font-extrabold text-white`}
+              className={`absolute bottom-0 left-0 right-0 top-0 z-20 mx-auto my-auto flex h-max w-max items-center justify-center bg-clip-text font-extrabold text-white`}
             >
               <p className="overflow-hidden text-center text-4xl">
                 {removeFileExtension(content.attachmentPath)}

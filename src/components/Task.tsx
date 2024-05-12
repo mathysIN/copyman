@@ -188,7 +188,7 @@ export function Task({
           />
           {!isFocused && (
             <div
-              className="absolute inset-y-0 w-full overflow-scroll text-black"
+              className="absolute inset-y-0 w-full overflow-scroll overflow-x-hidden text-black"
               onClick={onMarkdownRenderClick}
               dangerouslySetInnerHTML={{ __html: renderedMarkdown }}
             ></div>

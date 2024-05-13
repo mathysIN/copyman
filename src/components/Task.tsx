@@ -27,7 +27,7 @@ function _renderMarkdown(markdown: string): string {
   markdown = markdown.replace(boldRegex, "<strong>$1</strong>");
   markdown = markdown.replace(italicRegex, "<em>$1</em>");
   markdown = markdown.replace(underlineRegex, "<u>$1</u>");
-  markdown = markdown.replace(codeBlockRegex, "<pre><code>$1</code></pre>");
+  markdown = markdown.replace(codeBlockRegex, "<pre><code>$1<br></code></pre>");
   markdown = markdown.replace(/\n/g, "<br>");
 
   return markdown;

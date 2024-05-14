@@ -136,7 +136,7 @@ export function ActiveSession({
             <DialogTrigger asChild className="cursor-pointer">
               <FontAwesomeIcon
                 icon={faLock}
-                className={`${hasPassword && "text-yellow-400"}`}
+                className={`${hasPassword && "text-yellow-400"} active:scale-95`}
               />
             </DialogTrigger>
             <DialogContent className="sm:max-w-[480px]">
@@ -188,6 +188,7 @@ export function ActiveSession({
             </DialogContent>
           </Dialog>
           <button
+            className="active:scale-95"
             onClick={() => {
               deleteAllCookies();
               window.location.href = "/";

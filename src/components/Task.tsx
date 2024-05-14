@@ -1,24 +1,26 @@
 "use client";
 
-import { faLink, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faCopy, faLink, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useRef, useState } from "react";
 import {
   areSetEqual,
+  cn,
   extractLinksFromString,
   getLinkMetadataFromClient,
 } from "~/lib/utils";
 import type { NoteType } from "~/server/db/redis";
 import TextareaAutosize from "react-textarea-autosize";
-import DOMPurify from "dompurify";
+import he from "he";
+import ReactMarkdown from "react-markdown";
+import remarkBreaks from "remark-breaks";
 
 function _renderMarkdown(markdown: string): string {
   const headerRegex = /^(#+)\s(.+)/gm;
   const boldRegex = /\*\*(.*?)\*\*/g;
   const italicRegex = /_(.*?)_/g;
   const underlineRegex = /__(.*?)__/g;
-  const codeBlockRegex = /```([^```]+)```/g;
-
+  const codeBlockRegex = /```([^`]+)```/g;
   markdown = markdown.replace(headerRegex, (match, level, content) => {
     const headerLevel = level.length;
     return `<h${headerLevel}>${content}</h${headerLevel}>`;
@@ -61,6 +63,7 @@ export function Task({
   const [renderedMarkdown, setRenderedMarkdown] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isFocused, setIsFocused] = useState(false);
+  const [pleaseDontFocusBro, setPleaseDontFocusBro] = useState(false);
 
   const handleFocus = () => {
     setIsFocused(true);
@@ -72,7 +75,7 @@ export function Task({
   };
 
   const renderMarkdown = async () => {
-    setRenderedMarkdown(DOMPurify.sanitize(_renderMarkdown(value)));
+    setRenderedMarkdown(_renderMarkdown(he.encode(value, {})));
   };
 
   useEffect(() => {
@@ -80,6 +83,7 @@ export function Task({
   }, []);
 
   const onMarkdownRenderClick = () => {
+    if (pleaseDontFocusBro) return;
     setIsFocused(true);
     textareaRef?.current?.focus();
   };
@@ -175,7 +179,7 @@ export function Task({
       key={content.id}
       className={`${deleting && "animate-pulse cursor-wait opacity-75"} flex flex-col gap-2 rounded-md border-2 border-gray-300 bg-white px-2 py-2 text-black`}
     >
-      <div className="relative flex flex-row gap-2">
+      <div className="relative flex flex-col gap-2">
         <div className="flew-grow textarea relative w-full">
           <TextareaAutosize
             ref={textareaRef}
@@ -183,21 +187,88 @@ export function Task({
             onBlur={handleBlur}
             onChange={handleChange}
             value={value}
-            className={`${deleting && "cursor-wait"} ${!isFocused && "opacity-0"} textarea h-fit w-full  flex-grow`}
+            className={`${deleting && "cursor-wait"} ${!isFocused && "opacity-0"} textarea h-fit w-full flex-grow border-2`}
             maxRows={20}
           />
           {!isFocused && (
             <div
-              className="absolute inset-y-0 w-full overflow-scroll overflow-x-hidden text-black"
+              className="absolute inset-y-0 w-full overflow-hidden overflow-x-hidden break-words border-2 border-neutral-100 text-black"
               onClick={onMarkdownRenderClick}
-              dangerouslySetInnerHTML={{ __html: renderedMarkdown }}
-            ></div>
+            >
+              <ReactMarkdown
+                remarkPlugins={[remarkBreaks]}
+                children={value.replace(/(?<=\n\n)(?![*-])/gi, "&nbsp;\n ")}
+                components={{
+                  pre({ node, children, className, ...props }) {
+                    return (
+                      <div className="relative">
+                        <pre
+                          className={cn(className, "overflow-x-scroll")}
+                          {...props}
+                        >
+                          <br />
+                          {children}
+                          <br />
+                        </pre>
+                      </div>
+                    );
+                  },
+                  code({ node, children, ...props }) {
+                    return (
+                      <>
+                        <button
+                          className="absolute right-0 top-0 m-1 rounded-md bg-white px-2 py-1 text-black active:scale-95"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(`${children}`);
+                          }}
+                        >
+                          <FontAwesomeIcon icon={faCopy} />
+                        </button>
+                        {children}
+                      </>
+                    );
+                  },
+                }}
+              />
+            </div>
           )}
         </div>
+      </div>
+      {linksWithMeta.length > 0 && (
+        <div className="flex flex-row flex-wrap">
+          {linksWithMeta.map((link) => (
+            <a
+              key={link.link}
+              href={link.link}
+              target="_blank"
+              className="flex flex-row items-center gap-2 rounded-lg border-2 bg-neutral-800 px-2 py-1 text-white"
+            >
+              <p>{link.metadata.title}</p>
+              {link.metadata.image && (
+                <img src={link.metadata.image} width={20} height={20} alt="" />
+              )}
+              {!link.metadata.image && (
+                <FontAwesomeIcon icon={faLink} height={20} width={20} />
+              )}
+            </a>
+          ))}
+        </div>
+      )}
 
+      <div className="flex flex-row justify-start gap-x-2">
+        <button
+          className="text-black active:scale-95"
+          onClick={(e) => {
+            e.stopPropagation();
+            navigator.clipboard.writeText(value);
+          }}
+        >
+          <FontAwesomeIcon icon={faCopy} />
+        </button>
         <button
           disabled={deleting}
-          className={`${deleting && "cursor-wait"} min-w-min text-red-400`}
+          className={`${deleting && "cursor-wait"} min-w-min text-red-400 active:scale-95`}
           onClick={async () => {
             setDeleting(true);
             fetch("/api/notes", {
@@ -214,24 +285,6 @@ export function Task({
         >
           <FontAwesomeIcon icon={faTrash} />
         </button>
-      </div>
-      <div className="flex flex-row flex-wrap">
-        {linksWithMeta.map((link) => (
-          <a
-            key={link.link}
-            href={link.link}
-            target="_blank"
-            className="flex flex-row items-center gap-2 rounded-lg border-2 bg-neutral-800 px-2 py-1 text-white"
-          >
-            <p>{link.metadata.title}</p>
-            {link.metadata.image && (
-              <img src={link.metadata.image} width={20} height={20} alt="" />
-            )}
-            {!link.metadata.image && (
-              <FontAwesomeIcon icon={faLink} height={20} width={20} />
-            )}
-          </a>
-        ))}
       </div>
     </div>
   );

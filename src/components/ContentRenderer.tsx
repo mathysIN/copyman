@@ -80,13 +80,13 @@ const ContentRenderer = ({
         const randomGradient = GRADIENTS[index];
         return (
           <>
-            <p
-              className={`absolute bottom-0 left-0 right-0 top-0 z-20 mx-auto my-auto flex h-max w-max items-center justify-center bg-clip-text font-extrabold text-white`}
+            <div
+              className={`absolute bottom-0 left-0 right-0 top-0 z-20 mx-auto my-auto flex h-fit w-fit items-center justify-center bg-clip-text font-extrabold text-white`}
             >
-              <p className="overflow-hidden text-center text-4xl">
+              <p className="overflow-hidden text-center text-2xl">
                 {removeFileExtension(content.attachmentPath)}
               </p>
-            </p>
+            </div>
             <audio
               onPlay={() => setAudioPlaying(true)}
               onPause={() => setAudioPlaying(false)}
@@ -123,17 +123,18 @@ const ContentRenderer = ({
       <div className="flex flex-row items-center gap-4">
         <div key={content.id} className="z-10 flex gap-x-2">
           <button
+            className="active:scale-95"
             onClick={() => navigator.clipboard.writeText(content.attachmentURL)}
           >
             <FontAwesomeIcon icon={faLink} />
           </button>
           <a href={content.attachmentURL} target="_blank">
-            <button className="text-gray-900">
+            <button className="text-gray-900 active:scale-95">
               <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
             </button>
           </a>
           <button
-            className="text-red-400"
+            className="text-red-400 active:scale-95"
             onClick={async () => {
               setDeleting(true);
               await fetch(`/api/content?contentId=${content.id}`, {
@@ -145,8 +146,7 @@ const ContentRenderer = ({
             <FontAwesomeIcon icon={faTrash} />
           </button>
         </div>
-
-        <p className="center flex-1 overflow-scroll whitespace-nowrap text-right  align-middle text-sm text-gray-500 sm:w-64">
+        <p className="center flex-1 overflow-hidden whitespace-nowrap text-right  align-middle text-sm text-gray-500 sm:w-64">
           {content.attachmentPath}
         </p>
       </div>

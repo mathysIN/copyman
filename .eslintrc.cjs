@@ -43,6 +43,7 @@ const config = {
     "@typescript-eslint/prefer-optional-chain": "off",
     "@typescript-eslint/no-misused-promises": "off",
     "@typescript-eslint/dot-notation": "off",
+    "react/no-children-prop": "off",
     "@typescript-eslint/prefer-nullish-coalescing": "off",
     "drizzle/enforce-delete-with-where": [
       "error",

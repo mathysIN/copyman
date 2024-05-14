@@ -1,15 +1,32 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { AttachmentType, ContentType } from "~/server/db/redis";
-import { UploadButton } from "~/utils/uploadthing";
+import { useRef } from "react";
+import { AttachmentType } from "~/server/db/redis";
+import { UploadDropzone } from "~/utils/uploadthing";
+import {} from "@uploadthing/react";
+import { ClientUploadedFileData } from "uploadthing/types";
+
+export const UPLOADTHING_ENDPOINT = "imageUploader";
 
 export default function UploadContent({
   onNewContent = () => {},
 }: {
   onNewContent?: (content: AttachmentType) => any;
 }) {
+  const onClientUploadComplete = (
+    res: ClientUploadedFileData<AttachmentType>[],
+  ) => {
+    const response = res[0];
+    if (!response) return;
+    const content: AttachmentType = response.serverData;
+    onNewContent(content);
+  };
+  const onUploadError = (error: Error) => {
+    alert(`ERROR! ${error.message}`);
+  };
+
   const inputFileRef = useRef<HTMLInputElement>(null);
+
   return (
     <form
       onSubmit={async (event) => {
@@ -36,22 +53,17 @@ export default function UploadContent({
       }}
     >
       <div className="h-16">
-        <UploadButton
-          endpoint="imageUploader"
-          className="h-full rounded-xl bg-white text-black"
+        <UploadDropzone
+          endpoint={UPLOADTHING_ENDPOINT}
+          className="h-full cursor-pointer rounded-xl bg-white text-black"
+          config={{ appendOnPaste: true, mode: "auto" }}
           appearance={{
+            label: { display: "none" },
             container: { color: "black" },
             button: { color: "black" },
           }}
-          onClientUploadComplete={(res) => {
-            const response = res[0];
-            if (!response) return;
-            const content: AttachmentType = response.serverData;
-            onNewContent(content);
-          }}
-          onUploadError={(error: Error) => {
-            alert(`ERROR! ${error.message}`);
-          }}
+          onClientUploadComplete={onClientUploadComplete}
+          onUploadError={onUploadError}
         />
       </div>
     </form>

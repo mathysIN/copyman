@@ -7,11 +7,13 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { AddNewTask } from "~/components/AddNewTask";
+import { useEffect, useRef, useState } from "react";
+import { AddNewTask, AddNewTaskRef } from "~/components/AddNewTask";
 import ContentRenderer from "~/components/ContentRenderer";
 import { Task } from "~/components/Task";
-import UploadContent from "~/components/UploadContent";
+import UploadContent, {
+  UPLOADTHING_ENDPOINT,
+} from "~/components/UploadContent";
 import { Button } from "~/components/ui/button";
 import {
   Dialog,
@@ -37,6 +39,7 @@ import {
   NoteType,
   SessionType,
 } from "~/server/db/redis";
+import { useUploadThing } from "~/utils/uploadthing";
 
 export function ActiveSession({
   session,
@@ -47,9 +50,22 @@ export function ActiveSession({
   sessionContents: ContentType[];
   hasPassword: boolean;
 }) {
+  const uploadThing = useUploadThing(UPLOADTHING_ENDPOINT, {
+    onClientUploadComplete: (res) => {
+      const response = res[0];
+      if (!response) return;
+      const content: AttachmentType = response.serverData;
+      onNewContent(content);
+    },
+    onUploadError: (error) => {
+      alert(`ERROR! ${error.message}`);
+    },
+  });
+
   const [isConnected, setIsConnected] = useState(false);
   const [roomSize, setRoomSize] = useState(0);
   const [transport, setTransport] = useState("N/A");
+  const newTaskComponent = useRef<AddNewTaskRef>(null);
 
   function onConnect() {
     setIsConnected(true);
@@ -110,6 +126,45 @@ export function ActiveSession({
     socket.on("disconnect", onDisconnect);
   }, [onNewContent]);
 
+  const handleGlobalPaste = (event: ClipboardEvent) => {
+    const activeElement = document.activeElement as HTMLElement;
+
+    if (
+      activeElement.tagName !== "TEXTAREA" &&
+      activeElement.tagName !== "INPUT"
+    ) {
+      const clipboardData = event.clipboardData;
+      if (clipboardData) {
+        handleClipboardData(clipboardData);
+      }
+    }
+  };
+
+  const handleClipboardData = (clipboardData: DataTransfer) => {
+    const text = clipboardData.getData("text");
+    if (text) {
+      newTaskComponent.current?.addTask(text);
+    }
+
+    for (let i = 0; i < clipboardData.items.length; i++) {
+      const item = clipboardData.items[i];
+      if (!item) continue;
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (!file) continue;
+        uploadThing.startUpload([file]);
+      }
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener("paste", handleGlobalPaste);
+
+    return () => {
+      document.removeEventListener("paste", handleGlobalPaste);
+    };
+  }, []);
+
   const [hasPassword, setHasPassword] = useState(_hasPassword);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [passwordModalLoading, setPasswordModalLoading] = useState(false);
@@ -117,6 +172,7 @@ export function ActiveSession({
   const [hidden, setHidden] = useState(true);
   const [cachedContents, setCachedContents] =
     useState<ContentType[]>(sessionContents);
+
   return (
     <div className="w-4/5 pb-10">
       <div className="flex flex-col items-center justify-center">
@@ -241,7 +297,7 @@ export function ActiveSession({
         </div>
         <div className=" flex flex-[50%] flex-col gap-y-2">
           <h2>Autres trucs</h2>
-          <AddNewTask onNewContent={onNewContent} />
+          <AddNewTask onNewContent={onNewContent} ref={newTaskComponent} />
           {cachedContents
             .filter((c: ContentType): c is NoteType => c.type === "note")
             .map((task) => (

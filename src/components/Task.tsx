@@ -14,6 +14,7 @@ import TextareaAutosize from "react-textarea-autosize";
 import he from "he";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
+import remarkGfm from "remark-gfm";
 
 function _renderMarkdown(markdown: string): string {
   const headerRegex = /^(#+)\s(.+)/gm;
@@ -142,9 +143,10 @@ export function Task({
     setLinksWithMetaData(_linksWithMeta);
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleChange = () => {
     setModifying(true);
-    const newValue = e.target.value;
+    const newValue = textareaRef?.current?.value;
+    if (!newValue) return;
     setValue(newValue);
     if (timerId) {
       clearTimeout(timerId);
@@ -174,6 +176,41 @@ export function Task({
     renderLinks(newValue);
   };
 
+  const handleCheckboxChange = (index: number) => {
+    const lines = value.split("\n");
+    const newLines = lines.map((line, i) => {
+      if (index === i) {
+        return line.startsWith("- [ ]")
+          ? `- [x]${line.slice(5)}`
+          : `- [ ]${line.slice(5)}`;
+      }
+      return line;
+    });
+    if (textareaRef.current?.value)
+      textareaRef.current.value = newLines.join("\n");
+  };
+
+  const renderListItem = ({ children, ...props }: any) => {
+    const index = parseInt(props.node.position.start.line, 10) - 1;
+    const lineContent = value.split("\n")[index];
+    if (!lineContent) return <></>;
+
+    return (
+      <li>
+        <input
+          type="checkbox"
+          checked={lineContent.startsWith("- [x]")}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleCheckboxChange(index);
+            handleChange();
+          }}
+        />{" "}
+        {lineContent.slice(6).trim()}
+      </li>
+    );
+  };
+
   return (
     <div
       key={content.id}
@@ -196,9 +233,11 @@ export function Task({
               onClick={onMarkdownRenderClick}
             >
               <ReactMarkdown
-                remarkPlugins={[remarkBreaks]}
-                children={value.replace(/(?<=\n\n)(?![*-])/gi, "&nbsp;\n ")}
+                remarkPlugins={[remarkBreaks, remarkGfm]}
+                children={value}
+                // children={value.replace(/(?<=\n\n)(?![*-])/gi, "&nbsp;\n ")}
                 components={{
+                  li: renderListItem,
                   pre({ node, children, className, ...props }) {
                     return (
                       <div className="relative">

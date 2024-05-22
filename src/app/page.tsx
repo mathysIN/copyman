@@ -4,9 +4,14 @@ import { ActiveSession } from "~/components/sessions/ActiveSession";
 import { getSessionWithCookies } from "~/utils/authenticate";
 import Link from "next/link";
 import { ContentType } from "~/server/db/redis";
+import { Exception } from "~/utils/types";
 
 export default async function HomePage() {
-  const session = await getSessionWithCookies(cookies());
+  let error: undefined | Exception;
+  const session = await getSessionWithCookies(cookies()).catch((e) => {
+    error = e;
+    return null;
+  });
   let sessionContents: ContentType[] = [];
 
   if (session) {
@@ -32,8 +37,13 @@ export default async function HomePage() {
       </div>
       <div className="h-12" />
       <div className="flex flex-col items-center justify-center ">
-        {!session && <PreSession />}
-        {session && (
+        {error && (
+          <p className="text-red-500">
+            Il y a eu une erreur avec les serveurs de Copyman
+          </p>
+        )}
+        {!error && !session && <PreSession />}
+        {!error && session && (
           <ActiveSession
             session={session.toJSON()}
             hasPassword={session.hasPassword()}

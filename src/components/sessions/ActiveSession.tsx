@@ -146,9 +146,7 @@ export function ActiveSession({
       newTaskComponent.current?.addTask(text);
     }
 
-    for (let i = 0; i < clipboardData.items.length; i++) {
-      const item = clipboardData.items[i];
-      if (!item) continue;
+    for (const item of clipboardData.items) {
       if (item.type.startsWith("image/")) {
         const file = item.getAsFile();
         if (!file) continue;

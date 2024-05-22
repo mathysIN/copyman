@@ -8,7 +8,8 @@ interface Props {}
 export type AddNewTaskRef = {
   addTask: (content: string) => Promise<any>;
 };
-export const AddNewTask = forwardRef(
+
+const _AddNewTask = forwardRef(
   (
     { onNewContent = () => {} }: { onNewContent?: (task: NoteType) => any },
     ref,
@@ -64,3 +65,7 @@ export const AddNewTask = forwardRef(
     );
   },
 );
+
+_AddNewTask.displayName = "AddNewTask";
+
+export const AddNewTask = _AddNewTask;

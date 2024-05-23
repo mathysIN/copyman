@@ -229,7 +229,7 @@ export function Task({
           />
           {!isFocused && (
             <div
-              className="absolute inset-y-0 w-full overflow-hidden overflow-x-hidden break-words border-2 border-neutral-100 text-black"
+              className="absolute inset-y-0 w-full overflow-x-hidden break-words border-2 border-neutral-100 text-black"
               onClick={onMarkdownRenderClick}
             >
               <ReactMarkdown

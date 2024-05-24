@@ -8,13 +8,25 @@ import {
   cn,
   extractLinksFromString,
   getLinkMetadataFromClient,
+  isImageURL,
 } from "~/lib/utils";
-import type { NoteType } from "~/server/db/redis";
+import type { ContentType, NoteType } from "~/server/db/redis";
 import TextareaAutosize from "react-textarea-autosize";
 import he from "he";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "~/components/ui/alert-dialog";
 
 function _renderMarkdown(markdown: string): string {
   const headerRegex = /^(#+)\s(.+)/gm;
@@ -48,10 +60,12 @@ type LinksWithMeta = {
 
 export function Task({
   content,
+  allContent,
   onDeleteTask = () => {},
   onUpdateTask = () => {},
 }: {
   content: NoteType;
+  allContent: ContentType[];
   onDeleteTask: (taskId: string) => any;
   onUpdateTask: (task: NoteType) => any;
 }) {
@@ -115,30 +129,45 @@ export function Task({
       }),
     );
     for (const link of links) {
-      const metadata = await getLinkMetadataFromClient(link);
+      const copymanURL = allContent.find(
+        (c) => c.type == "attachment" && c.attachmentURL == link,
+      );
+      if (copymanURL && copymanURL.type == "attachment") {
+        _linksWithMeta.push({
+          link: link,
+          metadata: {
+            title: copymanURL.attachmentPath,
+            image: isImageURL(copymanURL.attachmentURL)
+              ? copymanURL.attachmentURL
+              : undefined,
+          },
+        });
+      } else {
+        const metadata = await getLinkMetadataFromClient(link);
 
-      if (
-        metadata &&
-        ((metadata["image"] && metadata["url"]) ||
-          (metadata["favicons"] && metadata["favicons"][0])) &&
-        metadata["title"]
-      )
-        _linksWithMeta.push({
-          link: link,
-          metadata: {
-            title: metadata["title"],
-            image: metadata["image"]
-              ? metadata["url"] + metadata["image"]
-              : metadata["favicons"][0]["href"],
-          },
-        });
-      else
-        _linksWithMeta.push({
-          link: link,
-          metadata: {
-            title: new URL(link).hostname,
-          },
-        });
+        if (
+          metadata &&
+          ((metadata["image"] && metadata["url"]) ||
+            (metadata["favicons"] && metadata["favicons"][0])) &&
+          metadata["title"]
+        )
+          _linksWithMeta.push({
+            link: link,
+            metadata: {
+              title: metadata["title"],
+              image: metadata["image"]
+                ? metadata["url"] + metadata["image"]
+                : metadata["favicons"][0]["href"],
+            },
+          });
+        else
+          _linksWithMeta.push({
+            link: link,
+            metadata: {
+              title: new URL(link).hostname,
+            },
+          });
+      }
     }
     setLinksWithMetaData(_linksWithMeta);
   }
@@ -200,6 +229,7 @@ export function Task({
         <input
           type="checkbox"
           checked={lineContent.startsWith("- [x]")}
+          readOnly
           onClick={(e) => {
             e.stopPropagation();
             handleCheckboxChange(index);
@@ -305,25 +335,46 @@ export function Task({
         >
           <FontAwesomeIcon icon={faCopy} />
         </button>
-        <button
-          disabled={deleting}
-          className={`${deleting && "cursor-wait"} min-w-min text-red-400 active:scale-95`}
-          onClick={async () => {
-            setDeleting(true);
-            fetch("/api/notes", {
-              method: "DELETE",
-              body: JSON.stringify({ taskId: content.id }),
-            })
-              .then(() => {
-                onDeleteTask(content.id);
-              })
-              .catch(() => {
-                setDeleting(false);
-              });
-          }}
-        >
-          <FontAwesomeIcon icon={faTrash} />
-        </button>
+
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <button
+              disabled={deleting}
+              className={`${deleting && "cursor-wait"} min-w-min text-red-400 active:scale-95`}
+            >
+              <FontAwesomeIcon icon={faTrash} />
+            </button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Suppression : êtes-vous sûr ?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Cette action ne pourra pas être annulée. Le contenu sera
+                définitivement retiré des serveurs de Copyman.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Annuler</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={async () => {
+                  setDeleting(true);
+                  fetch("/api/notes", {
+                    method: "DELETE",
+                    body: JSON.stringify({ taskId: content.id }),
+                  })
+                    .then(() => {
+                      onDeleteTask(content.id);
+                    })
+                    .catch(() => {
+                      setDeleting(false);
+                    });
+                }}
+              >
+                Confirmer
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

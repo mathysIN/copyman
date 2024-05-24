@@ -301,6 +301,7 @@ export function ActiveSession({
             .map((task) => (
               <Task
                 key={task.id}
+                allContent={cachedContents}
                 content={task}
                 onDeleteTask={onContentDelete}
                 onUpdateTask={onContentUpdate}

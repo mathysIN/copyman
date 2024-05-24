@@ -85,3 +85,13 @@ export function removeFileExtension(filename: string) {
   parts.pop();
   return parts.join(".");
 }
+
+export function isImageURL(url: string): boolean {
+  const extension = url.split(".").pop()?.toLowerCase();
+  const imageExtensions = ["jpg", "jpeg", "png", "gif", "bmp", "svg"];
+  if (extension && imageExtensions.includes(extension)) {
+    return true;
+  } else {
+    return false;
+  }
+}

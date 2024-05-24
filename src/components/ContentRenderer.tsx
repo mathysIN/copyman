@@ -8,6 +8,17 @@ import {
 import { useEffect, useRef, useState } from "react";
 import type { AttachmentType } from "~/server/db/redis";
 import { removeFileExtension, stringToHash } from "~/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "~/components/ui/alert-dialog";
 
 const GRADIENTS = [
   "bg-gradient-to-r from-green-400 to-blue-500",
@@ -133,18 +144,39 @@ const ContentRenderer = ({
               <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
             </button>
           </a>
-          <button
-            className="text-red-400 active:scale-95"
-            onClick={async () => {
-              setDeleting(true);
-              await fetch(`/api/content?contentId=${content.id}`, {
-                method: "DELETE",
-              }).then(() => onContentDelete(content.id));
-              setDeleting(false);
-            }}
-          >
-            <FontAwesomeIcon icon={faTrash} />
-          </button>
+
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button className="text-red-400 active:scale-95">
+                <FontAwesomeIcon icon={faTrash} />
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Suppression : êtes-vous sûr ?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  Cette action ne pourra pas être annulée. Le contenu sera
+                  définitivement retiré des serveurs de Copyman.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={async () => {
+                    setDeleting(true);
+                    await fetch(`/api/content?contentId=${content.id}`, {
+                      method: "DELETE",
+                    }).then(() => onContentDelete(content.id));
+                    setDeleting(false);
+                  }}
+                >
+                  Confirmer
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
         <p className="center flex-1 overflow-hidden whitespace-nowrap text-right  align-middle text-sm text-gray-500 sm:w-64">
           {content.attachmentPath}

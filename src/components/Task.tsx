@@ -205,42 +205,6 @@ export function Task({
     renderLinks(newValue);
   };
 
-  const handleCheckboxChange = (index: number) => {
-    const lines = value.split("\n");
-    const newLines = lines.map((line, i) => {
-      if (index === i) {
-        return line.startsWith("- [ ]")
-          ? `- [x]${line.slice(5)}`
-          : `- [ ]${line.slice(5)}`;
-      }
-      return line;
-    });
-    if (textareaRef.current?.value)
-      textareaRef.current.value = newLines.join("\n");
-  };
-
-  const renderListItem = ({ children, ...props }: any) => {
-    const index = parseInt(props.node.position.start.line, 10) - 1;
-    const lineContent = value.split("\n")[index];
-    if (!lineContent) return <></>;
-
-    return (
-      <li>
-        <input
-          type="checkbox"
-          checked={lineContent.startsWith("- [x]")}
-          readOnly
-          onClick={(e) => {
-            e.stopPropagation();
-            handleCheckboxChange(index);
-            handleChange();
-          }}
-        />{" "}
-        {lineContent.slice(6).trim()}
-      </li>
-    );
-  };
-
   return (
     <div
       key={content.id}
@@ -254,7 +218,7 @@ export function Task({
             onBlur={handleBlur}
             onChange={handleChange}
             value={value}
-            className={`${deleting && "cursor-wait"} ${!isFocused && "opacity-0"} textarea h-fit w-full flex-grow border-2`}
+            className={`${deleting && "cursor-wait"} ${!isFocused && "opacity-0"} textarea h-fit w-full flex-grow list-disc border-2`}
             maxRows={20}
           />
           {!isFocused && (
@@ -264,10 +228,19 @@ export function Task({
             >
               <ReactMarkdown
                 remarkPlugins={[remarkBreaks, remarkGfm]}
-                children={value}
-                // children={value.replace(/(?<=\n\n)(?![*-])/gi, "&nbsp;\n ")}
+                // children={value}
+                children={value.replace(/(?<=\n\n)(?![*-])/gi, "&nbsp;\n ")}
                 components={{
-                  li: renderListItem,
+                  ul({ node, children, className, ...props }) {
+                    return (
+                      <ul
+                        className={cn(className, "list-disc pl-5")}
+                        {...props}
+                      >
+                        {children}
+                      </ul>
+                    );
+                  },
                   pre({ node, children, className, ...props }) {
                     return (
                       <div className="relative">

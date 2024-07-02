@@ -2,7 +2,9 @@
 
 import { faCopy, faLink, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useEffect, useRef, useState } from "react";
+import { Components as DefaultComponents } from "react-markdown";
+import { ReactNode, useEffect, useRef, useState } from "react";
+import { Node } from "unist";
 import {
   areSetEqual,
   cn,
@@ -56,6 +58,24 @@ type LinksWithMeta = {
     image?: string;
     title: string;
   };
+};
+
+const replaceUncheckedWithChecked = (
+  text: string,
+  lineNumber: number,
+  toggled: boolean,
+) => {
+  return text
+    .split("\n")
+    .map((line, index) => {
+      if (index === lineNumber) {
+        console.log({ line });
+        if (toggled) return line.replace("- [ ]", "- [x]");
+        else return line.replace("- [x]", "- [ ]");
+      }
+      return line;
+    })
+    .join("\n");
 };
 
 export function Task({
@@ -239,6 +259,50 @@ export function Task({
                       >
                         {children}
                       </ul>
+                    );
+                  },
+                  input({ node, children, disabled, ...props }) {
+                    return <input {...props}></input>;
+                  },
+                  li({ node, ...props }) {
+                    console.log({ index: node });
+                    const input = node?.children[0] as HTMLInputElement;
+                    if (input.tagName != "input") return <></>;
+                    node?.position && console.log({ index: node });
+                    const padding = node?.children[1];
+                    // @ts-ignore
+                    const text = node?.children[2]?.value;
+                    const checkboxIndex = node?.position?.start.offset ?? 0;
+
+                    // @ts-ignore
+                    const isCheckboxItem = !!input.properties.checked ?? false;
+                    const line = node?.position?.start?.line ?? 0;
+                    return (
+                      <li
+                        {...props}
+                        className={cn(props.className)}
+                        data-copyman-line={node?.position?.start?.line}
+                      >
+                        <div className="flex items-center">
+                          <input
+                            type="checkbox"
+                            disabled={false}
+                            defaultChecked={isCheckboxItem}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              const newContent = replaceUncheckedWithChecked(
+                                value,
+                                line - 1,
+                                e.currentTarget.checked,
+                              );
+                              setValue(newContent);
+                              setTimeout(handleChange, 0);
+                            }}
+                          />{" "}
+                          {text}
+                        </div>
+                      </li>
                     );
                   },
                   pre({ node, children, className, ...props }) {

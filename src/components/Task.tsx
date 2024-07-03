@@ -267,7 +267,7 @@ export function Task({
                   li({ node, ...props }) {
                     console.log({ index: node });
                     const input = node?.children[0] as HTMLInputElement;
-                    if (input.tagName != "input") return <></>;
+                    if (input.tagName != "input") return <li {...props}></li>;
                     node?.position && console.log({ index: node });
                     const padding = node?.children[1];
                     // @ts-ignore

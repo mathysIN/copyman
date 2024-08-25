@@ -12,7 +12,7 @@ type dumbProp = PropsType<typeof f>;
 const dumb: dumbProp = {
   image: { maxFileSize: "64MB", maxFileCount: 1, minFileCount: 1 },
   video: { maxFileSize: "64MB", maxFileCount: 1, minFileCount: 1 },
-  audio: { maxFileSize: "64MB", maxFileCount: 1, minFileCount: 1 },
+  audio: { maxFileSize: "256MB", maxFileCount: 1, minFileCount: 1 },
   blob: { maxFileSize: "64MB", maxFileCount: 1, minFileCount: 1 },
   text: { maxFileSize: "64MB", maxFileCount: 1, minFileCount: 1 },
   pdf: { maxFileSize: "64MB", maxFileCount: 1, minFileCount: 1 },

@@ -29,6 +29,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "~/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
 function _renderMarkdown(markdown: string): string {
   const headerRegex = /^(#+)\s(.+)/gm;
@@ -81,8 +82,8 @@ const replaceUncheckedWithChecked = (
 export function Task({
   content,
   allContent,
-  onDeleteTask = () => {},
-  onUpdateTask = () => {},
+  onDeleteTask = () => { },
+  onUpdateTask = () => { },
 }: {
   content: NoteType;
   allContent: ContentType[];
@@ -259,6 +260,31 @@ export function Task({
                       >
                         {children}
                       </ul>
+                    );
+                  },
+                  a({ node, children, className, ...props }) {
+                    return (
+
+                      <TooltipProvider delayDuration={1000}>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <a
+                              {...props}
+                              className={cn(className, "underline cursor-pointer")}
+                              onClick={(e) => {
+                                if (!e.ctrlKey || e.button !== 0) e.preventDefault()
+                              }}
+                            >
+                              {children}
+                            </a>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>
+                              {`CTRL + Click pour ouvrir le lien`}
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     );
                   },
                   input({ node, children, disabled, ...props }) {

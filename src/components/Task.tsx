@@ -304,25 +304,17 @@ export function Task({
                   },
                   a({ node, children, className, ...props }) {
                     return (
-
-                      <TooltipProvider delayDuration={1000}>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <a
-                              {...props}
-                              className={cn(className, "underline cursor-pointer")}
-                              onClick={(e) => {
-                                if (!e.ctrlKey || e.button !== 0) e.preventDefault()
-                              }}
-                            >
-                              {children}
-                            </a>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {`CTRL + Click pour ouvrir le lien`}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      <>
+                        <a
+                          {...props}
+                          className={cn(className, "underline cursor-pointer")}
+                          onClick={(e) => {
+                            if (!e.ctrlKey || e.button !== 0) e.preventDefault()
+                          }}
+                        >
+                          {children}
+                        </a>
+                      </>
                     );
                   },
                   input({ ...props }) {

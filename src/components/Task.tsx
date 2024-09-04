@@ -70,7 +70,6 @@ const replaceUncheckedWithChecked = (
     .split("\n")
     .map((line, index) => {
       if (index === lineNumber) {
-        console.log({ line });
         if (toggled) return line.replace("- [ ]", "- [x]");
         else return line.replace("- [x]", "- [ ]");
       }
@@ -226,6 +225,47 @@ export function Task({
     renderLinks(newValue);
   };
 
+  // FIXME: optimize and fix
+  // - [ ] eaze aze az - [ ] <-- this would break it
+  function replaceCheckbox(str: string, replacementStr: string, targetCount: number) {
+    let count = 0;
+    let result = '';
+    let buffer = '';
+
+    let targetStrLength = 5;
+    let waitForJumpLine = false;
+
+    for (let i = 0; i < str.length; i++) {
+      buffer += str[i];
+      let selectedPart = buffer.slice(-targetStrLength);
+
+
+
+      if (!waitForJumpLine && ["- [ ]", "- [x]"].includes(selectedPart)) {
+        waitForJumpLine = true;
+        if (count === targetCount) {
+          result += buffer.slice(0, -targetStrLength) + replacementStr;
+          buffer = '';
+        }
+        count++;
+      }
+      if (selectedPart.endsWith("\n")) waitForJumpLine = false;
+
+      if (buffer.length > targetStrLength) {
+        result += buffer[0];
+        buffer = buffer.slice(1);
+      }
+    }
+
+    result += buffer;
+
+    return result;
+
+  }
+
+
+  let inputNumber = 0;
+
   return (
     <div
       key={content.id}
@@ -279,57 +319,20 @@ export function Task({
                             </a>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>
-                              {`CTRL + Click pour ouvrir le lien`}
-                            </p>
+                            {`CTRL + Click pour ouvrir le lien`}
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
                     );
                   },
-                  input({ node, children, disabled, ...props }) {
-                    return <input {...props}></input>;
-                  },
-                  li({ node, ...props }) {
-                    console.log({ index: node });
-                    const input = node?.children[0] as HTMLInputElement;
-                    if (input.tagName != "input") return <li {...props}></li>;
-                    node?.position && console.log({ index: node });
-                    const padding = node?.children[1];
-                    // @ts-ignore
-                    const text = node?.children[2]?.value;
-                    const checkboxIndex = node?.position?.start.offset ?? 0;
-
-                    // @ts-ignore
-                    const isCheckboxItem = !!input.properties.checked ?? false;
-                    const line = node?.position?.start?.line ?? 0;
-                    return (
-                      <li
-                        {...props}
-                        className={cn(props.className)}
-                        data-copyman-line={node?.position?.start?.line}
-                      >
-                        <div className="flex items-center">
-                          <input
-                            type="checkbox"
-                            disabled={false}
-                            defaultChecked={isCheckboxItem}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => {
-                              e.stopPropagation();
-                              const newContent = replaceUncheckedWithChecked(
-                                value,
-                                line - 1,
-                                e.currentTarget.checked,
-                              );
-                              setValue(newContent);
-                              setTimeout(handleChange, 0);
-                            }}
-                          />{" "}
-                          {text}
-                        </div>
-                      </li>
-                    );
+                  input({ ...props }) {
+                    inputNumber++;
+                    let _inputNumber = inputNumber;
+                    return <input onChange={() => { }} {...props} disabled={false} onClick={(e) => {
+                      e.stopPropagation()
+                      let realInputNumber = (_inputNumber / 2) - 1
+                      setValue(replaceCheckbox(value, props.checked ? "- [ ]" : "- [x]", realInputNumber))
+                    }}></input>;
                   },
                   pre({ node, children, className, ...props }) {
                     return (

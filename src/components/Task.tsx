@@ -318,9 +318,10 @@ export function Task({
                   input({ ...props }) {
                     inputNumber++;
                     const _inputNumber = inputNumber;
+                    const realInputNumber = (_inputNumber / 2) - 1
+                    console.log({ realInputNumber })
                     return <input onChange={() => { }} {...props} disabled={false} onClick={(e) => {
                       e.stopPropagation()
-                      const realInputNumber = (_inputNumber / 2) - 1
                       setValue(replaceCheckbox(value, props.checked ? "- [ ]" : "- [x]", realInputNumber))
                     }}></input>;
                   },

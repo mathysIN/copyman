@@ -232,14 +232,12 @@ export function Task({
     let result = '';
     let buffer = '';
 
-    let targetStrLength = 5;
+    const targetStrLength = 5;
     let waitForJumpLine = false;
 
     for (let i = 0; i < str.length; i++) {
       buffer += str[i];
-      let selectedPart = buffer.slice(-targetStrLength);
-
-
+      const selectedPart = buffer.slice(-targetStrLength);
 
       if (!waitForJumpLine && ["- [ ]", "- [x]"].includes(selectedPart)) {
         waitForJumpLine = true;
@@ -319,10 +317,10 @@ export function Task({
                   },
                   input({ ...props }) {
                     inputNumber++;
-                    let _inputNumber = inputNumber;
+                    const _inputNumber = inputNumber;
                     return <input onChange={() => { }} {...props} disabled={false} onClick={(e) => {
                       e.stopPropagation()
-                      let realInputNumber = (_inputNumber / 2) - 1
+                      const realInputNumber = (_inputNumber / 2) - 1
                       setValue(replaceCheckbox(value, props.checked ? "- [ ]" : "- [x]", realInputNumber))
                     }}></input>;
                   },

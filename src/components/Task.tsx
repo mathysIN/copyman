@@ -319,7 +319,7 @@ export function Task({
                     console.log({ realInputNumber })
                     return <input onChange={() => { }} {...props} disabled={false} onClick={(e) => {
                       e.stopPropagation()
-                      setValue(replaceCheckbox(value, props.checked ? "- [ ]" : "- [x]", realInputNumber))
+                      if (textareaRef?.current) textareaRef.current.value = replaceCheckbox(value, props.checked ? "- [ ]" : "- [x]", realInputNumber);
                       handleChange();
                     }}></input>;
                   },

@@ -2,7 +2,6 @@ import { Redis, RedisConfigNodejs } from "@upstash/redis";
 import { UUID, randomUUID } from "crypto";
 import { RequestCookies } from "next/dist/compiled/@edge-runtime/cookies";
 import { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
-import { O } from "node_modules/@upstash/redis/zmscore-07021e27";
 import { env } from "~/env";
 import { hashPassword, validatePassword } from "~/utils/password";
 import { ExcludeMatchingProperties } from "~/utils/types";

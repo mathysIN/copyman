@@ -2,9 +2,7 @@
 
 import { faCopy, faLink, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { Components as DefaultComponents } from "react-markdown";
-import { ReactNode, useEffect, useRef, useState } from "react";
-import { Node } from "unist";
+import { useEffect, useRef, useState } from "react";
 import {
   areSetEqual,
   cn,
@@ -29,7 +27,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "~/components/ui/alert-dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
 function _renderMarkdown(markdown: string): string {
   const headerRegex = /^(#+)\s(.+)/gm;
@@ -323,6 +320,7 @@ export function Task({
                     return <input onChange={() => { }} {...props} disabled={false} onClick={(e) => {
                       e.stopPropagation()
                       setValue(replaceCheckbox(value, props.checked ? "- [ ]" : "- [x]", realInputNumber))
+                      handleChange();
                     }}></input>;
                   },
                   pre({ node, children, className, ...props }) {

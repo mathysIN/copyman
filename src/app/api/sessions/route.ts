@@ -24,6 +24,7 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     ...session.toJSON(),
+    password,
     hasPassword: session.hasPassword(),
     isValidPassword: await session.verifyPasswordFromCookie(cookies()),
   });

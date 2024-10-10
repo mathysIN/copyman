@@ -1,13 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSessionWithCookies } from "~/utils/authenticate";
-import { randomUUID } from "crypto";
-import {
-  NoteType,
-  contents,
-  sessions,
-  withSessionKey,
-} from "~/server/db/redis";
 
 export async function POST(req: Request) {
   const data = await req.json();

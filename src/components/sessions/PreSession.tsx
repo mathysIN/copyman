@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import type { SessionType } from "~/server/db/redis";
@@ -16,6 +16,13 @@ export function PreSession() {
     searchParams.get("msg") ?? "",
   );
   const [loading, setLoading] = useState(false);
+
+  const sumbitForm = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      formRef?.current?.requestSubmit();
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     setErrorMessage("");
@@ -74,6 +81,7 @@ export function PreSession() {
           type="password"
           value={sessionValue}
           onChange={(e) => setSessionValue(e.target.value)}
+          onKeyDown={sumbitForm}
           className="outline-none"
           placeholder="session"
         />
@@ -88,6 +96,7 @@ export function PreSession() {
             type="password"
             value={passwordValue}
             onChange={(e) => setPasswordValue(e.target.value)}
+            onKeyDown={sumbitForm}
             className="outline-none"
             placeholder="password"
           />

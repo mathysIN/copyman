@@ -122,11 +122,13 @@ export function PreSession() {
           </svg>
         </div>
       )}
-      <button type="submit" className="hidden" />
-      <div className="h-8" />
-      <Link href="/">
-        <Image src="/logo.png" width={150} height={150} alt="logo" />
-      </Link>
+      <div className="h-2" />
+      <button type="submit" className="w-full flex flex-col justify-center">
+        <div className="flex border-2 border-white border-dashed rounded-md bg-white bg-opacity-5 hover:bg-opacity-10 active:scale-95 px-2 py-2 flex-row space-x-4 items-center justify-center">
+          <p className="font-bold text-2xl py-[2px]">Rejoindre</p>
+          <Image src="/logo.png" width={50} height={50} alt="logo" />
+        </div>
+      </button>
     </form>
   );
 }

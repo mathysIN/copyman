@@ -64,7 +64,7 @@ export async function POST(req: Request) {
     cookies().set("password", hashPassword(password), {
       expires: Date.now() + 10 * 365 * 24 * 60 * 60 * 1000,
     });
-  return redirect(`/${sessionId}`);
+  return redirect(`/join/${sessionId}`);
 }
 
 export async function PATCH(req: Request) {

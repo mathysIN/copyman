@@ -47,6 +47,7 @@ async function getSession(
     const newSession = {
       sessionId: sessionIdLower,
       createdAt: Date.now().toString(),
+      rawContentOrder: "",
     };
     const createResponse = await sessions.hmnew(sessionIdLower, newSession);
     if (!createResponse) return null;

@@ -4,6 +4,8 @@ import {
   faDoorOpen,
   faLock,
   faWarning,
+  faDownload,
+  faCopy,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Loader2 } from "lucide-react";
@@ -35,20 +37,25 @@ import { socket } from "~/lib/client/socket";
 import { deleteAllCookies } from "~/lib/utils";
 import {
   AttachmentType,
+  ContentOrder,
   ContentType,
   NoteType,
   SessionType,
 } from "~/server/db/redis";
 import { useUploadThing } from "~/utils/uploadthing";
+import { Reorder } from "framer-motion";
+import { UUID } from "node:crypto";
 
 export function ActiveSession({
   session,
   sessionContents,
   hasPassword: _hasPassword,
+  sessionContentOrder,
 }: {
   session: SessionType;
   sessionContents: ContentType[];
   hasPassword: boolean;
+  sessionContentOrder: ContentOrder;
 }) {
   const uploadThing = useUploadThing(UPLOADTHING_ENDPOINT, {
     onClientUploadComplete: (res) => {
@@ -65,6 +72,18 @@ export function ActiveSession({
   const [isConnected, setIsConnected] = useState(false);
   const [roomSize, setRoomSize] = useState(0);
   const [transport, setTransport] = useState("N/A");
+
+  const [hasPassword, setHasPassword] = useState(_hasPassword);
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [passwordModalLoading, setPasswordModalLoading] = useState(false);
+  const [passwordModalContent, setPasswordModalContent] = useState("");
+  const [hidden, setHidden] = useState(true);
+  const [orderNote, setOrderNote] = useState<ContentOrder>(sessionContentOrder);
+  const [orderAttachment, setOrderAttachment] =
+    useState<ContentOrder>(sessionContentOrder);
+  const [cachedContents, setCachedContents] =
+    useState<ContentType[]>(sessionContents);
+
   const newTaskComponent = useRef<AddNewTaskRef>(null);
 
   function onConnect() {
@@ -84,6 +103,12 @@ export function ActiveSession({
   function onContentDelete(contentId: string, emit = true) {
     if (emit) socket.emit("deleteContent", contentId);
     setCachedContents(cachedContents.filter((c) => c.id !== contentId));
+  }
+
+  function onContentOrderUpdate(order: ContentOrder, emit = true) {
+    if (emit) socket.emit("updatedContentOrder", order);
+    setOrderNote(order);
+    setOrderAttachment(order);
   }
 
   function onContentUpdate(content: ContentType, emit = true) {
@@ -116,6 +141,10 @@ export function ActiveSession({
 
     socket.on("deleteContent", (contentId) => {
       onContentDelete(contentId, false);
+    });
+
+    socket.on("updatedContentOrder", (order) => {
+      onContentOrderUpdate(order, false);
     });
 
     socket.on("roomInsight", (room) => {
@@ -163,13 +192,17 @@ export function ActiveSession({
     };
   }, []);
 
-  const [hasPassword, setHasPassword] = useState(_hasPassword);
-  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
-  const [passwordModalLoading, setPasswordModalLoading] = useState(false);
-  const [passwordModalContent, setPasswordModalContent] = useState("");
-  const [hidden, setHidden] = useState(true);
-  const [cachedContents, setCachedContents] =
-    useState<ContentType[]>(sessionContents);
+  const attachmentContent: AttachmentType[] = cachedContents
+    .filter((c: ContentType): c is AttachmentType => c.type === "attachment")
+    .sort((a, b) => {
+      return orderAttachment.indexOf(a.id) - orderAttachment.indexOf(b.id);
+    });
+
+  const noteContent: NoteType[] = cachedContents
+    .filter((c: ContentType): c is NoteType => c.type === "note")
+    .sort((a, b) => {
+      return orderNote.indexOf(a.id) - orderNote.indexOf(b.id);
+    });
 
   return (
     <div className="w-4/5 pb-10">
@@ -281,32 +314,50 @@ export function ActiveSession({
         <div className="flex flex-[50%] flex-col gap-y-2">
           <h2>Trucs</h2>
           <UploadContent onNewContent={onNewContent} />
-          {cachedContents
-            .filter(
-              (c: ContentType): c is AttachmentType => c.type === "attachment",
-            )
-            .map((content) => (
-              <ContentRenderer
-                key={content.id}
-                content={content}
-                onContentDelete={onContentDelete}
-              />
+          <Reorder.Group
+            values={attachmentContent}
+            className="flex flex-col gap-y-2"
+            onReorder={(newValues) => {
+              const newOrder = newValues.map((v) => v.id);
+              setOrderAttachment(newOrder);
+              onContentOrderUpdate([...newOrder, ...orderNote], true);
+            }}
+          >
+            {attachmentContent.map((content) => (
+              <Reorder.Item key={content.id} value={content}>
+                <ContentRenderer
+                  key={content.id}
+                  content={content}
+                  onContentDelete={onContentDelete}
+                />
+              </Reorder.Item>
             ))}
+          </Reorder.Group>
         </div>
-        <div className=" flex flex-[50%] flex-col gap-y-2">
+        <div className="flex flex-[50%] flex-col gap-y-2">
           <h2>Autres trucs</h2>
           <AddNewTask onNewContent={onNewContent} ref={newTaskComponent} />
-          {cachedContents
-            .filter((c: ContentType): c is NoteType => c.type === "note")
-            .map((task) => (
-              <Task
-                key={task.id}
-                allContent={cachedContents}
-                content={task}
-                onDeleteTask={onContentDelete}
-                onUpdateTask={onContentUpdate}
-              />
+          <Reorder.Group
+            values={noteContent}
+            className="flex flex-col gap-y-2"
+            onReorder={(newValues) => {
+              const newOrder = newValues.map((v) => v.id);
+              setOrderNote(newOrder);
+              onContentOrderUpdate([...newOrder, ...orderAttachment], true);
+            }}
+          >
+            {noteContent.map((task) => (
+              <Reorder.Item key={task.id} value={task}>
+                <Task
+                  key={task.id}
+                  allContent={cachedContents}
+                  content={task}
+                  onDeleteTask={onContentDelete}
+                  onUpdateTask={onContentUpdate}
+                />
+              </Reorder.Item>
             ))}
+          </Reorder.Group>
         </div>
       </div>
     </div>

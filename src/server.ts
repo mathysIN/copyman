@@ -3,7 +3,8 @@ import { createServer } from "node:http";
 import next from "next";
 import { Server } from "socket.io";
 import { getSessionWithCookieString } from "~/utils/authenticate";
-import { ContentType } from "~/server/db/redis";
+import { ContentOrder, ContentType } from "~/server/db/redis";
+import { Socket } from "socket.io-client";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
@@ -15,6 +16,7 @@ export interface ServerToClientEvents {
   addContent: (content: ContentType) => void;
   deleteContent: (contentId: string) => void;
   updatedContent: (content: ContentType) => void;
+  updatedContentOrder: (content: ContentOrder) => void;
   roomInsight: (room: RoomInsight) => void;
 }
 
@@ -27,6 +29,7 @@ export interface ClientToServerEvents {
   addContent: (content: ContentType) => void;
   deleteContent: (contentId: string) => void;
   updatedContent: (content: ContentType) => void;
+  updatedContentOrder: (content: ContentOrder) => void;
 }
 
 export interface InterServerEvents {
@@ -127,6 +130,22 @@ app.prepare().then(() => {
         if (id === socket.id) continue;
         io.to(id).emit("updatedContent", content);
       }
+    });
+
+    socket.on("updatedContentOrder", async (contentOrder) => {
+      const session = await getSessionWithCookieString(
+        socket.handshake.headers.cookie ?? "",
+        true,
+      );
+      if (!session) return;
+      const sockets = rooms.get(session.sessionId);
+      if (!sockets) return;
+
+      for (const id of sockets) {
+        if (id === socket.id) continue;
+        io.to(id).emit("updatedContentOrder", contentOrder);
+      }
+      session.setContentOrder(contentOrder);
     });
   });
 

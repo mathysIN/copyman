@@ -3,7 +3,7 @@ import { PreSession } from "~/components/sessions/PreSession";
 import { ActiveSession } from "~/components/sessions/ActiveSession";
 import { getSessionWithCookies } from "~/utils/authenticate";
 import Link from "next/link";
-import { ContentType } from "~/server/db/redis";
+import { ContentOrder, ContentType } from "~/server/db/redis";
 import { Exception } from "~/utils/types";
 
 export default async function HomePage() {
@@ -12,10 +12,13 @@ export default async function HomePage() {
     error = e;
     return null;
   });
+
   let sessionContents: ContentType[] = [];
+  let sessionContentOrder: ContentOrder = [];
 
   if (session) {
     sessionContents = await session.getAllContent();
+    sessionContentOrder = await session.getContentOrder();
   }
 
   return (
@@ -48,6 +51,7 @@ export default async function HomePage() {
             session={session.toJSON()}
             hasPassword={session.hasPassword()}
             sessionContents={sessionContents}
+            sessionContentOrder={sessionContentOrder}
           />
         )}
       </div>

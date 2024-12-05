@@ -27,6 +27,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "~/components/ui/alert-dialog";
+import { copyAndToast } from "~/lib/client/toast";
+import { useToast } from "~/hooks/use-toast";
 
 function _renderMarkdown(markdown: string): string {
   const headerRegex = /^(#+)\s(.+)/gm;
@@ -78,14 +80,15 @@ const replaceUncheckedWithChecked = (
 export function Task({
   content,
   allContent,
-  onDeleteTask = () => { },
-  onUpdateTask = () => { },
+  onDeleteTask = () => {},
+  onUpdateTask = () => {},
 }: {
   content: NoteType;
   allContent: ContentType[];
   onDeleteTask: (taskId: string) => any;
   onUpdateTask: (task: NoteType) => any;
 }) {
+  const { toast } = useToast();
   const [value, setValue] = useState(content.content ?? "");
   const [timerId, setTimerId] = useState<NodeJS.Timeout | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -224,10 +227,14 @@ export function Task({
 
   // FIXME: optimize and fix
   // - [ ] eaze aze az - [ ] <-- this would break it
-  function replaceCheckbox(str: string, replacementStr: string, targetCount: number) {
+  function replaceCheckbox(
+    str: string,
+    replacementStr: string,
+    targetCount: number,
+  ) {
     let count = 0;
-    let result = '';
-    let buffer = '';
+    let result = "";
+    let buffer = "";
 
     const targetStrLength = 5;
     let waitForJumpLine = false;
@@ -240,7 +247,7 @@ export function Task({
         waitForJumpLine = true;
         if (count === targetCount) {
           result += buffer.slice(0, -targetStrLength) + replacementStr;
-          buffer = '';
+          buffer = "";
         }
         count++;
       }
@@ -255,9 +262,7 @@ export function Task({
     result += buffer;
 
     return result;
-
   }
-
 
   let inputNumber = 0;
 
@@ -302,9 +307,10 @@ export function Task({
                       <>
                         <a
                           {...props}
-                          className={cn(className, "underline cursor-pointer")}
+                          className={cn(className, "cursor-pointer underline")}
                           onClick={(e) => {
-                            if (!e.ctrlKey || e.button !== 0) e.preventDefault()
+                            if (!e.ctrlKey || e.button !== 0)
+                              e.preventDefault();
                           }}
                         >
                           {children}
@@ -315,13 +321,24 @@ export function Task({
                   input({ ...props }) {
                     inputNumber++;
                     const _inputNumber = inputNumber;
-                    const realInputNumber = _inputNumber - 1
-                    console.log({ realInputNumber })
-                    return <input onChange={() => { }} {...props} disabled={false} onClick={(e) => {
-                      e.stopPropagation()
-                      if (textareaRef?.current) textareaRef.current.value = replaceCheckbox(value, props.checked ? "- [ ]" : "- [x]", realInputNumber);
-                      handleChange();
-                    }}></input>;
+                    const realInputNumber = _inputNumber - 1;
+                    return (
+                      <input
+                        onChange={() => {}}
+                        {...props}
+                        disabled={false}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (textareaRef?.current)
+                            textareaRef.current.value = replaceCheckbox(
+                              value,
+                              props.checked ? "- [ ]" : "- [x]",
+                              realInputNumber,
+                            );
+                          handleChange();
+                        }}
+                      ></input>
+                    );
                   },
                   pre({ node, children, className, ...props }) {
                     return (
@@ -344,7 +361,7 @@ export function Task({
                           className="absolute right-0 top-0 m-1 rounded-md bg-white px-2 py-1 text-black active:scale-95"
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigator.clipboard.writeText(`${children}`);
+                            copyAndToast(toast, `${children}`);
                           }}
                         >
                           <FontAwesomeIcon icon={faCopy} />
@@ -385,7 +402,7 @@ export function Task({
           className="text-black active:scale-95"
           onClick={(e) => {
             e.stopPropagation();
-            navigator.clipboard.writeText(value);
+            copyAndToast(toast, value);
           }}
         >
           <FontAwesomeIcon icon={faCopy} />

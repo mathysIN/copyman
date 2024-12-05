@@ -3,9 +3,11 @@ import {
   faArrowUpRightFromSquare,
   faLink,
   faTrash,
+  faDownload,
+  faCopy,
 } from "@fortawesome/free-solid-svg-icons";
 
-import { useEffect, useRef, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import type { AttachmentType } from "~/server/db/redis";
 import { removeFileExtension, stringToHash } from "~/lib/utils";
 import {
@@ -19,6 +21,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "~/components/ui/alert-dialog";
+import { copyAndToast } from "~/lib/client/toast";
+import { useToast } from "~/hooks/use-toast";
 
 const GRADIENTS = [
   "bg-gradient-to-r from-green-400 to-blue-500",
@@ -42,6 +46,7 @@ const ContentRenderer = ({
   content: AttachmentType;
   onContentDelete: (contentId: string) => any;
 }) => {
+  const { toast } = useToast();
   const [deleting, setDeleting] = useState(false);
   const [contentType, setContentType] = useState<
     "video" | "image" | "audio" | null
@@ -135,13 +140,13 @@ const ContentRenderer = ({
         <div key={content.id} className="z-10 flex gap-x-2">
           <button
             className="active:scale-95"
-            onClick={() => navigator.clipboard.writeText(content.attachmentURL)}
+            onClick={() => copyAndToast(toast, content.attachmentURL)}
           >
             <FontAwesomeIcon icon={faLink} />
           </button>
           <a href={content.attachmentURL} target="_blank">
             <button className="text-gray-900 active:scale-95">
-              <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
+              <FontAwesomeIcon icon={faDownload} />
             </button>
           </a>
 

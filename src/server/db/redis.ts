@@ -80,16 +80,19 @@ export type SessionType = {
   sessionId: string;
   password?: string;
   createdAt: string;
+  rawContentOrder: string;
 };
 
 export class Session {
   sessionId: string;
   password?: string;
   createdAt: string;
+  rawContentOrder: string;
   constructor(props: SessionType) {
     this.sessionId = props.sessionId;
     this.password = props.password;
     this.createdAt = props.createdAt;
+    this.rawContentOrder = props.rawContentOrder;
   }
 
   withSessionKey(...strings: string[]) {
@@ -185,6 +188,36 @@ export class Session {
     });
   }
 
+  private isValidUUID(str: string) {
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(str);
+  }
+
+  private rawContentOrderToUUIDArray(rawContentOrder: string): ContentOrder {
+    const orderContent = rawContentOrder.split(";");
+    for (const content of orderContent) {
+      if (!this.isValidUUID(content)) {
+        return [];
+      }
+    }
+    return orderContent as ContentOrder;
+  }
+
+  private contentOrderToRaw(contentOrder: ContentOrder): string {
+    return contentOrder.join(";");
+  }
+
+  async getContentOrder() {
+    return this.rawContentOrderToUUIDArray(this.rawContentOrder);
+  }
+
+  async setContentOrder(contentOrder: ContentOrder) {
+    return sessions.hmset(this.sessionId, {
+      rawContentOrder: this.contentOrderToRaw(contentOrder),
+    });
+  }
+
   async setPassword(password?: string) {
     if (!password) return sessions.hdel(this.sessionId, "password");
 
@@ -212,6 +245,7 @@ export class Session {
     return {
       sessionId: this.sessionId,
       createdAt: this.createdAt,
+      rawContentOrder: this.rawContentOrder,
     };
   }
 }
@@ -234,7 +268,12 @@ export type NoteType = BaseContentType & {
   type: "note";
 };
 
-export type NewNoteType = Omit<NoteType, "id" | "createdAt" | "updatedAt">;
+const REDIS_CONTENT_PREFIX = "content";
+const REDIS_KEY_CONTENT = toFullRedisKey([
+  REDIS_KEY_PREFIX,
+  REDIS_CONTENT_PREFIX,
+]);
+
 export type NewAttachmentType = Omit<
   AttachmentType,
   "id" | "createdAt" | "updatedAt"
@@ -247,13 +286,9 @@ export type AttachmentType = BaseContentType & {
   fileKey: string;
 };
 
-export type ContentType = NoteType | AttachmentType;
+export type ContentOrder = UUID[];
 
-const REDIS_CONTENT_PREFIX = "content";
-const REDIS_KEY_CONTENT = toFullRedisKey([
-  REDIS_KEY_PREFIX,
-  REDIS_CONTENT_PREFIX,
-]);
+export type ContentType = NoteType | AttachmentType;
 
 export const sessions = new RedisWithPrefix<SessionType>(
   redis,

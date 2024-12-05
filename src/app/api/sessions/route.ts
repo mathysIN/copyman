@@ -47,9 +47,11 @@ export async function POST(req: Request) {
       sessionId: string;
       createdAt: string;
       password?: string;
+      rawContentOrder: string;
     } = {
       sessionId: sessionId,
       createdAt: Date.now().toString(),
+      rawContentOrder: "",
     };
 
     if (password !== undefined) {

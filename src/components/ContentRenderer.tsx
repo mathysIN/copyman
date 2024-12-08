@@ -23,6 +23,7 @@ import {
 } from "~/components/ui/alert-dialog";
 import { copyAndToast } from "~/lib/client/toast";
 import { useToast } from "~/hooks/use-toast";
+import { Reorder, useDragControls } from "framer-motion";
 
 const GRADIENTS = [
   "bg-gradient-to-r from-green-400 to-blue-500",
@@ -52,8 +53,8 @@ const ContentRenderer = ({
     "video" | "image" | "audio" | null
   >(null);
   const [audioPlaying, setAudioPlaying] = useState(false);
+  const controls = useDragControls();
 
-  // Function to determine the content type based on the URL
   const getContentType = (url: string) => {
     if (url.match(/\.(mp4|ogg|webm)$/)) {
       return "video";
@@ -66,12 +67,10 @@ const ContentRenderer = ({
     }
   };
 
-  // Update the content type state when the component mounts
   useEffect(() => {
     setContentType(getContentType(content.attachmentURL));
   }, [content]);
 
-  // Render different content based on the content type
   const renderContent = () => {
     switch (contentType) {
       case "video":
@@ -118,76 +117,107 @@ const ContentRenderer = ({
   };
 
   return (
-    <div
-      className={`${deleting && "animate-pulse cursor-wait opacity-75"} space-y h-fit rounded-md border-2 border-gray-300 bg-white p-2 text-gray-900`}
+    <Reorder.Item
+      key={content.id}
+      value={content}
+      dragListener={false}
+      dragControls={controls}
     >
-      {contentType && (
-        <>
-          <div
-            className="relative flex h-0 w-full max-w-full justify-center"
-            style={{ paddingTop: "56.25%" }}
-          >
-            {contentType && (
-              <div className="absolute inset-0 overflow-hidden">
-                {renderContent()}
-              </div>
-            )}
-          </div>
-          <div className="h-2" />
-        </>
-      )}
-      <div className="flex flex-row items-center gap-4">
-        <div key={content.id} className="z-10 flex gap-x-2">
-          <button
-            className="active:scale-95"
-            onClick={() => copyAndToast(toast, content.attachmentURL)}
-          >
-            <FontAwesomeIcon icon={faLink} />
-          </button>
-          <a href={content.attachmentURL} target="_blank">
-            <button className="text-gray-900 active:scale-95">
-              <FontAwesomeIcon icon={faDownload} />
+      <div
+        className={`${deleting && "animate-pulse cursor-wait opacity-75"} space-y h-fit rounded-md border-2 border-gray-300 bg-white p-2 text-gray-900`}
+      >
+        {contentType && (
+          <>
+            <div
+              className="relative flex h-0 w-full max-w-full justify-center"
+              style={{ paddingTop: "56.25%" }}
+            >
+              {contentType && (
+                <div className="absolute inset-0 overflow-hidden">
+                  {renderContent()}
+                </div>
+              )}
+            </div>
+            <div className="h-2" />
+          </>
+        )}
+        <div className="flex flex-row justify-between gap-4">
+          <div className="flex flex-row gap-x-2">
+            <button
+              className="active:scale-95"
+              onClick={() => copyAndToast(toast, content.attachmentURL)}
+            >
+              <FontAwesomeIcon icon={faLink} />
             </button>
-          </a>
-
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <button className="text-red-400 active:scale-95">
-                <FontAwesomeIcon icon={faTrash} />
+            <a href={content.attachmentURL} target="_blank">
+              <button className="text-gray-900 active:scale-95">
+                <FontAwesomeIcon icon={faDownload} />
               </button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  Suppression : êtes-vous sûr ?
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  Cette action ne pourra pas être annulée. Le contenu sera
-                  définitivement retiré des serveurs de Copyman.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Annuler</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={async () => {
-                    setDeleting(true);
-                    await fetch(`/api/content?contentId=${content.id}`, {
-                      method: "DELETE",
-                    }).then(() => onContentDelete(content.id));
-                    setDeleting(false);
-                  }}
+            </a>
+
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button className="text-red-400 active:scale-95">
+                  <FontAwesomeIcon icon={faTrash} />
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    Suppression : êtes-vous sûr ?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Cette action ne pourra pas être annulée. Le contenu sera
+                    définitivement retiré des serveurs de Copyman.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={async () => {
+                      setDeleting(true);
+                      await fetch(`/api/content?contentId=${content.id}`, {
+                        method: "DELETE",
+                      }).then(() => onContentDelete(content.id));
+                      setDeleting(false);
+                    }}
+                  >
+                    Confirmer
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+          <div className="flex select-text items-center gap-2">
+            <p className="center flex-1 overflow-hidden whitespace-nowrap text-right  align-middle text-sm text-gray-500 sm:w-64">
+              {content.attachmentPath}
+            </p>
+            <div
+              className="reorder-handle flex cursor-grab flex-row items-center justify-center"
+              onPointerDown={(e) => {
+                controls?.start(e);
+              }}
+            >
+              <div className="drag-handle mt-[1px] cursor-grab">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 text-black"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
                 >
-                  Confirmer
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                  <circle cx="5" cy="6" r="1.5" />
+                  <circle cx="5" cy="12" r="1.5" />
+                  <circle cx="5" cy="18" r="1.5" />
+                  <circle cx="10" cy="6" r="1.5" />
+                  <circle cx="10" cy="12" r="1.5" />
+                  <circle cx="10" cy="18" r="1.5" />
+                </svg>
+              </div>
+            </div>
+          </div>
         </div>
-        <p className="center flex-1 overflow-hidden whitespace-nowrap text-right  align-middle text-sm text-gray-500 sm:w-64">
-          {content.attachmentPath}
-        </p>
       </div>
-    </div>
+    </Reorder.Item>
   );
 };
 

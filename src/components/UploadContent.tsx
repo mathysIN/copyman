@@ -3,15 +3,17 @@
 import { useRef } from "react";
 import { AttachmentType } from "~/server/db/redis";
 import { UploadDropzone } from "~/utils/uploadthing";
-import {} from "@uploadthing/react";
 import { ClientUploadedFileData } from "uploadthing/types";
+import { cn } from "~/lib/utils";
 
 export const UPLOADTHING_ENDPOINT = "imageUploader";
 
 export default function UploadContent({
   onNewContent = () => {},
+  className = "",
 }: {
   onNewContent?: (content: AttachmentType) => any;
+  className?: string;
 }) {
   const onClientUploadComplete = (
     res: ClientUploadedFileData<AttachmentType>[],
@@ -29,6 +31,7 @@ export default function UploadContent({
 
   return (
     <form
+      className={className}
       onSubmit={async (event) => {
         event.preventDefault();
 
@@ -52,14 +55,23 @@ export default function UploadContent({
         onNewContent(newBlob);
       }}
     >
-      <div className="h-16">
+      <div className="">
         <UploadDropzone
           endpoint={UPLOADTHING_ENDPOINT}
-          className="h-full cursor-pointer rounded-xl bg-white text-black"
+          className={cn(
+            className,
+            "cursor-pointer rounded-xl bg-white text-black",
+          )}
           config={{ appendOnPaste: true, mode: "auto" }}
+          content={{
+            button({ ready }) {
+              if (ready) return <div>Upload un fichier</div>;
+              return "Préparation...";
+            },
+          }}
           appearance={{
             label: { display: "none" },
-            container: { color: "black" },
+            container: { color: "black", marginTop: 0 },
             button: { color: "black" },
           }}
           onClientUploadComplete={onClientUploadComplete}

@@ -29,6 +29,7 @@ import {
 } from "~/components/ui/alert-dialog";
 import { copyAndToast } from "~/lib/client/toast";
 import { useToast } from "~/hooks/use-toast";
+import { Reorder, useDragControls } from "framer-motion";
 
 function _renderMarkdown(markdown: string): string {
   const headerRegex = /^(#+)\s(.+)/gm;
@@ -49,6 +50,8 @@ function _renderMarkdown(markdown: string): string {
 
   return markdown;
 }
+
+export type FramerControls = ReturnType<typeof useDragControls>;
 
 const REQUEST_DELAY = 800;
 
@@ -99,6 +102,7 @@ export function Task({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [pleaseDontFocusBro, setPleaseDontFocusBro] = useState(false);
+  const controls = useDragControls();
 
   const handleFocus = () => {
     setIsFocused(true);
@@ -267,187 +271,227 @@ export function Task({
   let inputNumber = 0;
 
   return (
-    <div
+    <Reorder.Item
       key={content.id}
-      className={`${deleting && "animate-pulse cursor-wait opacity-75"} flex flex-col gap-2 rounded-md border-2 border-gray-300 bg-white px-2 py-2 text-black`}
+      value={content}
+      dragListener={false}
+      dragControls={controls}
     >
-      <div className="relative flex flex-col gap-2">
-        <div className="flew-grow textarea relative w-full">
-          <TextareaAutosize
-            ref={textareaRef}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            onChange={handleChange}
-            value={value}
-            className={`${deleting && "cursor-wait"} ${!isFocused && "opacity-0"} textarea h-fit w-full flex-grow list-disc border-2`}
-            maxRows={20}
-          />
-          {!isFocused && (
-            <div
-              className="absolute inset-y-0 w-full overflow-x-hidden break-words border-2 border-neutral-100 text-black"
-              onClick={onMarkdownRenderClick}
-            >
-              <ReactMarkdown
-                remarkPlugins={[remarkBreaks, remarkGfm]}
-                // children={value}
-                children={value.replace(/(?<=\n\n)(?![*-])/gi, "&nbsp;\n ")}
-                components={{
-                  ul({ node, children, className, ...props }) {
-                    return (
-                      <ul
-                        className={cn(className, "list-disc pl-5")}
-                        {...props}
-                      >
-                        {children}
-                      </ul>
-                    );
-                  },
-                  a({ node, children, className, ...props }) {
-                    return (
-                      <>
-                        <a
-                          {...props}
-                          className={cn(className, "cursor-pointer underline")}
-                          onClick={(e) => {
-                            if (!e.ctrlKey || e.button !== 0)
-                              e.preventDefault();
-                          }}
-                        >
-                          {children}
-                        </a>
-                      </>
-                    );
-                  },
-                  input({ ...props }) {
-                    inputNumber++;
-                    const _inputNumber = inputNumber;
-                    const realInputNumber = _inputNumber - 1;
-                    return (
-                      <input
-                        onChange={() => {}}
-                        {...props}
-                        disabled={false}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (textareaRef?.current)
-                            textareaRef.current.value = replaceCheckbox(
-                              value,
-                              props.checked ? "- [ ]" : "- [x]",
-                              realInputNumber,
-                            );
-                          handleChange();
-                        }}
-                      ></input>
-                    );
-                  },
-                  pre({ node, children, className, ...props }) {
-                    return (
-                      <div className="relative">
-                        <pre
-                          className={cn(className, "overflow-x-scroll")}
+      <div
+        key={content.id}
+        className={`${deleting && "animate-pulse cursor-wait opacity-75"} flex flex-col gap-2 rounded-md border-2 border-gray-300 bg-white px-2 py-2 text-black`}
+      >
+        <div className="relative flex flex-col gap-2">
+          <div className="flew-grow textarea relative w-full">
+            <TextareaAutosize
+              ref={textareaRef}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              onChange={handleChange}
+              value={value}
+              className={`${deleting && "cursor-wait"} ${!isFocused && "opacity-0"} textarea h-fit w-full flex-grow list-disc border-2`}
+              maxRows={20}
+            />
+            {!isFocused && (
+              <div
+                className="absolute inset-y-0 w-full cursor-text overflow-x-hidden break-words border-2 border-neutral-100 text-black"
+                onClick={onMarkdownRenderClick}
+              >
+                <ReactMarkdown
+                  remarkPlugins={[remarkBreaks, remarkGfm]}
+                  // children={value}
+                  children={value.replace(/(?<=\n\n)(?![*-])/gi, "&nbsp;\n ")}
+                  components={{
+                    ul({ node, children, className, ...props }) {
+                      return (
+                        <ul
+                          className={cn(className, "list-disc pl-5")}
                           {...props}
                         >
-                          <br />
                           {children}
-                          <br />
-                        </pre>
-                      </div>
-                    );
-                  },
-                  code({ node, children, ...props }) {
-                    return (
-                      <>
-                        <button
-                          className="absolute right-0 top-0 m-1 rounded-md bg-white px-2 py-1 text-black active:scale-95"
+                        </ul>
+                      );
+                    },
+                    a({ node, children, className, ...props }) {
+                      return (
+                        <>
+                          <a
+                            {...props}
+                            className={cn(
+                              className,
+                              "cursor-pointer underline",
+                            )}
+                            onClick={(e) => {
+                              if (!e.ctrlKey || e.button !== 0)
+                                e.preventDefault();
+                            }}
+                          >
+                            {children}
+                          </a>
+                        </>
+                      );
+                    },
+                    input({ ...props }) {
+                      inputNumber++;
+                      const _inputNumber = inputNumber;
+                      const realInputNumber = _inputNumber - 1;
+                      return (
+                        <input
+                          onChange={() => {}}
+                          {...props}
+                          disabled={false}
                           onClick={(e) => {
                             e.stopPropagation();
-                            copyAndToast(toast, `${children}`);
+                            if (textareaRef?.current)
+                              textareaRef.current.value = replaceCheckbox(
+                                value,
+                                props.checked ? "- [ ]" : "- [x]",
+                                realInputNumber,
+                              );
+                            handleChange();
                           }}
-                        >
-                          <FontAwesomeIcon icon={faCopy} />
-                        </button>
-                        {children}
-                      </>
-                    );
-                  },
-                }}
-              />
-            </div>
-          )}
+                        ></input>
+                      );
+                    },
+                    pre({ node, children, className, ...props }) {
+                      return (
+                        <div className="relative">
+                          <pre
+                            className={cn(className, "overflow-x-scroll")}
+                            {...props}
+                          >
+                            <br />
+                            {children}
+                            <br />
+                          </pre>
+                        </div>
+                      );
+                    },
+                    code({ node, children, ...props }) {
+                      return (
+                        <>
+                          <button
+                            className="absolute right-0 top-0 m-1 rounded-md bg-white px-2 py-1 text-black active:scale-95"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              copyAndToast(toast, `${children}`);
+                            }}
+                          >
+                            <FontAwesomeIcon icon={faCopy} />
+                          </button>
+                          {children}
+                        </>
+                      );
+                    },
+                  }}
+                />
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-      {linksWithMeta.length > 0 && (
-        <div className="flex flex-row flex-wrap">
-          {linksWithMeta.map((link) => (
-            <a
-              key={link.link}
-              href={link.link}
-              target="_blank"
-              className="flex flex-row items-center gap-2 rounded-lg border-2 bg-neutral-800 px-2 py-1 text-white"
-            >
-              <p>{link.metadata.title}</p>
-              {link.metadata.image && (
-                <img src={link.metadata.image} width={20} height={20} alt="" />
-              )}
-              {!link.metadata.image && (
-                <FontAwesomeIcon icon={faLink} height={20} width={20} />
-              )}
-            </a>
-          ))}
-        </div>
-      )}
-
-      <div className="flex flex-row justify-start gap-x-2">
-        <button
-          className="text-black active:scale-95"
-          onClick={(e) => {
-            e.stopPropagation();
-            copyAndToast(toast, value);
-          }}
-        >
-          <FontAwesomeIcon icon={faCopy} />
-        </button>
-
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <button
-              disabled={deleting}
-              className={`${deleting && "cursor-wait"} min-w-min text-red-400 active:scale-95`}
-            >
-              <FontAwesomeIcon icon={faTrash} />
-            </button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Suppression : êtes-vous sûr ?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Cette action ne pourra pas être annulée. Le contenu sera
-                définitivement retiré des serveurs de Copyman.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Annuler</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={async () => {
-                  setDeleting(true);
-                  fetch("/api/notes", {
-                    method: "DELETE",
-                    body: JSON.stringify({ taskId: content.id }),
-                  })
-                    .then(() => {
-                      onDeleteTask(content.id);
-                    })
-                    .catch(() => {
-                      setDeleting(false);
-                    });
-                }}
+        {linksWithMeta.length > 0 && (
+          <div className="flex flex-row flex-wrap">
+            {linksWithMeta.map((link) => (
+              <a
+                key={link.link}
+                href={link.link}
+                target="_blank"
+                className="flex flex-row items-center gap-2 rounded-lg border-2 bg-neutral-800 px-2 py-1 text-white"
               >
-                Confirmer
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+                <p>{link.metadata.title}</p>
+                {link.metadata.image && (
+                  <img
+                    src={link.metadata.image}
+                    width={20}
+                    height={20}
+                    alt=""
+                  />
+                )}
+                {!link.metadata.image && (
+                  <FontAwesomeIcon icon={faLink} height={20} width={20} />
+                )}
+              </a>
+            ))}
+          </div>
+        )}
+
+        <div className="flex flex-row justify-between">
+          <div className="flex flex-row gap-x-2">
+            <button
+              className="text-black active:scale-95"
+              onClick={(e) => {
+                e.stopPropagation();
+                copyAndToast(toast, value);
+              }}
+            >
+              <FontAwesomeIcon icon={faCopy} />
+            </button>
+
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button
+                  disabled={deleting}
+                  className={`${deleting && "cursor-wait"} min-w-min text-red-400 active:scale-95`}
+                >
+                  <FontAwesomeIcon icon={faTrash} />
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    Suppression : êtes-vous sûr ?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Cette action ne pourra pas être annulée. Le contenu sera
+                    définitivement retiré des serveurs de Copyman.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={async () => {
+                      setDeleting(true);
+                      fetch("/api/notes", {
+                        method: "DELETE",
+                        body: JSON.stringify({ taskId: content.id }),
+                      })
+                        .then(() => {
+                          onDeleteTask(content.id);
+                        })
+                        .catch(() => {
+                          setDeleting(false);
+                        });
+                    }}
+                  >
+                    Confirmer
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+
+          <div
+            className="reorder-handle flex items-center justify-center"
+            onPointerDown={(e) => controls?.start(e)}
+          >
+            <div className="drag-handle cursor-grab">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 text-black"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <circle cx="5" cy="6" r="1.5" />
+                <circle cx="5" cy="12" r="1.5" />
+                <circle cx="5" cy="18" r="1.5" />
+                <circle cx="10" cy="6" r="1.5" />
+                <circle cx="10" cy="12" r="1.5" />
+                <circle cx="10" cy="18" r="1.5" />
+              </svg>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </Reorder.Item>
   );
 }

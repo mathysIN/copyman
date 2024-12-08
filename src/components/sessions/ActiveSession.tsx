@@ -43,8 +43,7 @@ import {
   SessionType,
 } from "~/server/db/redis";
 import { useUploadThing } from "~/utils/uploadthing";
-import { Reorder } from "framer-motion";
-import { UUID } from "node:crypto";
+import { DragControls, Reorder, useDragControls } from "framer-motion";
 
 export function ActiveSession({
   session,
@@ -205,7 +204,7 @@ export function ActiveSession({
     });
 
   return (
-    <div className="w-4/5 pb-10">
+    <div className="w-4/5 select-none pb-10">
       <div className="flex flex-col items-center justify-center">
         <div className="flex flex-row items-center gap-[12px] text-xl">
           <h1 className={`cursor-pointer`} onClick={() => setHidden(!hidden)}>
@@ -215,7 +214,6 @@ export function ActiveSession({
               : session.sessionId}
           </h1>
           <div />
-
           <Dialog
             open={passwordModalOpen}
             onOpenChange={(state) => setPasswordModalOpen(state)}
@@ -310,10 +308,18 @@ export function ActiveSession({
         )}
       </div>
       <div className="h-8" />
-      <div className="relative flex flex-col items-stretch justify-center gap-16 sm:flex-row sm:px-16">
-        <div className="flex flex-[50%] flex-col gap-y-2">
+      <div
+        className={`} relative flex flex-col items-stretch justify-center gap-0 sm:flex-row sm:gap-16 sm:px-16`}
+      >
+        <div className="flex flex-col gap-y-2 sm:w-1/2">
           <h2>Trucs</h2>
-          <UploadContent onNewContent={onNewContent} />
+          <div className="h-16">
+            <UploadContent
+              className="h-16 hover:opacity-90"
+              onNewContent={onNewContent}
+            />
+          </div>
+          <div />
           <Reorder.Group
             values={attachmentContent}
             className="flex flex-col gap-y-2"
@@ -323,20 +329,19 @@ export function ActiveSession({
               onContentOrderUpdate([...newOrder, ...orderNote], true);
             }}
           >
-            {attachmentContent.map((content) => (
-              <Reorder.Item key={content.id} value={content}>
-                <ContentRenderer
-                  key={content.id}
-                  content={content}
-                  onContentDelete={onContentDelete}
-                />
-              </Reorder.Item>
+            {attachmentContent.map((content, index) => (
+              <ContentRenderer
+                key={content.id}
+                content={content}
+                onContentDelete={onContentDelete}
+              />
             ))}
           </Reorder.Group>
         </div>
-        <div className="flex flex-[50%] flex-col gap-y-2">
+        <div className={`flex flex-col gap-y-2 sm:w-1/2`}>
           <h2>Autres trucs</h2>
           <AddNewTask onNewContent={onNewContent} ref={newTaskComponent} />
+          <div />
           <Reorder.Group
             values={noteContent}
             className="flex flex-col gap-y-2"
@@ -346,16 +351,14 @@ export function ActiveSession({
               onContentOrderUpdate([...newOrder, ...orderAttachment], true);
             }}
           >
-            {noteContent.map((task) => (
-              <Reorder.Item key={task.id} value={task}>
-                <Task
-                  key={task.id}
-                  allContent={cachedContents}
-                  content={task}
-                  onDeleteTask={onContentDelete}
-                  onUpdateTask={onContentUpdate}
-                />
-              </Reorder.Item>
+            {noteContent.map((task, index) => (
+              <Task
+                key={task.id}
+                allContent={cachedContents}
+                content={task}
+                onDeleteTask={onContentDelete}
+                onUpdateTask={onContentUpdate}
+              />
             ))}
           </Reorder.Group>
         </div>

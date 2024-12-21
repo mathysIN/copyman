@@ -58,7 +58,7 @@ const ContentRenderer = ({
   const getContentType = (url: string) => {
     if (url.match(/\.(mp4|ogg|webm)$/)) {
       return "video";
-    } else if (url.match(/\.(png|jpg|jpeg|gif)$/)) {
+    } else if (url.match(/\.(png|jpg|jpeg|gif|svg)$/)) {
       return "image";
     } else if (url.match(/\.(mp3|wav)$/)) {
       return "audio";

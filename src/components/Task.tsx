@@ -1,6 +1,11 @@
 "use client";
 
-import { faCopy, faLink, faTrash } from "@fortawesome/free-solid-svg-icons";
+import {
+  faCopy,
+  faLink,
+  faTrash,
+  faArrowUpRightFromSquare,
+} from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -30,6 +35,7 @@ import {
 import { copyAndToast } from "~/lib/client/toast";
 import { useToast } from "~/hooks/use-toast";
 import { Reorder, useDragControls } from "framer-motion";
+import { Dialog, DialogContent, DialogTrigger } from "./ui/dialog";
 
 function _renderMarkdown(markdown: string): string {
   const headerRegex = /^(#+)\s(.+)/gm;
@@ -270,6 +276,108 @@ export function Task({
 
   let inputNumber = 0;
 
+  const textEditContent = (
+    <div className="flew-grow textarea relative w-full">
+      <TextareaAutosize
+        ref={textareaRef}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        onChange={handleChange}
+        value={value}
+        className={`${deleting && "cursor-wait"} ${!isFocused && "opacity-0"} textarea h-fit w-full flex-grow list-disc border-2`}
+        maxRows={20}
+      />
+      {!isFocused && (
+        <div
+          className="absolute inset-y-0 w-full cursor-text overflow-x-hidden break-words border-2 border-neutral-100 text-black"
+          onClick={onMarkdownRenderClick}
+        >
+          <ReactMarkdown
+            remarkPlugins={[remarkBreaks, remarkGfm]}
+            // children={value}
+            children={value.replace(/(?<=\n\n)(?![*-])/gi, "&nbsp;\n ")}
+            components={{
+              ul({ node, children, className, ...props }) {
+                return (
+                  <ul className={cn(className, "list-disc pl-5")} {...props}>
+                    {children}
+                  </ul>
+                );
+              },
+              a({ node, children, className, ...props }) {
+                return (
+                  <>
+                    <a
+                      {...props}
+                      className={cn(className, "cursor-pointer underline")}
+                      onClick={(e) => {
+                        if (!e.ctrlKey || e.button !== 0) e.preventDefault();
+                      }}
+                    >
+                      {children}
+                    </a>
+                  </>
+                );
+              },
+              input({ ...props }) {
+                inputNumber++;
+                const _inputNumber = inputNumber;
+                const realInputNumber = _inputNumber - 1;
+                return (
+                  <input
+                    onChange={() => {}}
+                    {...props}
+                    disabled={false}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (textareaRef?.current)
+                        textareaRef.current.value = replaceCheckbox(
+                          value,
+                          props.checked ? "- [ ]" : "- [x]",
+                          realInputNumber,
+                        );
+                      handleChange();
+                    }}
+                  ></input>
+                );
+              },
+              pre({ node, children, className, ...props }) {
+                return (
+                  <div className="relative">
+                    <pre
+                      className={cn(className, "overflow-x-scroll")}
+                      {...props}
+                    >
+                      <br />
+                      {children}
+                      <br />
+                    </pre>
+                  </div>
+                );
+              },
+              code({ node, children, ...props }) {
+                return (
+                  <>
+                    <button
+                      className="absolute right-0 top-0 m-1 rounded-md bg-white px-2 py-1 text-black active:scale-95"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        copyAndToast(toast, `${children}`);
+                      }}
+                    >
+                      <FontAwesomeIcon icon={faCopy} />
+                    </button>
+                    {children}
+                  </>
+                );
+              },
+            }}
+          />
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <Reorder.Item
       key={content.id}
@@ -281,114 +389,7 @@ export function Task({
         key={content.id}
         className={`${deleting && "animate-pulse cursor-wait opacity-75"} flex flex-col gap-2 rounded-md border-2 border-gray-300 bg-white px-2 py-2 text-black`}
       >
-        <div className="relative flex flex-col gap-2">
-          <div className="flew-grow textarea relative w-full">
-            <TextareaAutosize
-              ref={textareaRef}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
-              onChange={handleChange}
-              value={value}
-              className={`${deleting && "cursor-wait"} ${!isFocused && "opacity-0"} textarea h-fit w-full flex-grow list-disc border-2`}
-              maxRows={20}
-            />
-            {!isFocused && (
-              <div
-                className="absolute inset-y-0 w-full cursor-text overflow-x-hidden break-words border-2 border-neutral-100 text-black"
-                onClick={onMarkdownRenderClick}
-              >
-                <ReactMarkdown
-                  remarkPlugins={[remarkBreaks, remarkGfm]}
-                  // children={value}
-                  children={value.replace(/(?<=\n\n)(?![*-])/gi, "&nbsp;\n ")}
-                  components={{
-                    ul({ node, children, className, ...props }) {
-                      return (
-                        <ul
-                          className={cn(className, "list-disc pl-5")}
-                          {...props}
-                        >
-                          {children}
-                        </ul>
-                      );
-                    },
-                    a({ node, children, className, ...props }) {
-                      return (
-                        <>
-                          <a
-                            {...props}
-                            className={cn(
-                              className,
-                              "cursor-pointer underline",
-                            )}
-                            onClick={(e) => {
-                              if (!e.ctrlKey || e.button !== 0)
-                                e.preventDefault();
-                            }}
-                          >
-                            {children}
-                          </a>
-                        </>
-                      );
-                    },
-                    input({ ...props }) {
-                      inputNumber++;
-                      const _inputNumber = inputNumber;
-                      const realInputNumber = _inputNumber - 1;
-                      return (
-                        <input
-                          onChange={() => {}}
-                          {...props}
-                          disabled={false}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (textareaRef?.current)
-                              textareaRef.current.value = replaceCheckbox(
-                                value,
-                                props.checked ? "- [ ]" : "- [x]",
-                                realInputNumber,
-                              );
-                            handleChange();
-                          }}
-                        ></input>
-                      );
-                    },
-                    pre({ node, children, className, ...props }) {
-                      return (
-                        <div className="relative">
-                          <pre
-                            className={cn(className, "overflow-x-scroll")}
-                            {...props}
-                          >
-                            <br />
-                            {children}
-                            <br />
-                          </pre>
-                        </div>
-                      );
-                    },
-                    code({ node, children, ...props }) {
-                      return (
-                        <>
-                          <button
-                            className="absolute right-0 top-0 m-1 rounded-md bg-white px-2 py-1 text-black active:scale-95"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              copyAndToast(toast, `${children}`);
-                            }}
-                          >
-                            <FontAwesomeIcon icon={faCopy} />
-                          </button>
-                          {children}
-                        </>
-                      );
-                    },
-                  }}
-                />
-              </div>
-            )}
-          </div>
-        </div>
+        <div className="relative flex flex-col gap-2">{textEditContent}</div>
         {linksWithMeta.length > 0 && (
           <div className="flex flex-row flex-wrap">
             {linksWithMeta.map((link) => (
@@ -427,6 +428,19 @@ export function Task({
               <FontAwesomeIcon icon={faCopy} />
             </button>
 
+            <Dialog>
+              <DialogTrigger asChild>
+                <button
+                  disabled={deleting}
+                  className={`${deleting && "cursor-wait"} min-w-min active:scale-95`}
+                >
+                  <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
+                </button>
+              </DialogTrigger>
+              <DialogContent className="text-lg">
+                {textEditContent}
+              </DialogContent>
+            </Dialog>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <button

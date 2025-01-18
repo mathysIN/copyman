@@ -24,6 +24,7 @@ import {
 import { copyAndToast } from "~/lib/client/toast";
 import { useToast } from "~/hooks/use-toast";
 import { Reorder, useDragControls } from "framer-motion";
+import { Dialog, DialogContent, DialogTrigger } from "./ui/dialog";
 
 const GRADIENTS = [
   "bg-gradient-to-r from-green-400 to-blue-500",
@@ -49,6 +50,7 @@ const ContentRenderer = ({
 }) => {
   const { toast } = useToast();
   const [deleting, setDeleting] = useState(false);
+  const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [contentType, setContentType] = useState<
     "video" | "image" | "audio" | null
   >(null);
@@ -83,11 +85,29 @@ const ContentRenderer = ({
         );
       case "image":
         return (
-          <img
-            src={content.attachmentURL}
-            alt="Content"
-            className="absolute inset-0 h-full w-full rounded-lg object-cover"
-          />
+          <>
+            <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
+              <DialogTrigger>
+                <img
+                  src={content.attachmentURL}
+                  alt="Content"
+                  className="absolute inset-0 h-full w-full rounded-lg object-cover"
+                />
+              </DialogTrigger>
+              <DialogContent className="h-full max-h-fit w-full border-none bg-transparent p-0 text-white md:max-w-fit">
+                <div
+                  onClick={() => setImageDialogOpen(false)}
+                  className="relative flex  items-center justify-center overflow-hidden "
+                >
+                  <img
+                    src={content.attachmentURL}
+                    alt="Content"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+              </DialogContent>
+            </Dialog>
+          </>
         );
       case "audio":
         const index =
@@ -117,12 +137,7 @@ const ContentRenderer = ({
   };
 
   return (
-    <Reorder.Item
-      key={content.id}
-      value={content}
-      dragListener={false}
-      dragControls={controls}
-    >
+    <Reorder.Item key={content.id} value={content} dragControls={controls}>
       <div
         className={`${deleting && "animate-pulse cursor-wait opacity-75"} space-y h-fit rounded-md border-2 border-gray-300 bg-white p-2 text-gray-900`}
       >
@@ -149,10 +164,12 @@ const ContentRenderer = ({
             >
               <FontAwesomeIcon icon={faLink} />
             </button>
-            <a href={content.attachmentURL} target="_blank">
-              <button className="text-gray-900 active:scale-95">
-                <FontAwesomeIcon icon={faDownload} />
-              </button>
+            <a
+              href={content.attachmentURL}
+              className="flex items-center justify-center text-gray-900 active:scale-95"
+              target="_blank"
+            >
+              <FontAwesomeIcon icon={faDownload} />
             </a>
 
             <AlertDialog>
@@ -174,6 +191,7 @@ const ContentRenderer = ({
                 <AlertDialogFooter>
                   <AlertDialogCancel>Annuler</AlertDialogCancel>
                   <AlertDialogAction
+                    autoFocus
                     onClick={async () => {
                       setDeleting(true);
                       await fetch(`/api/content?contentId=${content.id}`, {
@@ -194,9 +212,7 @@ const ContentRenderer = ({
             </p>
             <div
               className="reorder-handle flex cursor-grab flex-row items-center justify-center"
-              onPointerDown={(e) => {
-                controls?.start(e);
-              }}
+              onPointerDown={(e) => controls?.start(e)}
             >
               <div className="drag-handle mt-[1px] cursor-grab">
                 <svg

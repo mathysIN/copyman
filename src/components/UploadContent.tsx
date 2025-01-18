@@ -2,9 +2,12 @@
 
 import { useRef } from "react";
 import { AttachmentType } from "~/server/db/redis";
-import { UploadDropzone } from "~/utils/uploadthing";
+import { UploadDropzone, UploadButton } from "~/utils/uploadthing";
 import { ClientUploadedFileData } from "uploadthing/types";
 import { cn } from "~/lib/utils";
+import { useToast } from "~/hooks/use-toast";
+import { faUpload } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 export const UPLOADTHING_ENDPOINT = "imageUploader";
 
@@ -15,6 +18,7 @@ export default function UploadContent({
   onNewContent?: (content: AttachmentType) => any;
   className?: string;
 }) {
+  const { toast } = useToast();
   const onClientUploadComplete = (
     res: ClientUploadedFileData<AttachmentType>[],
   ) => {
@@ -24,7 +28,10 @@ export default function UploadContent({
     onNewContent(content);
   };
   const onUploadError = (error: Error) => {
-    alert(`ERROR! ${error.message}`);
+    toast({
+      description: `Une erreur a eu lieu lors de la mise en ligne du fichier\n\n${error.message}`,
+      variant: "destructive",
+    });
   };
 
   const inputFileRef = useRef<HTMLInputElement>(null);
@@ -56,7 +63,7 @@ export default function UploadContent({
       }}
     >
       <div className="">
-        <UploadDropzone
+        <UploadButton
           endpoint={UPLOADTHING_ENDPOINT}
           className={cn(
             className,
@@ -65,14 +72,26 @@ export default function UploadContent({
           config={{ appendOnPaste: true, mode: "auto" }}
           content={{
             button({ ready }) {
-              if (ready) return <div>Upload un fichier</div>;
+              if (ready)
+                return (
+                  <div className="flex items-center justify-center space-x-2">
+                    <p>Upload un fichier</p>
+                    <FontAwesomeIcon icon={faUpload} />
+                  </div>
+                );
               return "Préparation...";
             },
           }}
           appearance={{
-            label: { display: "none" },
-            container: { color: "black", marginTop: 0 },
+            container: { color: "black" },
             button: { color: "black" },
+          }}
+          onBeforeUploadBegin={(e) => {
+            const file = e[0];
+            toast({
+              description: `Mise en ligne de ${file?.name}`,
+            });
+            return e;
           }}
           onClientUploadComplete={onClientUploadComplete}
           onUploadError={onUploadError}

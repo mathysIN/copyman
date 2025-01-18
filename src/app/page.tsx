@@ -21,6 +21,8 @@ export default async function HomePage() {
     sessionContentOrder = await session.getContentOrder();
   }
 
+  const showingSession = !error && session;
+
   return (
     <main className="relative flex min-h-screen flex-col  bg-[#287d7c] text-white">
       <div className="mx-auto flex flex-col items-center py-8 text-center">
@@ -29,24 +31,23 @@ export default async function HomePage() {
             Copyman
           </h1>
         </Link>
-        <p className="text-lg">
-          Un presse papier pas sécurisé mais pratique pour mon travail
-        </p>
-        <a href="https://mathys.in" className="text-xs text-white no-underline">
-          <p className="border-b-2 border-dashed border-opacity-60 opacity-60">
-            retourner sur mathys.in
-          </p>
-        </a>
+        {!showingSession && (
+          <>
+            <p className="text-lg">
+              Un presse papier pas sécurisé mais pratique pour mon travail
+            </p>
+            <div className="h-12" />
+          </>
+        )}
       </div>
-      <div className="h-12" />
       <div className="flex flex-col items-center justify-center ">
         {error && (
           <p className="text-red-500">
             Il y a eu une erreur avec les serveurs de Copyman
           </p>
         )}
-        {!error && !session && <PreSession />}
-        {!error && session && (
+        {!showingSession && <PreSession />}
+        {showingSession && (
           <ActiveSession
             session={session.toJSON()}
             hasPassword={session.hasPassword()}

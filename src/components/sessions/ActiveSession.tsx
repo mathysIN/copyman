@@ -44,6 +44,7 @@ import {
 } from "~/server/db/redis";
 import { useUploadThing } from "~/utils/uploadthing";
 import { DragControls, Reorder, useDragControls } from "framer-motion";
+import { useToast } from "~/hooks/use-toast";
 
 export function ActiveSession({
   session,
@@ -64,13 +65,17 @@ export function ActiveSession({
       onNewContent(content);
     },
     onUploadError: (error) => {
-      alert(`ERROR! ${error.message}`);
+      toast({
+        description: `Une erreur a eu lieu lors de la mise en ligne du fichier`,
+        variant: "destructive",
+      });
     },
   });
 
   const [isConnected, setIsConnected] = useState(false);
   const [roomSize, setRoomSize] = useState(0);
   const [transport, setTransport] = useState("N/A");
+  const { toast } = useToast();
 
   const [hasPassword, setHasPassword] = useState(_hasPassword);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
@@ -168,6 +173,16 @@ export function ActiveSession({
     }
   };
 
+  const handleDragOver = (e: DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer?.files[0];
+    if (file) uploadFile(file);
+  };
+
   const handleClipboardData = (clipboardData: DataTransfer) => {
     const text = clipboardData.getData("text");
     if (text) {
@@ -178,16 +193,32 @@ export function ActiveSession({
       if (item.type.startsWith("image/")) {
         const file = item.getAsFile();
         if (!file) continue;
-        uploadThing.startUpload([file]);
+        uploadFile(file);
       }
     }
   };
 
+  const uploadFile = (file: File) => {
+    uploadThing.startUpload([file]).catch((error) => {
+      toast({
+        description: `Une erreur a eu lieu lors de la mise en ligne du fichier`,
+        variant: "destructive",
+      });
+    });
+    toast({
+      description: `Mise en ligne de ${file.name}`,
+    });
+  };
+
   useEffect(() => {
     document.addEventListener("paste", handleGlobalPaste);
+    document.addEventListener("dragover", handleDragOver);
+    document.addEventListener("drop", handleDrop);
 
     return () => {
       document.removeEventListener("paste", handleGlobalPaste);
+      document.removeEventListener("dragover", handleDragOver);
+      document.removeEventListener("drop", handleDrop);
     };
   }, []);
 
@@ -283,7 +314,7 @@ export function ActiveSession({
           </button>
         </div>
         <span className="text-gray-200">
-          Créé le {new Date(parseInt(session.createdAt)).toLocaleDateString()}
+          Créée le {new Date(parseInt(session.createdAt)).toLocaleDateString()}
           {isConnected && <> - {roomSize} connectés</>}
         </span>
         {!isConnected && (

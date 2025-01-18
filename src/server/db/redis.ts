@@ -80,14 +80,14 @@ export type SessionType = {
   sessionId: string;
   password?: string;
   createdAt: string;
-  rawContentOrder: string;
+  rawContentOrder?: string;
 };
 
 export class Session {
   sessionId: string;
   password?: string;
   createdAt: string;
-  rawContentOrder: string;
+  rawContentOrder?: string;
   constructor(props: SessionType) {
     this.sessionId = props.sessionId;
     this.password = props.password;
@@ -209,7 +209,9 @@ export class Session {
   }
 
   async getContentOrder() {
-    return this.rawContentOrderToUUIDArray(this.rawContentOrder);
+    return this.rawContentOrder
+      ? this.rawContentOrderToUUIDArray(this.rawContentOrder)
+      : [];
   }
 
   async setContentOrder(contentOrder: ContentOrder) {

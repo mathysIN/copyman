@@ -379,12 +379,7 @@ export function Task({
   );
 
   return (
-    <Reorder.Item
-      key={content.id}
-      value={content}
-      dragListener={false}
-      dragControls={controls}
-    >
+    <Reorder.Item key={content.id} value={content}>
       <div
         key={content.id}
         className={`${deleting && "animate-pulse cursor-wait opacity-75"} flex flex-col gap-2 rounded-md border-2 border-gray-300 bg-white px-2 py-2 text-black`}

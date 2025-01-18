@@ -423,7 +423,11 @@ export function Task({
               <FontAwesomeIcon icon={faCopy} />
             </button>
 
-            <Dialog>
+            <Dialog
+              onOpenChange={() =>
+                setTimeout(() => textareaRef.current?.blur(), 0)
+              }
+            >
               <DialogTrigger asChild>
                 <button
                   disabled={deleting}
@@ -432,7 +436,7 @@ export function Task({
                   <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
                 </button>
               </DialogTrigger>
-              <DialogContent className="text-lg">
+              <DialogContent className="scale-105">
                 {textEditContent}
               </DialogContent>
             </Dialog>

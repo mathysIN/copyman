@@ -20,8 +20,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="overflow-hidden">
-      <body className={`overflow-hidden font-sans ${inter.variable}`}>
+    <html lang="en" className="overflow-x-hidden">
+      <body className={`overflow-x-hidden font-sans ${inter.variable}`}>
         {children}
       </body>
       <Toaster />

@@ -18,7 +18,7 @@ export function PreSession() {
   const [loading, setLoading] = useState(false);
 
   const sumbitForm = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       e.preventDefault();
       formRef?.current?.requestSubmit();
     }
@@ -87,21 +87,19 @@ export function PreSession() {
         />
         <input name="create" defaultValue="true" hidden />
       </span>
-      {needPassword && (
-        <span className="flex flex-row space-x-[1px] rounded-xl border-blue-600 bg-white p-2 text-black">
-          <span className="w-6 px-1">🔒</span>
-          <div className="h-1" />
-          <input
-            name="password"
-            type="password"
-            value={passwordValue}
-            onChange={(e) => setPasswordValue(e.target.value)}
-            onKeyDown={sumbitForm}
-            className="outline-none"
-            placeholder="password"
-          />
-        </span>
-      )}
+      <span className="flex flex-row space-x-[1px] rounded-xl border-blue-600 bg-white p-2 text-black">
+        <span className="w-6 px-1">**</span>
+        <div className="h-1" />
+        <input
+          name="password"
+          type="password"
+          value={passwordValue}
+          onChange={(e) => setPasswordValue(e.target.value)}
+          onKeyDown={sumbitForm}
+          className="outline-none"
+          placeholder="mot de passe"
+        />
+      </span>
       {loading && (
         <div role="status">
           <svg
@@ -123,12 +121,15 @@ export function PreSession() {
         </div>
       )}
       <div className="h-2" />
-      <button type="submit" className="w-full flex flex-col justify-center">
-        <div className="flex border-2 border-white border-dashed rounded-md bg-white bg-opacity-5 hover:bg-opacity-10 active:scale-95 px-2 py-2 flex-row space-x-4 items-center justify-center">
-          <p className="font-bold text-2xl py-[2px]">Rejoindre</p>
+      <div className="flex w-full flex-col items-center justify-center">
+        <button
+          type="submit"
+          className="flex flex-row items-center justify-center space-x-4 rounded-md border-2 border-dashed border-white bg-white bg-opacity-5 px-2 py-2 hover:bg-opacity-10 active:scale-95"
+        >
+          <p className="py-[2px] text-2xl font-bold">Rejoindre</p>
           <Image src="/logo.png" width={50} height={50} alt="logo" />
-        </div>
-      </button>
+        </button>
+      </div>
     </form>
   );
 }

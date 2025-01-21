@@ -24,7 +24,7 @@
     "@radix-ui/react-toast": "^1.2.2",
     "@radix-ui/react-tooltip": "^1.0.7",
     "@t3-oss/env-nextjs": "^0.9.2",
-    "@uploadthing/react": "^6.4.4",
+    "@uploadthing/react": "^7.1.5",
     "@upstash/redis": "^1.29.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
@@ -46,7 +46,7 @@
     "socket.io-client": "^4.7.5",
     "tailwind-merge": "^2.2.2",
     "tailwindcss-animate": "^1.0.7",
-    "uploadthing": "^6.9.0",
+    "uploadthing": "^7.4.4",
     "url-metadata": "^4.1.0",
     "zod": "^3.22.4"
   },

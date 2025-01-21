@@ -58,19 +58,21 @@ const ContentRenderer = ({
   const controls = useDragControls();
 
   const getContentType = (url: string) => {
-    if (url.match(/\.(mp4|ogg|webm)$/)) {
-      return "video";
-    } else if (url.match(/\.(png|jpg|jpeg|gif|svg)$/)) {
-      return "image";
-    } else if (url.match(/\.(mp3|wav)$/)) {
-      return "audio";
-    } else {
-      return null;
+    const urlSplited = url.split(".");
+    const stringExtension = urlSplited[urlSplited.length - 1] ?? "";
+    let extension: "video" | "image" | "audio" | null = null;
+    if (["mp4", "ogg", "webm"].includes(stringExtension)) {
+      extension = "video";
+    } else if (["png", "jpg", "jpeg", "gif", "svg"].includes(stringExtension)) {
+      extension = "image";
+    } else if (["mp3", "wav"].includes(stringExtension)) {
+      extension = "audio";
     }
+    return extension;
   };
 
   useEffect(() => {
-    setContentType(getContentType(content.attachmentURL));
+    setContentType(getContentType(content.attachmentPath));
   }, [content]);
 
   const renderContent = () => {

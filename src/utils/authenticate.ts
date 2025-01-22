@@ -58,7 +58,7 @@ async function getSession(
   if (
     !ignorePassword &&
     session.hasPassword() &&
-    !(await session.verifyPassword(password ?? ""))
+    !(await session.verifyPassword(password))
   )
     return null;
   return session;

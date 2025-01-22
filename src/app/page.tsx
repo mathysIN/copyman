@@ -33,10 +33,9 @@ export default async function HomePage() {
         </Link>
         {!showingSession && (
           <>
-            <p className="text-lg">
-              Un presse papier pas sécurisé mais pratique pour mon travail
+            <p className="py-2 text-lg">
+              {MOTDS[Math.floor(Math.random() * MOTDS.length)]}
             </p>
-            <div className="h-12" />
           </>
         )}
       </div>
@@ -59,3 +58,10 @@ export default async function HomePage() {
     </main>
   );
 }
+
+const MOTDS = [
+  "5 balles de bounty à celui qui trouve une faille",
+  '"Mais Apple UC et AirDrop existe déjà", haha men fou',
+  "Un presse papier pas sécurisé mais pratique pour mon travail",
+  "L'application qui tourne sur un spaghetti code",
+];

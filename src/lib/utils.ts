@@ -56,7 +56,7 @@ export function areSetEqual<T>(set1: Set<T>, set2: Set<T>): boolean {
 }
 
 export function isValidSessionId(s: string): boolean {
-  return /^[a-zA-Z0-9_]*$/.test(s);
+  return s.length > 0 && /^[a-zA-Z0-9_]*$/.test(s);
 }
 
 export function deleteAllCookies() {

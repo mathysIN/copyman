@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { sessions } from "~/server/db/redis";
+import { Session, sessions } from "~/server/db/redis";
 import { cookies } from "next/headers";
 import {
   getSessionWithCookies,
@@ -12,37 +12,41 @@ import { isValidSessionId } from "~/lib/utils";
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const sessionId = url.searchParams.get("sessionId");
-  const password = url.searchParams.get("password");
-  let session;
-  if (sessionId)
-    session = await getSessionWithSessionId(sessionId, undefined, true);
+  const rawPassword = url.searchParams.get("password");
+  const password = rawPassword ? hashPassword(rawPassword) : undefined;
+  const join = url.searchParams.get("join") == "true";
+  const session = sessionId
+    ? await getSessionWithSessionId(sessionId, undefined, true)
+    : null;
   if (!session)
     return NextResponse.json({ createNewSession: true }, { status: 200 });
-  if (password) {
-    cookies().set("password", hashPassword(password));
-  }
 
   return NextResponse.json({
     ...session.toJSON(),
     password,
     hasPassword: session.hasPassword(),
-    isValidPassword: await session.verifyPasswordFromCookie(cookies()),
+    isValidPassword: await session.verifyPassword(password),
   });
 }
 
 export async function POST(req: Request) {
   const data = await req.formData();
-  const sessionId = data.get("session")?.toString()?.toLowerCase();
-  const password = data.get("password")?.toString();
-  const create = data.get("create")?.toString();
-
-  if (sessionId) {
-    cookies().set("sessionId", sessionId, {
-      expires: Date.now() + 10 * 365 * 24 * 60 * 60 * 1000,
-    });
-    if (!isValidSessionId(sessionId))
-      return redirect("/?msg=invalid_session_id");
-
+  const sessionId = data.get("session")?.toString()?.toLowerCase() ?? "";
+  const rawPassword = data.get("password")?.toString();
+  const password = rawPassword && hashPassword(rawPassword);
+  const join = data.get("join")?.toString() == "true";
+  if (!isValidSessionId(sessionId)) return redirect("/?msg=invalid_session_id");
+  let canJoin = false;
+  if (join) {
+    const session = await getSessionWithSessionId(
+      sessionId ?? "",
+      password,
+      true,
+      false,
+    );
+    if (!session) return redirect("/?msg=invalid_session_id");
+    canJoin = true;
+  } else {
     const sessionData: {
       sessionId: string;
       createdAt: string;
@@ -50,21 +54,29 @@ export async function POST(req: Request) {
       rawContentOrder: string;
     } = {
       sessionId: sessionId,
+      password: password,
       createdAt: Date.now().toString(),
       rawContentOrder: "",
     };
 
-    if (password !== undefined) {
-      sessionData.password = password;
-    }
+    const newSession = await sessions
+      .hmnew(sessionId, sessionData)
+      .catch(() => {});
 
-    await sessions.hmnew(sessionId, sessionData).catch(() => {});
+    if (!newSession) return redirect("/?msg=session_exists");
+    canJoin = true;
   }
-  if (password)
-    cookies().set("password", hashPassword(password), {
+
+  if (canJoin) {
+    cookies().set("session", sessionId, {
       expires: Date.now() + 10 * 365 * 24 * 60 * 60 * 1000,
     });
-  return redirect(`/join/${sessionId}`);
+    if (password)
+      cookies().set("password", password, {
+        expires: Date.now() + 10 * 365 * 24 * 60 * 60 * 1000,
+      });
+  }
+  return redirect("/");
 }
 
 export async function PATCH(req: Request) {

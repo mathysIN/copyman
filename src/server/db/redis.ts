@@ -228,9 +228,14 @@ export class Session {
     });
   }
 
-  async verifyPassword(password: string) {
-    if (!this.password) return true;
-    return validatePassword(password, this.password);
+  async verifyPassword(password?: string) {
+    if (!this.password) {
+      if (!password) return true;
+      else return false;
+    } else {
+      if (!password) return false;
+      return validatePassword(password, this.password);
+    }
   }
 
   hasPassword() {
@@ -240,7 +245,7 @@ export class Session {
   async verifyPasswordFromCookie(
     cookie: RequestCookies | ReadonlyRequestCookies,
   ) {
-    return this.verifyPassword(cookie.get("password")?.value ?? "");
+    return this.verifyPassword(cookie.get("password")?.value);
   }
 
   toJSON(): SessionType {

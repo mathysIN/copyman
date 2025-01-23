@@ -20,6 +20,7 @@ import { Button } from "~/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -45,6 +46,17 @@ import {
 import { useUploadThing } from "~/utils/uploadthing";
 import { DragControls, Reorder, useDragControls } from "framer-motion";
 import { useToast } from "~/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "~/components/ui/alert-dialog";
+import { DialogClose } from "@radix-ui/react-dialog";
 
 export function ActiveSession({
   session,
@@ -318,24 +330,30 @@ export function ActiveSession({
           {isConnected && <> - {roomSize} connectés</>}
         </span>
         {!isConnected && (
-          <TooltipProvider delayDuration={200}>
-            <Tooltip>
-              <TooltipTrigger>
-                <div className="flex flex-row items-center justify-center space-x-2">
-                  <FontAwesomeIcon icon={faWarning} />
-                  <span className="text-red-400">
-                    Le client est deconnecté du socket.
-                  </span>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>
+          <Dialog>
+            <DialogTrigger>
+              <div className="flex flex-row items-center justify-center space-x-2">
+                <FontAwesomeIcon icon={faWarning} />
+                <span className="text-red-400">
+                  Le client est deconnecté du socket.
+                </span>
+              </div>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Le client est deconnecté du socket.</DialogTitle>
+                <DialogDescription>
                   {`Les changements en direct sont désactivés. Rafraichissez la
                   page pour voir les changements d'autres clients connectés.`}
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <DialogClose>
+                  <Button>Bruh</Button>
+                </DialogClose>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         )}
       </div>
       <div className="h-8" />

@@ -74,8 +74,8 @@ export default function UploadContent({
             button({ ready }) {
               if (ready)
                 return (
-                  <div className="flex items-center justify-center space-x-2">
-                    <p>Upload un fichier</p>
+                  <div className="flex w-max items-center justify-center space-x-2">
+                    <p>Nouveau fichier</p>
                     <FontAwesomeIcon icon={faUpload} />
                   </div>
                 );

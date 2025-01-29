@@ -10,13 +10,18 @@ import { cn } from "~/utils/helpers";
 import imageCreate from "~/../public/create.png";
 import imageInSession from "~/../public/insession.png";
 import imageSharing from "~/../public/sharing.png";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "~/components/ui/collapsible";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faAngleDown, faArrowDown } from "@fortawesome/free-solid-svg-icons";
+import { faQuestionCircle } from "@fortawesome/free-solid-svg-icons";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "~/components/ui/dialog";
+import { Button } from "~/components/ui/button";
 
 export function PreSession() {
   const formRef = useRef<HTMLFormElement>(null);
@@ -91,11 +96,11 @@ export function PreSession() {
         ref={formRef}
       >
         <input name="join" value={`${joinSession}`} readOnly hidden />
-        <div className="flex items-center space-x-4">
+        <div className="flex flex-col items-center gap-4 text-center sm:flex-row">
           <label
             htmlFor="join-session"
             className={cn(
-              "w-44 cursor-pointer text-right",
+              "w-44 cursor-pointer sm:text-right",
               joinSession && "opacity-50",
               !joinSession && "underline",
             )}
@@ -111,7 +116,7 @@ export function PreSession() {
           <label
             htmlFor="join-session"
             className={cn(
-              "w-44 cursor-pointer",
+              "w-44 cursor-pointer sm:text-left",
               !joinSession && "opacity-50",
               joinSession && "underline",
             )}
@@ -184,56 +189,64 @@ export function PreSession() {
       </form>
       <div className="h-20" />
 
-      <div className="flex flex-row justify-center">
-        <Collapsible className="flex flex-col justify-center">
-          <CollapsibleTrigger>
-            <h3 className="py-2 text-center text-3xl font-bold">
-              {"Qu'est-ce que Copyman "}
-              <FontAwesomeIcon icon={faAngleDown} />
-            </h3>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <div className="h-2" />
-            <div className="flex flex-col items-center justify-center">
-              <div className="flex flex-col items-center text-center font-bold">
-                <div className="flex flex-col items-center">
-                  <p className="text-5xl italic">1</p>
-                  <p>
-                    Créez une session avec un identifiant et un mot de passe
-                  </p>
+      <Dialog>
+        <DialogTrigger>
+          <h3 className="py-2 text-center text-sm  underline">
+            {"Qu'est-ce que Copyman "}
+            <FontAwesomeIcon icon={faQuestionCircle} />
+          </h3>
+        </DialogTrigger>
+        <DialogContent className="h-full max-h-full overflow-visible bg-stone-800 text-white lg:max-w-fit">
+          <DialogHeader>
+            <DialogTitle> {"Qu'est-ce que Copyman "}</DialogTitle>
+            <div className="flex flex-col justify-center overflow-visible py-4">
+              <div className="h-2" />
+              <div className="flex h-full flex-col items-center justify-center">
+                <div className="flex flex-col items-center text-center font-bold">
+                  <div className="flex flex-col items-center">
+                    <p className="text-5xl italic">1</p>
+                    <p>
+                      Créez une session avec un identifiant et un mot de passe
+                    </p>
+                  </div>
+                  <Image src={imageCreate} className="w-96" alt="logo" />
                 </div>
-                <Image src={imageCreate} className="w-96" alt="logo" />
+                <div className="flex flex-col items-center font-bold">
+                  <div className="flex flex-col items-center">
+                    <p className="text-5xl italic">2</p>
+                    <p>Ajoutez vos textes et fichiers</p>
+                  </div>
+                  <Image src={imageInSession} className="w-96" alt="logo" />
+                </div>
+                <div className="flex flex-col items-center font-bold">
+                  <div className="flex flex-col items-center">
+                    <p className="text-5xl italic">3</p>
+                    <p className="w-80 text-center">{`Rejoignez la session temps réel avec d'autres appareils en quelques cliques`}</p>
+                  </div>
+                  <Image src={imageSharing} className="w-96" alt="logo" />
+                </div>
               </div>
-              <div className="flex flex-col items-center font-bold">
-                <div className="flex flex-col items-center">
-                  <p className="text-5xl italic">2</p>
-                  <p>Ajoutez vos textes et fichiers</p>
-                </div>
-                <Image src={imageInSession} className="w-96" alt="logo" />
-              </div>
-              <div className="flex flex-col items-center font-bold">
-                <div className="flex flex-col items-center">
-                  <p className="text-5xl italic">3</p>
-                  <p className="w-80 text-center">{`Rejoignez la session temps réel avec d'autres appareils en quelques cliques`}</p>
-                </div>
-                <Image src={imageSharing} className="w-96" alt="logo" />
+              <div className="px-8 text-center">
+                <p className="py-2">
+                  {
+                    "Copyman permet de partager facilement du contenu en temps réel via des sessions. Pas besoin de compte, tout est rapide et pratique. Parfait pour une utilisation simple et collaborative."
+                  }
+                </p>
+                <p className="py-2">
+                  {
+                    "La plateforme est encore en développement (et le code est bien naze) mais l'objectif serait de la peaufiner."
+                  }
+                </p>
               </div>
             </div>
-            <div className="max-w-[500px] px-8 text-center">
-              <p className="py-2">
-                {
-                  "Copyman permet de partager facilement du contenu en temps réel via des sessions. Pas besoin de compte, tout est rapide et pratique. Parfait pour une utilisation simple et collaborative."
-                }
-              </p>
-              <p className="py-2">
-                {
-                  "La plateforme est encore en développement (et le code est bien naze) mais l'objectif serait de la peaufiner."
-                }
-              </p>
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-      </div>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose>
+              <Button>Dac</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="h-20" />
     </>
   );

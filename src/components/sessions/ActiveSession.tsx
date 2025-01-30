@@ -4,8 +4,6 @@ import {
   faDoorOpen,
   faLock,
   faWarning,
-  faDownload,
-  faCopy,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Loader2 } from "lucide-react";
@@ -28,12 +26,6 @@ import {
 } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "~/components/ui/tooltip";
 import { socket } from "~/lib/client/socket";
 import { deleteAllCookies } from "~/lib/utils";
 import {
@@ -44,19 +36,10 @@ import {
   SessionType,
 } from "~/server/db/redis";
 import { useUploadThing } from "~/utils/uploadthing";
-import { DragControls, Reorder, useDragControls } from "framer-motion";
+import { Reorder } from "framer-motion";
 import { useToast } from "~/hooks/use-toast";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "~/components/ui/alert-dialog";
 import { DialogClose } from "@radix-ui/react-dialog";
+import { User } from "~/server";
 
 export function ActiveSession({
   session,
@@ -85,7 +68,7 @@ export function ActiveSession({
   });
 
   const [isConnected, setIsConnected] = useState(false);
-  const [roomSize, setRoomSize] = useState(0);
+  const [roomUsers, setRoomUsers] = useState<User[]>([]);
   const [transport, setTransport] = useState("N/A");
   const { toast } = useToast();
 
@@ -164,7 +147,7 @@ export function ActiveSession({
     });
 
     socket.on("roomInsight", (room) => {
-      setRoomSize(room.connectedCount);
+      setRoomUsers(room.users);
     });
 
     socket.on("connect", onConnect);
@@ -246,6 +229,15 @@ export function ActiveSession({
       return orderNote.indexOf(a.id) - orderNote.indexOf(b.id);
     });
 
+  const mergedUsers = new Map<string, User & { quantity: number }>();
+  for (const user of roomUsers) {
+    const userAlreadyIn = mergedUsers.get(user.commonId);
+    if (!userAlreadyIn) {
+      mergedUsers.set(user.commonId, { ...user, quantity: 1 });
+      continue;
+    } else userAlreadyIn.quantity++;
+  }
+
   return (
     <div className="w-4/5 select-none pb-10">
       <div className="flex flex-col items-center justify-center">
@@ -326,8 +318,38 @@ export function ActiveSession({
           </button>
         </div>
         <span className="text-gray-200">
-          Créée le {new Date(parseInt(session.createdAt)).toLocaleDateString()}
-          {isConnected && <> - {roomSize} connectés</>}
+          Créée le {new Date(parseInt(session.createdAt)).toLocaleDateString()}{" "}
+          {isConnected && (
+            <Dialog>
+              <DialogTrigger>
+                <div className="flex flex-row items-center justify-center space-x-2">
+                  <button> - {roomUsers.length} connectés</button>
+                </div>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>
+                    Connectés à la session ({roomUsers.length})
+                  </DialogTitle>
+                  <DialogDescription>
+                    <div className="flex flex-col gap-2">
+                      {Array.from(mergedUsers.values()).map((u) => (
+                        <p>
+                          - {u.quantity > 1 && `(x${u.quantity}) `}
+                          {u.userAgent}
+                        </p>
+                      ))}
+                    </div>
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <DialogClose>
+                    <Button>Cool</Button>
+                  </DialogClose>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
         </span>
         {!isConnected && (
           <Dialog>

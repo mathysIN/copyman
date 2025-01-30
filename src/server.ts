@@ -4,7 +4,7 @@ import next from "next";
 import { Server } from "socket.io";
 import { getSessionWithCookieString } from "~/utils/authenticate";
 import { ContentOrder, ContentType } from "~/server/db/redis";
-import { Socket } from "socket.io-client";
+import { createHashId } from "~/lib/utils";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
@@ -22,6 +22,7 @@ export interface ServerToClientEvents {
 
 type RoomInsight = {
   connectedCount: number;
+  users: User[];
 };
 
 export interface ClientToServerEvents {
@@ -41,7 +42,13 @@ export interface ConnectionStart {
   password?: string;
 }
 
-const rooms = new Map<string, Set<string>>();
+export type User = {
+  id: string;
+  commonId: string;
+  userAgent: string;
+};
+
+const rooms = new Map<string, Map<string, User>>();
 
 app.prepare().then(() => {
   const httpServer = createServer(handler);
@@ -60,20 +67,30 @@ app.prepare().then(() => {
     );
     if (!session) return;
     if (!rooms.has(session.sessionId)) {
-      rooms.set(session.sessionId, new Set());
+      rooms.set(session.sessionId, new Map());
     }
     const sockets = rooms.get(session.sessionId);
     if (sockets) {
-      sockets.add(socket.id);
+      const userAgent = socket.handshake.headers["user-agent"] ?? "Anonymous";
+      const socketId = socket.id;
+      const ip = socket.handshake.address;
+      const commandId = `${userAgent}:${ip}`;
+      sockets.set(socket.id, {
+        userAgent: userAgent,
+        id: socketId,
+        commonId: await createHashId(commandId),
+      });
+      const users = Array.from(sockets.values());
       setTimeout(
         () =>
           io
             .to(socket.id)
-            .emit("roomInsight", { connectedCount: sockets.size }),
+            .emit("roomInsight", { connectedCount: sockets.size, users }),
         1000,
       ); // i cant make this work for some reason
-      for (const id of sockets) {
-        io.to(id).emit("roomInsight", { connectedCount: sockets.size });
+      for (const keyVal of sockets) {
+        const id = keyVal[0];
+        io.to(id).emit("roomInsight", { connectedCount: sockets.size, users });
       }
     }
 
@@ -81,8 +98,13 @@ app.prepare().then(() => {
       const sockets = rooms.get(session.sessionId);
       if (sockets) {
         sockets.delete(socket.id);
-        for (const id of sockets) {
-          io.to(id).emit("roomInsight", { connectedCount: sockets.size });
+        const users = Array.from(sockets.values());
+        for (const keyVal of sockets) {
+          const id = keyVal[0];
+          io.to(id).emit("roomInsight", {
+            connectedCount: sockets.size,
+            users,
+          });
         }
       }
       for (const room of rooms) {
@@ -98,7 +120,8 @@ app.prepare().then(() => {
       if (!session) return;
       const sockets = rooms.get(session.sessionId);
       if (!sockets) return;
-      for (const id of sockets) {
+      for (const keyVal of sockets) {
+        const id = keyVal[0];
         if (id === socket.id) continue;
         io.to(id).emit("addContent", content);
       }
@@ -112,7 +135,8 @@ app.prepare().then(() => {
       if (!session) return;
       const sockets = rooms.get(session.sessionId);
       if (!sockets) return;
-      for (const id of sockets) {
+      for (const keyVal of sockets) {
+        const id = keyVal[0];
         if (id === socket.id) continue;
         io.to(id).emit("deleteContent", contentId);
       }
@@ -126,7 +150,8 @@ app.prepare().then(() => {
       if (!session) return;
       const sockets = rooms.get(session.sessionId);
       if (!sockets) return;
-      for (const id of sockets) {
+      for (const keyVal of sockets) {
+        const id = keyVal[0];
         if (id === socket.id) continue;
         io.to(id).emit("updatedContent", content);
       }
@@ -141,7 +166,8 @@ app.prepare().then(() => {
       const sockets = rooms.get(session.sessionId);
       if (!sockets) return;
 
-      for (const id of sockets) {
+      for (const keyVal of sockets) {
+        const id = keyVal[0];
         if (id === socket.id) continue;
         io.to(id).emit("updatedContentOrder", contentOrder);
       }

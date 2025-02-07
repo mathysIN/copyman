@@ -49,6 +49,7 @@ const ContentRenderer = ({
   onContentDelete: (contentId: string) => any;
 }) => {
   const { toast } = useToast();
+  const [isHolding, setIsHolding] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [contentType, setContentType] = useState<
@@ -139,7 +140,12 @@ const ContentRenderer = ({
   };
 
   return (
-    <Reorder.Item key={content.id} value={content} dragControls={controls}>
+    <Reorder.Item
+      key={content.id}
+      value={content}
+      dragControls={controls}
+      dragListener={isHolding}
+    >
       <div
         className={`${deleting && "animate-pulse cursor-wait opacity-75"} space-y h-fit rounded-md border-2 border-gray-300 bg-white p-2 text-gray-900`}
       >
@@ -214,6 +220,11 @@ const ContentRenderer = ({
             </p>
             <div
               className="reorder-handle flex cursor-grab flex-row items-center justify-center"
+              onMouseDown={() => setIsHolding(true)}
+              onMouseUp={() => setIsHolding(false)}
+              onMouseLeave={() => setIsHolding(false)}
+              onTouchStart={() => setIsHolding(true)}
+              onTouchEnd={() => setIsHolding(false)}
               onPointerDown={(e) => controls?.start(e)}
             >
               <div className="drag-handle mt-[1px] cursor-grab">

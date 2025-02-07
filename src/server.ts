@@ -1,10 +1,15 @@
 import "dotenv/config";
-import { createServer } from "node:http";
+import { createServer, IncomingMessage } from "node:http";
 import next from "next";
-import { Server } from "socket.io";
-import { getSessionWithCookieString } from "~/utils/authenticate";
-import { ContentOrder, ContentType } from "~/server/db/redis";
+import { Server, Socket } from "socket.io";
+import {
+  getSessionWithCookieString,
+  getSessionWithRecord,
+} from "~/utils/authenticate";
+import { ContentOrder, ContentType, Session } from "~/server/db/redis";
 import { createHashId } from "~/lib/utils";
+import { parse as parseCookie } from "cookie";
+import express from "express";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
@@ -48,10 +53,69 @@ export type User = {
   userAgent: string;
 };
 
+type CopymanSocket = Socket<
+  ClientToServerEvents,
+  ServerToClientEvents,
+  InterServerEvents,
+  ConnectionStart
+>;
+
 const rooms = new Map<string, Map<string, User>>();
 
+function readBody(req: IncomingMessage): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let data = "";
+    req.on("data", (chunk) => (data += chunk));
+    req.on("end", () => resolve(data));
+    req.on("error", (err) => reject(err));
+  });
+}
+
+export async function createCustomRequest(req: IncomingMessage) {
+  const bodyText = await readBody(req);
+  return {
+    method: req.method,
+    url: req.url,
+    headers: req.headers,
+    json: async () => JSON.parse(bodyText),
+    text: async () => bodyText,
+    cookies: parseCookie(req.headers.cookie || ""),
+  };
+}
+
 app.prepare().then(() => {
-  const httpServer = createServer(handler);
+  const server = express();
+  const httpServer = createServer(server);
+
+  server.use(express.json());
+  server.get("/api/notes", async (req, res) => {
+    const data = await req.body;
+    const cookies = req.cookies;
+
+    const session = await getSessionWithRecord(cookies);
+    if (!session) {
+      res.writeHead(401, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ message: "Unauthorized" }));
+      return;
+    }
+    const { content } = data;
+    const newNote = { content };
+    const response = await session.createNewNote(newNote).catch(() => {});
+
+    if (response) {
+      addContentHandler(io, session, response);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(response));
+    } else {
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ message: "Failed to create" }));
+    }
+    return;
+  });
+
+  server.all("*", (req, res) => {
+    return handler(req, res);
+  });
 
   const io = new Server<
     ClientToServerEvents,
@@ -118,13 +182,7 @@ app.prepare().then(() => {
         true,
       );
       if (!session) return;
-      const sockets = rooms.get(session.sessionId);
-      if (!sockets) return;
-      for (const keyVal of sockets) {
-        const id = keyVal[0];
-        if (id === socket.id) continue;
-        io.to(id).emit("addContent", content);
-      }
+      addContentHandler(io, session, content, socket);
     });
 
     socket.on("deleteContent", async (contentId) => {
@@ -174,13 +232,26 @@ app.prepare().then(() => {
       session.setContentOrder(contentOrder);
     });
   });
-
-  httpServer
-    .once("error", (err) => {
-      console.error(err);
-      process.exit(1);
-    })
-    .listen(port, () => {
-      console.log(`> Ready on http://${hostname}:${port}`);
-    });
+  httpServer.listen(3000, () => {
+    console.log(`> Ready on http://${hostname}:${port}`);
+  });
 });
+
+async function addContentHandler(
+  io: Server,
+  session: Session,
+  content: ContentType,
+  socket?: CopymanSocket,
+) {
+  if (!session) return;
+  const sockets = rooms.get(session.sessionId);
+  if (!sockets) return;
+  for (const keyVal of sockets) {
+    const id = keyVal[0];
+    if (socket) {
+      io.except(socket.id).to(id).emit("addContent", content);
+    } else {
+      io.emit("addContent", content);
+    }
+  }
+}

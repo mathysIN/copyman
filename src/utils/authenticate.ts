@@ -2,8 +2,19 @@ import type { RequestCookies } from "next/dist/compiled/@edge-runtime/cookies";
 import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 import { Session, sessions } from "~/server/db/redis";
 import cookie from "cookie";
+import { string } from "zod";
 
 const BANNED_SESSIONS = ["admin", "favicon.ico", "socket.io"];
+
+export async function getSessionWithRecord(
+  record: Record<string, string>,
+  ignorePassword = false,
+): Promise<Session | null> {
+  const sessionId = record["session"];
+  if (!sessionId) return null;
+  const password = record["password"];
+  return getSession(sessionId, password, ignorePassword);
+}
 
 export async function getSessionWithCookies(
   cookies: RequestCookies | ReadonlyRequestCookies,

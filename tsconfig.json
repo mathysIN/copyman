@@ -10,8 +10,10 @@
     "moduleDetection": "force",
     "isolatedModules": true,
 
-    /* Strictness */
     "strict": true,
+    "noImplicitAny": true,
+    "forceConsistentCasingInFileNames": true,
+    /* Strictness */
     "noUncheckedIndexedAccess": true,
     "checkJs": true,
 

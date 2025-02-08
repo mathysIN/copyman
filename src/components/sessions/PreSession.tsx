@@ -23,6 +23,12 @@ import {
 } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
 
+const enumCreateJoinSession = {
+  NONE: 0,
+  CREATE: 1,
+  JOIN: 2,
+};
+
 export function PreSession() {
   const formRef = useRef<HTMLFormElement>(null);
   const searchParams = useSearchParams();
@@ -31,6 +37,9 @@ export function PreSession() {
   const [needPassword, setNeedPassword] = useState(false);
   const [joinSession, setJoinSession] = useState(
     () => localStorage.getItem("joinSession") === "true",
+  );
+  const [sessionAction, setSessionAction] = useState(
+    enumCreateJoinSession.NONE,
   );
   useEffect(() => {
     localStorage.setItem("joinSession", joinSession.toString());

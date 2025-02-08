@@ -259,7 +259,7 @@ export function ActiveSession({
                 className={`${hasPassword && "text-yellow-400"} active:scale-95`}
               />
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[480px]">
+            <DialogContent className="xl:max-w-[480px]">
               <DialogHeader>
                 <DialogTitle>
                   {hasPassword && "Modifier le mot de passe existant"}
@@ -353,13 +353,9 @@ export function ActiveSession({
         </span>
         {!isConnected && (
           <Dialog>
-            <DialogTrigger>
-              <div className="flex flex-row items-center justify-center space-x-2">
-                <FontAwesomeIcon icon={faWarning} />
-                <span className="text-red-400">
-                  Le client est deconnecté du socket.
-                </span>
-              </div>
+            <DialogTrigger className="my-2 flex flex-row items-center justify-center space-x-2 rounded-xl bg-red-400 px-3 py-2 text-white hover:opacity-90 active:scale-95">
+              <FontAwesomeIcon icon={faWarning} />
+              <span>Le client est deconnecté du socket.</span>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
@@ -380,9 +376,9 @@ export function ActiveSession({
       </div>
       <div className="h-8" />
       <div
-        className={`} relative flex flex-col items-stretch justify-center gap-0 sm:flex-row sm:gap-16 sm:px-16`}
+        className={`} relative flex flex-col items-stretch justify-center gap-0 gap-y-4 xl:flex-row xl:gap-16 xl:px-16`}
       >
-        <div className="flex flex-col gap-y-2 sm:w-1/2">
+        <div className="flex flex-col gap-y-2 xl:w-1/2">
           <h2>Trucs</h2>
           <div className="h-16">
             <UploadContent
@@ -409,7 +405,7 @@ export function ActiveSession({
             ))}
           </Reorder.Group>
         </div>
-        <div className={`flex flex-col gap-y-2 sm:w-1/2`}>
+        <div className={`flex flex-col gap-y-2 xl:w-1/2`}>
           <h2>Autres trucs</h2>
           <AddNewTask onNewContent={onNewContent} ref={newTaskComponent} />
           <div />

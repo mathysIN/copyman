@@ -462,6 +462,7 @@ export function Task({
                 <AlertDialogFooter>
                   <AlertDialogCancel>Annuler</AlertDialogCancel>
                   <AlertDialogAction
+                    autoFocus
                     onClick={async () => {
                       setDeleting(true);
                       fetch("/api/notes", {

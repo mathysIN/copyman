@@ -208,29 +208,22 @@ const ContentRenderer = ({
               </AlertDialogContent>
             </AlertDialog>
           </div>
-          <div className="flex select-text items-center gap-2">
-            <p className="center flex-1 overflow-hidden whitespace-nowrap text-right  align-middle text-sm text-gray-500 sm:w-64">
-              {content.attachmentPath}
-            </p>
-            <div
-              className="reorder-handle flex cursor-grab flex-row items-center justify-center"
-              onPointerDown={(e) => controls?.start(e)}
-            >
-              <div className="drag-handle mt-[1px] cursor-grab">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-black"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <circle cx="5" cy="6" r="1.5" />
-                  <circle cx="5" cy="12" r="1.5" />
-                  <circle cx="5" cy="18" r="1.5" />
-                  <circle cx="10" cy="6" r="1.5" />
-                  <circle cx="10" cy="12" r="1.5" />
-                  <circle cx="10" cy="18" r="1.5" />
-                </svg>
-              </div>
+          <div className="center flex flex-1 flex-row items-center justify-end gap-x-2 overflow-hidden whitespace-pre-line text-left  align-middle text-sm text-gray-500 sm:w-64">
+            <p className="select-text">{content.attachmentPath}</p>
+            <div className="drag-handle mt-[1px] cursor-grab">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 text-black"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <circle cx="5" cy="6" r="1.5" />
+                <circle cx="5" cy="12" r="1.5" />
+                <circle cx="5" cy="18" r="1.5" />
+                <circle cx="10" cy="6" r="1.5" />
+                <circle cx="10" cy="12" r="1.5" />
+                <circle cx="10" cy="18" r="1.5" />
+              </svg>
             </div>
           </div>
         </div>

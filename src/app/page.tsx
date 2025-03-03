@@ -25,7 +25,7 @@ export default async function HomePage() {
 
   return (
     <main className="relative flex min-h-screen flex-col  bg-[#287d7c] text-white">
-      <div className="mx-auto flex flex-col items-center py-8 text-center">
+      <div className="mx-auto flex flex-col items-center py-8 pb-4 text-center">
         <Link href="/">
           <h1 className="text-4xl font-bold text-white no-underline ">
             Copyman

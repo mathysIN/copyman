@@ -216,15 +216,15 @@ const ContentRenderer = ({
               </AlertDialogContent>
             </AlertDialog>
           </div>
-          <div className="flex select-text items-center gap-2">
+          <div className="flex select-text items-center gap-2 overflow-hidden ">
             <p className="center flex-1 overflow-hidden whitespace-nowrap text-right  align-middle text-sm text-gray-500 sm:w-64">
               {content.attachmentPath}
             </p>
             <div
-              className="reorder-handle flex cursor-grab touch-none flex-row items-center justify-center"
+              className="flex cursor-grab touch-none flex-row items-center justify-center"
               onPointerDown={(e) => controls?.start(e)}
             >
-              <div className="drag-handle mt-[1px] cursor-grab">
+              <div className=" mt-[1px] cursor-grab">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-5 w-5 text-black"

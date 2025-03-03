@@ -201,11 +201,19 @@ export function Task({
     }
     setLinksWithMetaData(_linksWithMeta);
   }
+  const handleChangeEvent = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value;
+    handleChange(newValue);
+  };
 
-  const handleChange = () => {
-    setModifying(true);
+  const handleChangeRef = () => {
     const newValue = textareaRef?.current?.value;
-    if (!newValue) return;
+    if (newValue == undefined) return;
+    handleChange(newValue);
+  };
+
+  const handleChange = (newValue: string) => {
+    setModifying(true);
     setValue(newValue);
     if (timerId) {
       clearTimeout(timerId);
@@ -276,107 +284,109 @@ export function Task({
 
   let inputNumber = 0;
 
-  const textEditContent = (
-    <div className="flew-grow textarea relative w-full">
-      <TextareaAutosize
-        ref={textareaRef}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        onChange={handleChange}
-        value={value}
-        className={`${deleting && "cursor-wait"} ${!isFocused && "opacity-0"} textarea h-fit w-full flex-grow list-disc border-2`}
-        maxRows={20}
-      />
-      {!isFocused && (
-        <div
-          className="absolute inset-y-0 w-full cursor-text overflow-x-hidden break-words border-2 border-neutral-100 text-black"
-          onClick={onMarkdownRenderClick}
-        >
-          <ReactMarkdown
-            remarkPlugins={[remarkBreaks, remarkGfm]}
-            // children={value}
-            children={value.replace(/(?<=\n\n)(?![*-])/gi, "&nbsp;\n ")}
-            components={{
-              ul({ node, children, className, ...props }) {
-                return (
-                  <ul className={cn(className, "list-disc pl-5")} {...props}>
-                    {children}
-                  </ul>
-                );
-              },
-              a({ node, children, className, ...props }) {
-                return (
-                  <>
-                    <a
-                      {...props}
-                      className={cn(className, "cursor-pointer underline")}
-                      onClick={(e) => {
-                        if (!e.ctrlKey || e.button !== 0) e.preventDefault();
-                      }}
-                    >
+  function textEditContent() {
+    return (
+      <div className="flew-grow textarea relative w-full">
+        <TextareaAutosize
+          ref={textareaRef}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onChange={handleChangeEvent}
+          value={value}
+          className={`${deleting && "cursor-wait"} ${!isFocused && "opacity-0"} textarea h-fit w-full flex-grow list-disc border-2`}
+          maxRows={20}
+        />
+        {!isFocused && (
+          <div
+            className="absolute inset-y-0 w-full cursor-text overflow-x-hidden break-words border-2 border-neutral-100 text-black"
+            onClick={onMarkdownRenderClick}
+          >
+            <ReactMarkdown
+              remarkPlugins={[remarkBreaks, remarkGfm]}
+              // children={value}
+              children={value.replace(/(?<=\n\n)(?![*-])/gi, "&nbsp;\n ")}
+              components={{
+                ul({ node, children, className, ...props }) {
+                  return (
+                    <ul className={cn(className, "list-disc pl-5")} {...props}>
                       {children}
-                    </a>
-                  </>
-                );
-              },
-              input({ ...props }) {
-                inputNumber++;
-                const _inputNumber = inputNumber;
-                const realInputNumber = _inputNumber - 1;
-                return (
-                  <input
-                    onChange={() => {}}
-                    {...props}
-                    disabled={false}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (textareaRef?.current)
-                        textareaRef.current.value = replaceCheckbox(
-                          value,
-                          props.checked ? "- [ ]" : "- [x]",
-                          realInputNumber,
-                        );
-                      handleChange();
-                    }}
-                  ></input>
-                );
-              },
-              pre({ node, children, className, ...props }) {
-                return (
-                  <div className="relative">
-                    <pre
-                      className={cn(className, "overflow-x-scroll")}
+                    </ul>
+                  );
+                },
+                a({ node, children, className, ...props }) {
+                  return (
+                    <>
+                      <a
+                        {...props}
+                        className={cn(className, "cursor-pointer underline")}
+                        onClick={(e) => {
+                          if (!e.ctrlKey || e.button !== 0) e.preventDefault();
+                        }}
+                      >
+                        {children}
+                      </a>
+                    </>
+                  );
+                },
+                input({ ...props }) {
+                  inputNumber++;
+                  const _inputNumber = inputNumber;
+                  const realInputNumber = _inputNumber - 1;
+                  return (
+                    <input
+                      onChange={() => {}}
                       {...props}
-                    >
-                      <br />
-                      {children}
-                      <br />
-                    </pre>
-                  </div>
-                );
-              },
-              code({ node, children, ...props }) {
-                return (
-                  <>
-                    <button
-                      className="absolute right-0 top-0 m-1 rounded-md bg-white px-2 py-1 text-black active:scale-95"
+                      disabled={false}
                       onClick={(e) => {
                         e.stopPropagation();
-                        copyAndToast(toast, `${children}`);
+                        if (textareaRef?.current)
+                          textareaRef.current.value = replaceCheckbox(
+                            value,
+                            props.checked ? "- [ ]" : "- [x]",
+                            realInputNumber,
+                          );
+                        handleChangeRef();
                       }}
-                    >
-                      <FontAwesomeIcon icon={faCopy} />
-                    </button>
-                    {children}
-                  </>
-                );
-              },
-            }}
-          />
-        </div>
-      )}
-    </div>
-  );
+                    ></input>
+                  );
+                },
+                pre({ node, children, className, ...props }) {
+                  return (
+                    <div className="relative">
+                      <pre
+                        className={cn(className, "overflow-x-scroll")}
+                        {...props}
+                      >
+                        <br />
+                        {children}
+                        <br />
+                      </pre>
+                    </div>
+                  );
+                },
+                code({ node, children, ...props }) {
+                  return (
+                    <>
+                      <button
+                        className="absolute right-0 top-0 m-1 rounded-md bg-white px-2 py-1 text-black active:scale-95"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copyAndToast(toast, `${children}`);
+                        }}
+                      >
+                        <FontAwesomeIcon icon={faCopy} />
+                      </button>
+                      {children}
+                    </>
+                  );
+                },
+              }}
+            />
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <Reorder.Item key={content.id} dragListener={!isFocused} value={content}>
@@ -384,7 +394,7 @@ export function Task({
         key={content.id}
         className={`${deleting && "animate-pulse cursor-wait opacity-75"} flex flex-col gap-2 rounded-md border-2 border-gray-300 bg-white px-2 py-2 text-black`}
       >
-        <div className="relative flex flex-col gap-2">{textEditContent}</div>
+        <div className="relative flex flex-col gap-2">{textEditContent()}</div>
         {linksWithMeta.length > 0 && (
           <div className="flex flex-row flex-wrap">
             {linksWithMeta.map((link) => (
@@ -437,7 +447,7 @@ export function Task({
                 </button>
               </DialogTrigger>
               <DialogContent className="scale-105">
-                {textEditContent}
+                {textEditContent()}
               </DialogContent>
             </Dialog>
             <AlertDialog>
@@ -462,6 +472,7 @@ export function Task({
                 <AlertDialogFooter>
                   <AlertDialogCancel>Annuler</AlertDialogCancel>
                   <AlertDialogAction
+                    autoFocus
                     onClick={async () => {
                       setDeleting(true);
                       fetch("/api/notes", {
@@ -484,10 +495,10 @@ export function Task({
           </div>
 
           <div
-            className="reorder-handle flex items-center justify-center"
+            className="flex cursor-grab touch-none flex-row items-center justify-center"
             onPointerDown={(e) => controls?.start(e)}
           >
-            <div className="drag-handle cursor-grab">
+            <div className=" mt-[1px] cursor-grab">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="h-5 w-5 text-black"

@@ -46,6 +46,7 @@ const config = {
     "@typescript-eslint/no-misused-promises": "off",
     "@typescript-eslint/ban-ts-comment": "off",
     "@typescript-eslint/dot-notation": "off",
+    "@typescript-eslint/no-unsafe-call": "off",
     "react/no-children-prop": "off",
     "@typescript-eslint/prefer-nullish-coalescing": "off",
     "drizzle/enforce-delete-with-where": [

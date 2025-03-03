@@ -143,6 +143,8 @@ const ContentRenderer = ({
     <Reorder.Item
       key={content.id}
       value={content}
+      drag="y"
+      layoutScroll={true}
       dragControls={controls}
       dragListener={isHolding}
     >
@@ -219,12 +221,7 @@ const ContentRenderer = ({
               {content.attachmentPath}
             </p>
             <div
-              className="reorder-handle flex cursor-grab flex-row items-center justify-center"
-              onMouseDown={() => setIsHolding(true)}
-              onMouseUp={() => setIsHolding(false)}
-              onMouseLeave={() => setIsHolding(false)}
-              onTouchStart={() => setIsHolding(true)}
-              onTouchEnd={() => setIsHolding(false)}
+              className="reorder-handle flex cursor-grab touch-none flex-row items-center justify-center"
               onPointerDown={(e) => controls?.start(e)}
             >
               <div className="drag-handle mt-[1px] cursor-grab">

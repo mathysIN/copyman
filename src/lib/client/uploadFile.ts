@@ -2,24 +2,27 @@ import { toast } from "~/hooks/use-toast";
 import { AttachmentType } from "~/server/db/redis";
 
 export async function uploadFiles(
-  files: { file: string; fileName: string; mimeType: string }[],
+  files: File[],
 ): Promise<AttachmentType[] | null> {
   if (files.length == 0) return [];
-  let uniqueFile:
-    | { file: string; fileName: string; mimeType: string }
-    | undefined;
+  let uniqueFile: File | undefined;
   if (files.length == 1) {
     uniqueFile = files[0];
   }
 
   try {
     toast({
-      description: `Mise en ligne de ${uniqueFile ? uniqueFile.fileName : `${files.length} fichiers`} en cours...`,
+      description: `Mise en ligne de ${uniqueFile ? uniqueFile.name : `${files.length} fichiers`} en cours...`,
     });
+    const formData = new FormData();
+
+    files.forEach((file) => {
+      formData.append("files", file);
+    });
+
     const response = await fetch("/api/content/upload", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(files),
+      body: formData,
     });
 
     const result = (await response.json()) as AttachmentType[];

@@ -6,45 +6,42 @@ import { getSessionWithCookies } from "~/utils/authenticate";
 import { cookies } from "next/headers";
 import { env } from "~/env";
 
-type UploadFile = {
-  file?: string;
-  fileName?: string;
-  mimeType?: string;
-};
+export async function POST(req: Request): Promise<NextResponse> {
+  const formData = await req.formData();
+  const files = formData.getAll("files") as File[] | undefined;
 
-export async function POST(request: Request): Promise<NextResponse> {
+  if (!files?.length)
+    return NextResponse.json({ error: "No files provided" }, { status: 400 });
+
   const startTotal = performance.now();
 
   const session = await getSessionWithCookies(cookies());
+
   if (!session)
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   try {
     const startParse = performance.now();
-    const files: UploadFile[] = await request.json();
     console.log(
       `Parsing request JSON took: ${performance.now() - startParse}ms`,
     );
 
-    if (!Array.isArray(files) || files.length === 0) {
-      return NextResponse.json({ error: "No files provided" }, { status: 400 });
-    }
-
-    const uploadPromises = files.map(async ({ file, fileName, mimeType }) => {
+    const uploadPromises = files.map(async (file) => {
       const startFileProcess = performance.now();
-      if (!file || !fileName || !mimeType) throw new Error("Invalid file data");
 
-      const buffer = Buffer.from(file, "base64");
       const fileKey = crypto.randomBytes(16).toString("hex");
+      const arrayBuffer = await file.arrayBuffer();
+      const stream = Buffer.from(arrayBuffer);
       const fileUrl = getUrlFromFileR2FileKey(fileKey);
+      const fileName = file.name;
 
       const startUpload = performance.now();
-      const upload = await r2Client.send(
+      await r2Client.send(
         new PutObjectCommand({
           Bucket: env.R2_BUCKET_NAME,
           Key: fileKey,
-          Body: buffer,
-          ContentType: mimeType,
+          Body: stream,
+          ContentType: file.type,
         }),
       );
       console.log(

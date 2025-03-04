@@ -163,8 +163,7 @@ export function ActiveSession({
     e.preventDefault();
     const files = e.dataTransfer?.files;
     if (files) {
-      const processedFiles = await Promise.all([...files].map(convertFile));
-      uploadFiles(processedFiles);
+      uploadFiles(Array.from(files));
     }
   };
 
@@ -178,7 +177,7 @@ export function ActiveSession({
       if (item.type.startsWith("image/")) {
         const file = item.getAsFile();
         if (!file) continue;
-        uploadFiles([await convertFile(file)]);
+        uploadFiles([file]);
       }
     }
   };

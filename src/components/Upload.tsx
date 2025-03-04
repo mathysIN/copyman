@@ -25,15 +25,7 @@ export default function Upload({
 
     setUploading(true);
 
-    const filesArray = await Promise.all(
-      Array.from(files).map(async (file) => ({
-        file: await toBase64(file),
-        fileName: file.name,
-        mimeType: file.type,
-      })),
-    );
-
-    const attachments = await uploadFiles(filesArray);
+    const attachments = await uploadFiles(Array.from(files));
     setUploading(false);
     if (!attachments) return;
     onNewContent(attachments);

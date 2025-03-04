@@ -87,7 +87,6 @@ app.prepare().then(() => {
   const server = express();
   const httpServer = createServer(server);
 
-  server.use(express.json());
   server.get("/api/notes", async (req, res) => {
     const data = await req.body;
     const cookies = req.cookies;

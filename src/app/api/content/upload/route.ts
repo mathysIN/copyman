@@ -82,6 +82,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     console.log(
       `Error processing request after: ${performance.now() - startTotal}ms`,
     );
+    console.log(error);
     return NextResponse.json(
       { error: "Upload failed", details: error },
       { status: 500 },

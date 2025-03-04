@@ -2,6 +2,9 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getSessionWithCookies } from "~/utils/authenticate";
 import { utapi } from "~/server/uploadthing";
+import r2Client from "~/server/r2";
+import { DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { env } from "~/env";
 
 export async function DELETE(request: Request): Promise<NextResponse> {
   const session = await getSessionWithCookies(cookies());
@@ -30,7 +33,12 @@ export async function DELETE(request: Request): Promise<NextResponse> {
     );
 
   if (content.type === "attachment") {
-    utapi.deleteFiles(content.fileKey);
+    await r2Client.send(
+      new DeleteObjectCommand({
+        Bucket: env.R2_BUCKET_NAME,
+        Key: content.fileKey,
+      }),
+    );
   }
 
   return NextResponse.json(content, { status: 200 });

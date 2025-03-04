@@ -27,7 +27,7 @@ import {
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { socket } from "~/lib/client/socket";
-import { deleteAllCookies } from "~/lib/utils";
+import { convertFile, deleteAllCookies } from "~/lib/utils";
 import {
   AttachmentType,
   ContentOrder,
@@ -40,6 +40,8 @@ import { Reorder } from "framer-motion";
 import { useToast } from "~/hooks/use-toast";
 import { DialogClose } from "@radix-ui/react-dialog";
 import { User } from "~/server";
+import Upload from "~/components/Upload";
+import { uploadFiles } from "~/lib/client/uploadFile";
 
 export function ActiveSession({
   session,
@@ -52,21 +54,6 @@ export function ActiveSession({
   hasPassword: boolean;
   sessionContentOrder: ContentOrder;
 }) {
-  const uploadThing = useUploadThing(UPLOADTHING_ENDPOINT, {
-    onClientUploadComplete: (res) => {
-      const response = res[0];
-      if (!response) return;
-      const content: AttachmentType = response.serverData;
-      onNewContent(content);
-    },
-    onUploadError: (error) => {
-      toast({
-        description: `Une erreur a eu lieu lors de la mise en ligne du fichier`,
-        variant: "destructive",
-      });
-    },
-  });
-
   const [isConnected, setIsConnected] = useState(false);
   const [roomUsers, setRoomUsers] = useState<User[]>([]);
   const [transport, setTransport] = useState("N/A");
@@ -94,9 +81,9 @@ export function ActiveSession({
     setTransport("N/A");
   }
 
-  function onNewContent(content: ContentType, emit = true) {
+  function onNewContent(content: ContentType[], emit = true) {
     if (emit) socket.emit("addContent", content);
-    setCachedContents([content, ...cachedContents]);
+    setCachedContents([...content, ...cachedContents]);
   }
 
   function onContentDelete(contentId: string, emit = true) {
@@ -172,13 +159,16 @@ export function ActiveSession({
     e.preventDefault();
   };
 
-  const handleDrop = (e: DragEvent) => {
+  const handleDrop = async (e: DragEvent) => {
     e.preventDefault();
-    const file = e.dataTransfer?.files[0];
-    if (file) uploadFile(file);
+    const files = e.dataTransfer?.files;
+    if (files) {
+      const processedFiles = await Promise.all([...files].map(convertFile));
+      uploadFiles(processedFiles);
+    }
   };
 
-  const handleClipboardData = (clipboardData: DataTransfer) => {
+  const handleClipboardData = async (clipboardData: DataTransfer) => {
     const text = clipboardData.getData("text");
     if (text) {
       newTaskComponent.current?.addTask(text);
@@ -188,21 +178,9 @@ export function ActiveSession({
       if (item.type.startsWith("image/")) {
         const file = item.getAsFile();
         if (!file) continue;
-        uploadFile(file);
+        uploadFiles([await convertFile(file)]);
       }
     }
-  };
-
-  const uploadFile = (file: File) => {
-    uploadThing.startUpload([file]).catch((error) => {
-      toast({
-        description: `Une erreur a eu lieu lors de la mise en ligne du fichier`,
-        variant: "destructive",
-      });
-    });
-    toast({
-      description: `Mise en ligne de ${file.name}`,
-    });
   };
 
   useEffect(() => {
@@ -385,10 +363,7 @@ export function ActiveSession({
         <div className="flex flex-col gap-y-2 sm:w-1/2">
           <h2>Trucs</h2>
           <div className="h-16">
-            <UploadContent
-              className="h-16 hover:opacity-90"
-              onNewContent={onNewContent}
-            />
+            <Upload onNewContent={onNewContent} />
           </div>
           <div />
           <Reorder.Group
@@ -411,7 +386,10 @@ export function ActiveSession({
         </div>
         <div className={`flex flex-col gap-y-2 sm:w-1/2`}>
           <h2>Autres trucs</h2>
-          <AddNewTask onNewContent={onNewContent} ref={newTaskComponent} />
+          <AddNewTask
+            onNewContent={(n) => onNewContent([n])}
+            ref={newTaskComponent}
+          />
           <div />
           <Reorder.Group
             values={noteContent}

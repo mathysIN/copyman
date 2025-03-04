@@ -18,7 +18,7 @@ const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
 
 export interface ServerToClientEvents {
-  addContent: (content: ContentType) => void;
+  addContent: (content: ContentType[]) => void;
   deleteContent: (contentId: string) => void;
   updatedContent: (content: ContentType) => void;
   updatedContentOrder: (content: ContentOrder) => void;
@@ -32,7 +32,7 @@ type RoomInsight = {
 
 export interface ClientToServerEvents {
   hello: () => void;
-  addContent: (content: ContentType) => void;
+  addContent: (content: ContentType[]) => void;
   deleteContent: (contentId: string) => void;
   updatedContent: (content: ContentType) => void;
   updatedContentOrder: (content: ContentOrder) => void;
@@ -103,7 +103,7 @@ app.prepare().then(() => {
     const response = await session.createNewNote(newNote).catch(() => {});
 
     if (response) {
-      addContentHandler(io, session, response);
+      addContentHandler(io, session, [response]);
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(response));
     } else {
@@ -240,7 +240,7 @@ app.prepare().then(() => {
 async function addContentHandler(
   io: Server,
   session: Session,
-  content: ContentType,
+  content: ContentType[],
   socket?: CopymanSocket,
 ) {
   if (!session) return;

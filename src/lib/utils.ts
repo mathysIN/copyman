@@ -109,3 +109,12 @@ export async function createHashId(input: string) {
 
   return hashHex;
 }
+
+export async function convertFile(file: File) {
+  const buffer = await file.arrayBuffer();
+  return {
+    file: Buffer.from(buffer).toString("base64"),
+    fileName: file.name,
+    mimeType: file.type,
+  };
+}

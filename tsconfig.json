@@ -40,6 +40,6 @@
     "**/*.cjs",
     "**/*.js",
     ".next/types/**/*.ts"
-  ],
+, "src/app/api/content/upload"  ],
   "exclude": ["node_modules"]
 }

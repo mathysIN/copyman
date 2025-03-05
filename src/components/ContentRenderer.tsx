@@ -6,6 +6,8 @@ import {
   faDownload,
   faCopy,
 } from "@fortawesome/free-solid-svg-icons";
+import { PhotoProvider, PhotoView } from "react-photo-view";
+import "react-photo-view/dist/react-photo-view.css";
 
 import { use, useEffect, useRef, useState } from "react";
 import type { AttachmentType } from "~/server/db/redis";
@@ -88,29 +90,15 @@ const ContentRenderer = ({
         );
       case "image":
         return (
-          <>
-            <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
-              <DialogTrigger>
-                <img
-                  src={content.attachmentURL}
-                  alt="Content"
-                  className="absolute inset-0 h-full w-full rounded-lg object-cover"
-                />
-              </DialogTrigger>
-              <DialogContent className="h-full max-h-fit w-full border-none bg-transparent p-0 text-white md:max-w-fit">
-                <div
-                  onClick={() => setImageDialogOpen(false)}
-                  className="relative flex  items-center justify-center overflow-hidden "
-                >
-                  <img
-                    src={content.attachmentURL}
-                    alt="Content"
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </div>
-              </DialogContent>
-            </Dialog>
-          </>
+          <PhotoProvider>
+            <PhotoView src={content.attachmentURL}>
+              <img
+                src={content.attachmentURL}
+                alt="Content"
+                className="inset-0 h-full w-full cursor-pointer rounded-lg object-cover"
+              />
+            </PhotoView>
+          </PhotoProvider>
         );
       case "audio":
         const index =

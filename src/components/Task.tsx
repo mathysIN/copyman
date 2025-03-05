@@ -389,7 +389,14 @@ export function Task({
   }
 
   return (
-    <Reorder.Item key={content.id} dragListener={!isFocused} value={content}>
+    <Reorder.Item
+      key={content.id}
+      value={content}
+      drag="y"
+      layoutScroll={true}
+      dragControls={controls}
+      dragListener={false}
+    >
       <div
         key={content.id}
         className={`${deleting && "animate-pulse cursor-wait opacity-75"} flex flex-col gap-2 rounded-md border-2 border-gray-300 bg-white px-2 py-2 text-black`}

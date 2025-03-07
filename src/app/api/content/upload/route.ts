@@ -28,8 +28,9 @@ export async function POST(req: Request): Promise<NextResponse> {
 
     const uploadPromises = files.map(async (file) => {
       const startFileProcess = performance.now();
+      const fileExtension = file.name.split('.').pop();
 
-      const fileKey = crypto.randomBytes(16).toString("hex");
+      const fileKey = crypto.randomBytes(16).toString("hex") + "." + fileExtension;
       const arrayBuffer = await file.arrayBuffer();
       const stream = Buffer.from(arrayBuffer);
       const fileUrl = getUrlFromFileR2FileKey(fileKey);

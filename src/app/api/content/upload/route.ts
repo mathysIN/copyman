@@ -43,6 +43,7 @@ export async function POST(req: Request): Promise<NextResponse> {
           Key: fileKey,
           Body: stream,
           ContentType: file.type,
+	  ContentDisposition: `attachment; filename="${fileName}"`
         }),
       );
       console.log(

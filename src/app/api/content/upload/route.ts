@@ -28,9 +28,10 @@ export async function POST(req: Request): Promise<NextResponse> {
 
     const uploadPromises = files.map(async (file) => {
       const startFileProcess = performance.now();
-      const fileExtension = file.name.split('.').pop();
+      const fileExtension = file.name.split(".").pop();
 
-      const fileKey = crypto.randomBytes(16).toString("hex") + "." + fileExtension;
+      const fileKey =
+        crypto.randomBytes(16).toString("hex") + "." + fileExtension;
       const arrayBuffer = await file.arrayBuffer();
       const stream = Buffer.from(arrayBuffer);
       const fileUrl = getUrlFromFileR2FileKey(fileKey);
@@ -43,7 +44,7 @@ export async function POST(req: Request): Promise<NextResponse> {
           Key: fileKey,
           Body: stream,
           ContentType: file.type,
-	  ContentDisposition: `attachment; filename="${fileName}"`
+          ContentDisposition: `attachment; filename="${fileName}"`,
         }),
       );
       console.log(

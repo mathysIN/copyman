@@ -2,9 +2,8 @@
 
 import {
   faDoorOpen,
-  faImagePortrait,
-  faLock,
-  faWarning,
+  faImage, faLock,
+  faWarning
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Loader2 } from "lucide-react";
@@ -220,22 +219,24 @@ export function ActiveSession({
     <div className="w-4/5 select-none pb-10">
       <div className="flex flex-col items-center justify-center">
         <div className="flex flex-row items-center gap-[12px] text-xl">
-          <h1 className={`cursor-pointer`} onClick={() => setHidden(!hidden)}>
+          <button className={`cursor-pointer`} onClick={() => setHidden(!hidden)}>
             #
             {hidden
               ? new Array(session.sessionId.length).fill("*").join("")
               : session.sessionId}
-          </h1>
+          </button>
           <div />
           <Dialog
             open={passwordModalOpen}
             onOpenChange={(state) => setPasswordModalOpen(state)}
           >
-            <DialogTrigger asChild className="cursor-pointer">
-              <FontAwesomeIcon
-                icon={faLock}
-                className={`${hasPassword && "text-yellow-400"} active:scale-95`}
-              />
+            <DialogTrigger asChild>
+              <button>
+                <FontAwesomeIcon
+                  icon={faLock}
+                  className={`${hasPassword && "text-yellow-400"} active:scale-95`}
+                />
+              </button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[480px]">
               <DialogHeader>
@@ -288,10 +289,7 @@ export function ActiveSession({
           <Dialog>
             <DialogTrigger asChild>
               <button>
-                <FontAwesomeIcon
-                  icon={faImagePortrait}
-                  className={`active:scale-95`}
-                />
+                <FontAwesomeIcon icon={faImage} className={`active:scale-95`} />
               </button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[480px]">

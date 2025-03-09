@@ -32,9 +32,9 @@ export default function Upload({
   };
 
   return (
-    <div
+    <button
       onClick={() => document.getElementById("file-upload")?.click()}
-      className={`${uploading ? "animate-pulse cursor-wait opacity-75" : "cursor-pointer"} flex h-16 flex-col items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-black`}
+      className={`${uploading ? "animate-pulse cursor-wait opacity-75" : "cursor-pointer"} flex h-16 w-full flex-col items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-black`}
     >
       <input
         id="file-upload"
@@ -47,7 +47,7 @@ export default function Upload({
         <span>{uploading ? "Mise en ligne..." : "Nouveau fichier"}</span>
         <FontAwesomeIcon icon={faUpload} />
       </div>
-    </div>
+    </button>
   );
 }
 

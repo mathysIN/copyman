@@ -20,42 +20,52 @@ export default async function HomePage() {
     sessionContents = await session.getAllContent();
     sessionContentOrder = await session.getContentOrder();
   }
+  const bgImageURL = session?.imageBackground;
 
   const showingSession = !error && session;
 
   return (
-    <main className="relative flex min-h-screen flex-col  bg-[#287d7c] text-white">
-      <div className="mx-auto flex flex-col items-center py-8 pb-4 text-center">
-        <Link href="/">
-          <h1 className="text-4xl font-bold text-white no-underline ">
-            Copyman
-          </h1>
-        </Link>
-        {!showingSession && (
-          <>
-            <p className="py-2 text-lg">
-              {MOTDS[Math.floor(Math.random() * MOTDS.length)]}
+    <>
+      <div
+        className="absolute -z-10 h-full w-full"
+        style={{
+          background: `url('${bgImageURL}'), #287d7c`,
+          backgroundSize: "cover",
+        }}
+      ></div>
+      <main className="relative flex min-h-screen flex-col text-white backdrop-blur-md">
+        <div className="mx-auto flex flex-col items-center py-8 pb-4 text-center">
+          <Link href="/">
+            <h1 className="text-4xl font-bold text-white no-underline ">
+              Copyman
+            </h1>
+          </Link>
+          {!showingSession && (
+            <>
+              <p className="py-2 text-lg">
+                {MOTDS[Math.floor(Math.random() * MOTDS.length)]}
+              </p>
+            </>
+          )}
+        </div>
+        <div className="flex flex-col items-center justify-center ">
+          {error && (
+            <p className="text-red-500">
+              Il y a eu une erreur avec les serveurs de Copyman
             </p>
-          </>
-        )}
-      </div>
-      <div className="flex flex-col items-center justify-center ">
-        {error && (
-          <p className="text-red-500">
-            Il y a eu une erreur avec les serveurs de Copyman
-          </p>
-        )}
-        {!showingSession && <PreSession />}
-        {showingSession && (
-          <ActiveSession
-            session={session.toJSON()}
-            hasPassword={session.hasPassword()}
-            sessionContents={sessionContents}
-            sessionContentOrder={sessionContentOrder}
-          />
-        )}
-      </div>
-    </main>
+          )}
+          {!showingSession && <PreSession />}
+          {showingSession && (
+            <ActiveSession
+              session={session.toJSON()}
+              hasPassword={session.hasPassword()}
+              sessionContents={sessionContents}
+              sessionContentOrder={sessionContentOrder}
+            />
+          )}
+        </div>
+      </main>
+    </>
   );
 }
 

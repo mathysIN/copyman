@@ -2,6 +2,7 @@
 
 import {
   faDoorOpen,
+  faImagePortrait,
   faLock,
   faWarning,
 } from "@fortawesome/free-solid-svg-icons";
@@ -11,9 +12,6 @@ import { useEffect, useRef, useState } from "react";
 import { AddNewTask, AddNewTaskRef } from "~/components/AddNewTask";
 import ContentRenderer from "~/components/ContentRenderer";
 import { Task } from "~/components/Task";
-import UploadContent, {
-  UPLOADTHING_ENDPOINT,
-} from "~/components/UploadContent";
 import { Button } from "~/components/ui/button";
 import {
   Dialog,
@@ -27,7 +25,7 @@ import {
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { socket } from "~/lib/client/socket";
-import { convertFile, deleteAllCookies } from "~/lib/utils";
+import { deleteAllCookies } from "~/lib/utils";
 import {
   AttachmentType,
   ContentOrder,
@@ -35,7 +33,6 @@ import {
   NoteType,
   SessionType,
 } from "~/server/db/redis";
-import { useUploadThing } from "~/utils/uploadthing";
 import { Reorder } from "framer-motion";
 import { useToast } from "~/hooks/use-toast";
 import { DialogClose } from "@radix-ui/react-dialog";
@@ -63,6 +60,10 @@ export function ActiveSession({
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [passwordModalLoading, setPasswordModalLoading] = useState(false);
   const [passwordModalContent, setPasswordModalContent] = useState("");
+  const [bgModalContent, setBgModalContent] = useState(
+    session.backgroundImageURL ?? "",
+  );
+  const [bgModalLoading, setBgModalLoading] = useState(false);
   const [hidden, setHidden] = useState(true);
   const [orderNote, setOrderNote] = useState<ContentOrder>(sessionContentOrder);
   const [orderAttachment, setOrderAttachment] =
@@ -280,6 +281,56 @@ export function ActiveSession({
                   {passwordModalContent
                     ? "Sauvegarder"
                     : "Retirer le mot de passe"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          <Dialog>
+            <DialogTrigger asChild>
+              <button>
+                <FontAwesomeIcon
+                  icon={faImagePortrait}
+                  className={`active:scale-95`}
+                />
+              </button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[480px]">
+              <DialogHeader>
+                <DialogTitle>{"Mettre un fond d'écran"}</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="name" className="text-right">
+                    {"URL du fond d'écran"}
+                  </Label>
+                  <Input
+                    onChange={(e) => setBgModalContent(e.target.value)}
+                    value={bgModalContent}
+                    type="url"
+                    placeholder="https://files.copyman.fr/content/bg.jpg"
+                    className="col-span-3"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  disabled={bgModalLoading}
+                  type="submit"
+                  onClick={async () => {
+                    setBgModalLoading(true);
+                    await fetch("/api/sessions/background", {
+                      method: "PATCH",
+                      body: JSON.stringify({
+                        background: bgModalContent,
+                      }),
+                    }).then(() => location.reload());
+                    setBgModalLoading(false);
+                  }}
+                >
+                  {bgModalLoading && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  {bgModalContent ? "Sauvegarder" : "Retirer le fond d'écran"}
                 </Button>
               </DialogFooter>
             </DialogContent>

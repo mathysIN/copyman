@@ -21,7 +21,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="overflow-x-hidden">
-      <body className={`overflow-x-hidden font-sans ${inter.variable}`}>
+      <body
+        className={`relative overflow-x-hidden font-sans ${inter.variable}`}
+      >
         {children}
       </body>
       <Toaster />

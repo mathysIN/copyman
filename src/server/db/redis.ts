@@ -79,6 +79,7 @@ const REDIS_KEY_PREFIX = toFullRedisKey([REDIS_KEY_MAIN_PREFIX, ENVIRONMENT]);
 export type SessionType = {
   sessionId: string;
   password?: string;
+  backgroundImageURL?: string;
   createdAt: string;
   rawContentOrder?: string;
 };
@@ -88,11 +89,15 @@ export class Session {
   password?: string;
   createdAt: string;
   rawContentOrder?: string;
+  imageBackground?: URL;
   constructor(props: SessionType) {
     this.sessionId = props.sessionId;
     this.password = props.password;
     this.createdAt = props.createdAt;
     this.rawContentOrder = props.rawContentOrder;
+    try {
+      this.imageBackground = new URL(props.backgroundImageURL ?? "");
+    } catch {}
   }
 
   withSessionKey(...strings: string[]) {
@@ -248,11 +253,21 @@ export class Session {
     return this.verifyPassword(cookie.get("password")?.value);
   }
 
+  async setBackgroundImageURL(backgroundImageURL?: string) {
+    if (!backgroundImageURL)
+      return sessions.hdel(this.sessionId, "backgroundImageURL");
+
+    return sessions.hmset(this.sessionId, {
+      backgroundImageURL: backgroundImageURL,
+    });
+  }
+
   toJSON(): SessionType {
     return {
       sessionId: this.sessionId,
       createdAt: this.createdAt,
       rawContentOrder: this.rawContentOrder,
+      backgroundImageURL: this.imageBackground?.href,
     };
   }
 }

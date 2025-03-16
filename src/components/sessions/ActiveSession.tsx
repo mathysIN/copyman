@@ -2,8 +2,9 @@
 
 import {
   faDoorOpen,
-  faImage, faLock,
-  faWarning
+  faImage,
+  faLock,
+  faWarning,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Loader2 } from "lucide-react";
@@ -216,10 +217,13 @@ export function ActiveSession({
   }
 
   return (
-    <div className="w-4/5 select-none pb-10">
+    <div className="w-full max-w-[1250px] select-none px-4 pb-10">
       <div className="flex flex-col items-center justify-center">
         <div className="flex flex-row items-center gap-[12px] text-xl">
-          <button className={`cursor-pointer`} onClick={() => setHidden(!hidden)}>
+          <button
+            className={`cursor-pointer`}
+            onClick={() => setHidden(!hidden)}
+          >
             #
             {hidden
               ? new Array(session.sessionId.length).fill("*").join("")

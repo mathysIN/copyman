@@ -396,6 +396,7 @@ export function Task({
       layoutScroll={true}
       dragControls={controls}
       dragListener={false}
+      layout={"position"}
     >
       <div
         key={content.id}

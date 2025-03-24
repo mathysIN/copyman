@@ -26,6 +26,7 @@ import {
 } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
 import { Loading } from "~/components/Loading";
+import InstallButton from "~/components/InstallButton";
 
 export function PreSession() {
   const formRef = useRef<HTMLFormElement>(null);
@@ -260,6 +261,8 @@ export function PreSession() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <div className="h-20" />
+      <InstallButton />
       <div className="h-20" />
     </>
   );

@@ -48,3 +48,9 @@ export async function DELETE(req: Request) {
     return new Response("Failed to delete", { status: 500 });
   }
 }
+
+export async function GET(req: Request) {
+  const data = await req.json();
+  const session = await getSessionWithCookies(cookies());
+  if (!session) return new Response("Unauthorized", { status: 401 });
+}

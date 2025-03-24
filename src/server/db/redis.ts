@@ -285,11 +285,6 @@ export type BaseContentType = {
   sessionId: string;
 };
 
-export type NoteType = BaseContentType & {
-  content: string;
-  type: "note";
-};
-
 const REDIS_CONTENT_PREFIX = "content";
 const REDIS_KEY_CONTENT = toFullRedisKey([
   REDIS_KEY_PREFIX,
@@ -301,6 +296,11 @@ export type NewAttachmentType = Omit<
   "id" | "createdAt" | "updatedAt"
 >;
 
+export type NoteType = BaseContentType & {
+  type: "note";
+  content: string;
+};
+
 export type AttachmentType = BaseContentType & {
   type: "attachment";
   attachmentURL: string;
@@ -308,9 +308,9 @@ export type AttachmentType = BaseContentType & {
   fileKey: string;
 };
 
-export type ContentOrder = UUID[];
-
 export type ContentType = NoteType | AttachmentType;
+
+export type ContentOrder = UUID[];
 
 export const sessions = new RedisWithPrefix<SessionType>(
   redis,

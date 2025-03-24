@@ -6,6 +6,19 @@ import r2Client from "~/server/r2";
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { env } from "~/env";
 
+export async function GET(request: Request): Promise<NextResponse> {
+  const session = await getSessionWithCookies(cookies());
+  if (!session)
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  const orderAttachment = await session.getContentOrder();
+  const sessionContent = (await session.getAllContent()).sort((a, b) => {
+    if (a.type === "attachment" && b.type !== "attachment") return 1;
+    if (a.type !== "attachment" && b.type === "attachment") return -1;
+    return orderAttachment.indexOf(a.id) - orderAttachment.indexOf(b.id);
+  });
+  return NextResponse.json(sessionContent, { status: 200 });
+}
+
 export async function DELETE(request: Request): Promise<NextResponse> {
   const session = await getSessionWithCookies(cookies());
   if (!session)

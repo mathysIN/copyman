@@ -16,18 +16,17 @@ export default function manifest(): MetadataRoute.Manifest {
         type: "image/x-icon",
       },
     ],
-    "share_target": {
-      "action": "/share",
-      "method": "POST",
-      "enctype": "multipart/form-data",
-      "params": {
-        "files": [
-          {
-            "name": "file",
-            "accept": ["*/*"]
-          }
-        ]
-      }
-    }
+    share_target: {
+      action: "/share",
+      method: "post",
+      enctype: "multipart/form-data",
+      params: [
+        {
+          name: "title",
+          value: "title",
+          required: true,
+        },
+      ],
+    },
   };
 }

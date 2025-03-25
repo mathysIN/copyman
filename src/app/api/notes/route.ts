@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSessionWithCookies } from "~/utils/authenticate";
 import { Session } from "~/server/db/redis";
-import { serverCreateNote } from "~/lib/utils";
+import { serverCreateNote } from "~/lib/serverUtils";
 
 export async function POST(req: Request) {
   const data = await req.json();

@@ -5,6 +5,7 @@ import r2Client, { getUrlFromFileR2FileKey } from "~/server/r2";
 import { getSessionWithCookies } from "~/utils/authenticate";
 import { cookies } from "next/headers";
 import { env } from "~/env";
+import { Session } from "~/server/db/redis";
 
 export async function POST(req: Request): Promise<NextResponse> {
   const formData = await req.formData();
@@ -26,49 +27,7 @@ export async function POST(req: Request): Promise<NextResponse> {
       `Parsing request JSON took: ${performance.now() - startParse}ms`,
     );
 
-    const uploadPromises = files.map(async (file) => {
-      const startFileProcess = performance.now();
-      const fileExtension = file.name.split(".").pop();
-
-      const fileKey =
-        crypto.randomBytes(16).toString("hex") + "." + fileExtension;
-      const arrayBuffer = await file.arrayBuffer();
-      const stream = Buffer.from(arrayBuffer);
-      const fileUrl = getUrlFromFileR2FileKey(fileKey);
-      const fileName = file.name;
-
-      const startUpload = performance.now();
-      await r2Client.send(
-        new PutObjectCommand({
-          Bucket: env.R2_BUCKET_NAME,
-          Key: fileKey,
-          Body: stream,
-          ContentType: file.type,
-          ContentDisposition: `attachment; filename="${fileName}"`,
-        }),
-      );
-      console.log(
-        `Uploading file ${fileName} took: ${performance.now() - startUpload}ms`,
-      );
-
-      const startDbInsert = performance.now();
-      const content = await session.createNewAttachment({
-        attachmentPath: fileName,
-        attachmentURL: fileUrl,
-        fileKey: fileKey,
-      });
-      console.log(
-        `DB insert for ${fileName} took: ${performance.now() - startDbInsert}ms`,
-      );
-
-      if (!content || content.type != "attachment")
-        throw new Error("Failed to insert content");
-
-      console.log(
-        `Processing file ${fileName} took: ${performance.now() - startFileProcess}ms`,
-      );
-      return content;
-    });
+    const uploadPromises = await serverUploadFiles(session, files);
 
     const startUploads = performance.now();
     const results = await Promise.all(uploadPromises);
@@ -88,4 +47,50 @@ export async function POST(req: Request): Promise<NextResponse> {
       { status: 500 },
     );
   }
+}
+
+export async function serverUploadFiles(session: Session, files: File[]) {
+  return files.map(async (file) => {
+    const startFileProcess = performance.now();
+    const fileExtension = file.name.split(".").pop();
+
+    const fileKey =
+      crypto.randomBytes(16).toString("hex") + "." + fileExtension;
+    const arrayBuffer = await file.arrayBuffer();
+    const stream = Buffer.from(arrayBuffer);
+    const fileUrl = getUrlFromFileR2FileKey(fileKey);
+    const fileName = file.name;
+
+    const startUpload = performance.now();
+    await r2Client.send(
+      new PutObjectCommand({
+        Bucket: env.R2_BUCKET_NAME,
+        Key: fileKey,
+        Body: stream,
+        ContentType: file.type,
+        ContentDisposition: `attachment; filename="${fileName}"`,
+      }),
+    );
+    console.log(
+      `Uploading file ${fileName} took: ${performance.now() - startUpload}ms`,
+    );
+
+    const startDbInsert = performance.now();
+    const content = await session.createNewAttachment({
+      attachmentPath: fileName,
+      attachmentURL: fileUrl,
+      fileKey: fileKey,
+    });
+    console.log(
+      `DB insert for ${fileName} took: ${performance.now() - startDbInsert}ms`,
+    );
+
+    if (!content || content.type != "attachment")
+      throw new Error("Failed to insert content");
+
+    console.log(
+      `Processing file ${fileName} took: ${performance.now() - startFileProcess}ms`,
+    );
+    return content;
+  });
 }

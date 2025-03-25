@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSessionWithCookies } from "~/utils/authenticate";
+import { Session } from "~/server/db/redis";
 
 export async function POST(req: Request) {
   const data = await req.json();
@@ -8,12 +9,17 @@ export async function POST(req: Request) {
   if (!session) return new Response("Unauthorized", { status: 401 });
   const { content } = data;
   const newNote = { content };
-  const response = await session.createNewNote(newNote).catch(() => {});
+  const response = serverCreateNote(session, content);
   if (response) {
     return NextResponse.json(response, { status: 200 });
   } else {
     return new Response("Failed to create", { status: 500 });
   }
+}
+
+export async function serverCreateNote(session: Session, content: string) {
+  const newNote = { content };
+  return session.createNewNote(newNote);
 }
 
 export async function PATCH(req: Request) {

@@ -6,6 +6,7 @@ import { getSessionWithCookies } from "~/utils/authenticate";
 export async function POST(req: NextRequest) {
   const protocol = req.url.split(":")[0] === "https" ? "https" : "http";
   const redirectUrl = `${protocol}://${req.headers.get("host")}/`;
+  console.log(redirectUrl);
   try {
     const data = await req.json();
     const session = await getSessionWithCookies(cookies());

@@ -8,7 +8,6 @@ export async function POST(req: NextRequest) {
   const redirectUrl = `${protocol}://${req.headers.get("host")}/`;
   console.log(redirectUrl);
   try {
-    const data = await req.json();
     const session = await getSessionWithCookies(cookies());
     if (!session) return NextResponse.redirect(redirectUrl);
     const formData = await req.formData();

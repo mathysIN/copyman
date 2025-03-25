@@ -1,8 +1,6 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
-import { serverUploadFiles } from "~/app/api/content/upload/route";
-import { serverCreateNote } from "~/app/api/notes/route";
-import { uploadFiles } from "~/lib/client/uploadFile";
+import { serverCreateNote, serverUploadFiles } from "~/lib/utils";
 import { getSessionWithCookies } from "~/utils/authenticate";
 
 export async function POST(req: NextRequest) {

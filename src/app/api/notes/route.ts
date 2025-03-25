@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSessionWithCookies } from "~/utils/authenticate";
 import { Session } from "~/server/db/redis";
+import { serverCreateNote } from "~/lib/utils";
 
 export async function POST(req: Request) {
   const data = await req.json();
@@ -17,10 +18,6 @@ export async function POST(req: Request) {
   }
 }
 
-export async function serverCreateNote(session: Session, content: string) {
-  const newNote = { content };
-  return session.createNewNote(newNote);
-}
 
 export async function PATCH(req: Request) {
   const data = await req.json();

@@ -1,35 +1,41 @@
+"use client";
+
 import { useEffect, useState } from "react";
 
 export default function InstallButton() {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [deferredEvent, setDeferredEvent] = useState<Event | null>(null);
 
   useEffect(() => {
-    const handleBeforeInstallPrompt = (e: any) => {
+    const beforeInstallPromptHandler = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e);
+      setDeferredEvent(e); // Store the event for later use
     };
 
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    // Add event listener for the beforeinstallprompt
+    window.addEventListener("beforeinstallprompt", beforeInstallPromptHandler);
+
+    // Cleanup event listener on unmount
     return () => {
       window.removeEventListener(
         "beforeinstallprompt",
-        handleBeforeInstallPrompt,
+        beforeInstallPromptHandler,
       );
     };
   }, []);
 
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === "accepted") {
-      setDeferredPrompt(null);
+  const handleInstallClick = () => {
+    if (deferredEvent) {
+      (deferredEvent as any).prompt(); // Show the install prompt
     }
   };
 
+  if (!deferredEvent) return null;
+
   return (
-    deferredPrompt && (
-      <button onClick={handleInstallClick}>Install Copyman</button>
-    )
+    <div>
+      <button id="install-button" onClick={handleInstallClick}>
+        Install App
+      </button>
+    </div>
   );
 }

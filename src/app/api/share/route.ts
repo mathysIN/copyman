@@ -3,8 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { serverCreateNote, serverUploadFiles } from "~/lib/serverUtils";
 import { getSessionWithCookies } from "~/utils/authenticate";
 
-export async function POST(req: NextRequest) {
-  const redirectUrl = new URL(req.url).origin;
+export async function GET(req: NextRequest) {
+  const protocol = req.url.split(":")[0] === "https" ? "https" : "http";
+  const redirectUrl = `${protocol}://${req.headers.get("host")}/`;
   try {
     const data = await req.json();
     const session = await getSessionWithCookies(cookies());

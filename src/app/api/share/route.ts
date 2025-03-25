@@ -4,6 +4,7 @@ import { serverCreateNote, serverUploadFiles } from "~/lib/serverUtils";
 import { getSessionWithCookies } from "~/utils/authenticate";
 
 export async function POST(req: NextRequest) {
+  const url = new URL(req.url).origin;
   try {
     const data = await req.json();
     const session = await getSessionWithCookies(cookies());
@@ -25,9 +26,9 @@ export async function POST(req: NextRequest) {
       await serverUploadFiles(session, fileArray);
     }
 
-    return NextResponse.redirect("/");
+    return NextResponse.redirect(origin);
   } catch (error) {
     console.error("Error processing share data:", error);
-    return NextResponse.redirect("/");
+    return NextResponse.redirect(origin);
   }
 }

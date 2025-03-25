@@ -4,7 +4,6 @@ import { cookies } from "next/headers";
 import { serverUploadFiles } from "~/lib/serverUtils";
 
 export async function POST(req: Request): Promise<NextResponse> {
-  const url = new URL(req.url);
   const formData = await req.formData();
   const files = formData.getAll("files") as File[] | undefined;
 

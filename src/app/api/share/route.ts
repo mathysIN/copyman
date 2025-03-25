@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { serverCreateNote, serverUploadFiles } from "~/lib/serverUtils";
 import { getSessionWithCookies } from "~/utils/authenticate";
 
-export async function GET(req: NextRequest) {
+export async function POST(req: NextRequest) {
   const protocol = req.url.split(":")[0] === "https" ? "https" : "http";
   const redirectUrl = `${protocol}://${req.headers.get("host")}/`;
   try {

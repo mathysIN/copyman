@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   try {
     const data = await req.json();
     const session = await getSessionWithCookies(cookies());
-    if (!session) return NextResponse.redirect("/");
+    if (!session) return NextResponse.redirect(redirectUrl);
     const formData = await req.formData();
     const title = formData.get("title");
     const text = formData.get("text") as string;

@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   console.log(redirectUrl);
   try {
     const session = await getSessionWithCookies(cookies());
-    if (!session) return NextResponse.redirect(redirectUrl);
+    if (!session) return NextResponse.redirect(redirectUrl, 303);
     const formData = await req.formData();
     const title = formData.get("title");
     const text = formData.get("text") as string;
@@ -27,9 +27,9 @@ export async function POST(req: NextRequest) {
       await serverUploadFiles(session, fileArray);
     }
 
-    return NextResponse.redirect(redirectUrl);
+    return NextResponse.redirect(redirectUrl, 303);
   } catch (error) {
     console.error("Error processing share data:", error);
-    return NextResponse.redirect(redirectUrl);
+    return NextResponse.redirect(redirectUrl, 303);
   }
 }

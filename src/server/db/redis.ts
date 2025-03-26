@@ -128,7 +128,7 @@ export class Session {
       ...preContent,
       ...note,
       type: "note",
-    } as NoteType;
+    } satisfies NoteType;
     return contents
       .hmnew(key, newContent)
       .then(() => newContent)
@@ -146,7 +146,7 @@ export class Session {
       ...preContent,
       ...attachment,
       type: "attachment",
-    } as AttachmentType;
+    } satisfies AttachmentType;
     return contents
       .hmnew(key, newContent)
       .then(() => newContent)

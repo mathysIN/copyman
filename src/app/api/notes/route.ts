@@ -9,15 +9,13 @@ export async function POST(req: Request) {
   const session = await getSessionWithCookies(cookies());
   if (!session) return new Response("Unauthorized", { status: 401 });
   const { content } = data;
-  const newNote = { content };
-  const response = serverCreateNote(session, content);
+  const response = await serverCreateNote(session, content);
   if (response) {
     return NextResponse.json(response, { status: 200 });
   } else {
     return new Response("Failed to create", { status: 500 });
   }
 }
-
 
 export async function PATCH(req: Request) {
   const data = await req.json();

@@ -1,4 +1,4 @@
-import { Session } from "~/server/db/redis";
+import { AttachmentType, Session } from "~/server/db/redis";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import crypto from "crypto";
 import { env } from "~/env";
@@ -10,7 +10,8 @@ export async function serverCreateNote(session: Session, content: string) {
 }
 
 export async function serverUploadFiles(session: Session, files: File[]) {
-  return files.map(async (file) => {
+  const createdAttachments: AttachmentType[] = [];
+  for (const file of files) {
     const startFileProcess = performance.now();
     const fileExtension = file.name.split(".").pop();
 
@@ -51,6 +52,7 @@ export async function serverUploadFiles(session: Session, files: File[]) {
     console.log(
       `Processing file ${fileName} took: ${performance.now() - startFileProcess}ms`,
     );
-    return content;
-  });
+    createdAttachments.push(content);
+  }
+  return createdAttachments;
 }

@@ -49,6 +49,7 @@
     "react-textarea-autosize": "^8.5.3",
     "remark-breaks": "^4.0.0",
     "remark-gfm": "^4.0.0",
+    "server-only": "^0.0.1",
     "socket.io": "^4.7.5",
     "socket.io-client": "^4.7.5",
     "tailwind-merge": "^2.2.2",

@@ -1,3 +1,4 @@
+import "server-only";
 import { AttachmentType, Session } from "~/server/db/redis";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import crypto from "crypto";

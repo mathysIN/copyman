@@ -164,7 +164,9 @@ export function ActiveSession({
     e.preventDefault();
     const files = e.dataTransfer?.files;
     if (files) {
-      uploadFiles(Array.from(files));
+      const attachments = await uploadFiles(Array.from(files));
+      if (!attachments) return;
+      onNewContent(attachments);
     }
   };
 
@@ -178,7 +180,9 @@ export function ActiveSession({
       if (item.type.startsWith("image/")) {
         const file = item.getAsFile();
         if (!file) continue;
-        uploadFiles([file]);
+        const attachments = await uploadFiles([file]);
+        if (!attachments) return;
+        onNewContent(attachments);
       }
     }
   };

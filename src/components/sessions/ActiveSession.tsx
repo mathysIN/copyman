@@ -25,7 +25,7 @@ import {
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { socket } from "~/lib/client/socket";
-import { deleteAllCookies } from "~/lib/utils";
+import { deleteAllCookies, sortAttachments } from "~/lib/utils";
 import {
   AttachmentType,
   ContentOrder,
@@ -65,8 +65,7 @@ export function ActiveSession({
   );
   const [bgModalLoading, setBgModalLoading] = useState(false);
   const [hidden, setHidden] = useState(true);
-  const [orderNote, setOrderNote] = useState<ContentOrder>(sessionContentOrder);
-  const [orderAttachment, setOrderAttachment] =
+  const [contentOrder, setContentOrder] =
     useState<ContentOrder>(sessionContentOrder);
   const [cachedContents, setCachedContents] =
     useState<ContentType[]>(sessionContents);
@@ -82,20 +81,22 @@ export function ActiveSession({
     setTransport("N/A");
   }
 
-  function onNewContent(content: ContentType[], emit = true) {
+  const onNewContent = (content: ContentType[], emit = true) => {
     if (emit) socket.emit("addContent", content);
-    setCachedContents([...content, ...cachedContents]);
-  }
+    setCachedContents((prev) => [...prev, ...content]);
+  };
+  useEffect(() => {
+    console.log("Component re-rendered with cachedContents:", cachedContents);
+  }, [cachedContents]);
 
-  function onContentDelete(contentId: string, emit = true) {
+  const onContentDelete = (contentId: string, emit = true) => {
     if (emit) socket.emit("deleteContent", contentId);
     setCachedContents(cachedContents.filter((c) => c.id !== contentId));
-  }
+  };
 
   function onContentOrderUpdate(order: ContentOrder, emit = true) {
     if (emit) socket.emit("updatedContentOrder", order);
-    setOrderNote(order);
-    setOrderAttachment(order);
+    setContentOrder(order);
   }
 
   function onContentUpdate(content: ContentType, emit = true) {
@@ -164,7 +165,9 @@ export function ActiveSession({
     e.preventDefault();
     const files = e.dataTransfer?.files;
     if (files) {
-      uploadFiles(Array.from(files));
+      const attachments = await uploadFiles(Array.from(files));
+      if (!attachments) return;
+      onNewContent(attachments);
     }
   };
 
@@ -174,13 +177,20 @@ export function ActiveSession({
       newTaskComponent.current?.addTask(text);
     }
 
+    const attachments: AttachmentType[] = [];
     for (const item of clipboardData.items) {
       if (item.type.startsWith("image/")) {
         const file = item.getAsFile();
         if (!file) continue;
-        uploadFiles([file]);
+        const newAttachments = await uploadFiles([file]);
+        if (!newAttachments) continue;
+        attachments.push(...newAttachments);
       }
     }
+    if (!attachments) return;
+    console.log("handleClipboardData", attachments);
+    console.log("content", cachedContents);
+    onNewContent(attachments);
   };
 
   useEffect(() => {
@@ -197,15 +207,11 @@ export function ActiveSession({
 
   const attachmentContent: AttachmentType[] = cachedContents
     .filter((c: ContentType): c is AttachmentType => c.type === "attachment")
-    .sort((a, b) => {
-      return orderAttachment.indexOf(a.id) - orderAttachment.indexOf(b.id);
-    });
+    .sort((a, b) => sortAttachments(a, b, contentOrder));
 
   const noteContent: NoteType[] = cachedContents
     .filter((c: ContentType): c is NoteType => c.type === "note")
-    .sort((a, b) => {
-      return orderNote.indexOf(a.id) - orderNote.indexOf(b.id);
-    });
+    .sort((a, b) => sortAttachments(a, b, contentOrder));
 
   const mergedUsers = new Map<string, User & { quantity: number }>();
   for (const user of roomUsers) {
@@ -423,8 +429,8 @@ export function ActiveSession({
             className="flex flex-col gap-y-2"
             onReorder={(newValues) => {
               const newOrder = newValues.map((v) => v.id);
-              setOrderAttachment(newOrder);
-              onContentOrderUpdate([...newOrder, ...orderNote], true);
+              setContentOrder(newOrder);
+              onContentOrderUpdate([...newOrder, ...contentOrder], true);
             }}
           >
             {attachmentContent.map((content, index) => (
@@ -448,8 +454,8 @@ export function ActiveSession({
             className="flex flex-col gap-y-2"
             onReorder={(newValues) => {
               const newOrder = newValues.map((v) => v.id);
-              setOrderNote(newOrder);
-              onContentOrderUpdate([...newOrder, ...orderAttachment], true);
+              setContentOrder(newOrder);
+              onContentOrderUpdate([...newOrder, ...contentOrder], true);
             }}
           >
             {noteContent.map((task, index) => (

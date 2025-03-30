@@ -1,11 +1,8 @@
-import { PutObjectCommand } from "@aws-sdk/client-s3";
 import crypto from "crypto";
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import type urlMetadata from "url-metadata";
-import { env } from "~/env";
-import { Session } from "~/server/db/redis";
-import r2Client, { getUrlFromFileR2FileKey } from "~/server/r2";
+import { ContentOrder, ContentType } from "~/server/db/redis";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -122,4 +119,19 @@ export async function convertFile(file: File) {
     fileName: file.name,
     mimeType: file.type,
   };
+}
+
+export function sortAttachments(
+  a: ContentType,
+  b: ContentType,
+  order: ContentOrder,
+) {
+  const indexA = order.indexOf(a.id);
+  const indexB = order.indexOf(b.id);
+  if (indexA != -1 && indexB != -1) return indexA - indexB;
+  if (indexA == -1 && indexB == -1)
+    return parseInt(b.createdAt) - parseInt(a.createdAt);
+  if (indexA == -1) return -1;
+  if (indexB == -1) return 1;
+  return 0;
 }

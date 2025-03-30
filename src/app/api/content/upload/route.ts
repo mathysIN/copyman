@@ -2,8 +2,13 @@ import { NextResponse } from "next/server";
 import { getSessionWithCookies } from "~/utils/authenticate";
 import { cookies } from "next/headers";
 import { serverUploadFiles } from "~/lib/serverUtils";
+import { AttachmentType } from "~/server/db/redis";
 
-export async function POST(req: Request): Promise<NextResponse> {
+export async function POST(
+  req: Request,
+): Promise<
+  NextResponse<AttachmentType[] | { error?: string; message?: string }>
+> {
   const formData = await req.formData();
   const files = formData.getAll("files") as File[] | undefined;
 

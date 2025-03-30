@@ -243,14 +243,11 @@ async function addContentHandler(
   socket?: CopymanSocket,
 ) {
   if (!session) return;
-  const sockets = rooms.get(session.sessionId);
-  if (!sockets) return;
-  for (const keyVal of sockets) {
-    const id = keyVal[0];
-    if (socket) {
-      io.except(socket.id).to(id).emit("addContent", content);
-    } else {
-      io.emit("addContent", content);
-    }
+  const room = rooms.get(session.sessionId);
+  if (!room) return;
+  for (const keyVal of room) {
+    const [id] = keyVal;
+    if (id == socket?.id) continue;
+    io.to(id).emit("addContent", content);
   }
 }

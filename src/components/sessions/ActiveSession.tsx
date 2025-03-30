@@ -85,13 +85,10 @@ export function ActiveSession({
     if (emit) socket.emit("addContent", content);
     setCachedContents((prev) => [...prev, ...content]);
   };
-  useEffect(() => {
-    console.log("Component re-rendered with cachedContents:", cachedContents);
-  }, [cachedContents]);
 
   const onContentDelete = (contentId: string, emit = true) => {
     if (emit) socket.emit("deleteContent", contentId);
-    setCachedContents(cachedContents.filter((c) => c.id !== contentId));
+    setCachedContents((prev) => prev.filter((c) => c.id !== contentId));
   };
 
   function onContentOrderUpdate(order: ContentOrder, emit = true) {
@@ -99,13 +96,17 @@ export function ActiveSession({
     setContentOrder(order);
   }
 
+  function onRoomInsight(room: { users: User[] }) {
+    setRoomUsers(room.users);
+  }
+
   function onContentUpdate(content: ContentType, emit = true) {
     if (emit) socket.emit("updatedContent", content);
     else {
       const index = cachedContents.findIndex((c) => c.id == content.id);
       if (!index && !cachedContents[index]) throw "Client unsynced with server";
-      setCachedContents(
-        cachedContents.map((c) => {
+      setCachedContents((prev) =>
+        prev.map((c) => {
           if (c.id == content.id) {
             return content;
           }
@@ -136,12 +137,22 @@ export function ActiveSession({
     });
 
     socket.on("roomInsight", (room) => {
-      setRoomUsers(room.users);
+      onRoomInsight(room);
     });
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
-  }, [onNewContent]);
+
+    return () => {
+      socket.off("updatedContent");
+      socket.off("addContent");
+      socket.off("deleteContent");
+      socket.off("updatedContentOrder");
+      socket.off("roomInsight");
+      socket.off("connect");
+      socket.off("disconnect");
+    };
+  }, []);
 
   const handleGlobalPaste = (event: ClipboardEvent) => {
     const activeElement = document.activeElement as HTMLElement;
@@ -188,8 +199,6 @@ export function ActiveSession({
       }
     }
     if (!attachments) return;
-    console.log("handleClipboardData", attachments);
-    console.log("content", cachedContents);
     onNewContent(attachments);
   };
 

@@ -10,6 +10,7 @@ import { ContentOrder, ContentType, Session } from "~/server/db/redis";
 import { createHashId } from "~/lib/utils";
 import { parse as parseCookie } from "cookie";
 import express from "express";
+import { serverCreateNote, serverUploadFiles } from "~/lib/serverUtils";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
@@ -71,35 +72,20 @@ function readBody(req: IncomingMessage): Promise<string> {
   });
 }
 
-export async function createCustomRequest(req: IncomingMessage) {
-  const bodyText = await readBody(req);
-  return {
-    method: req.method,
-    url: req.url,
-    headers: req.headers,
-    json: async () => JSON.parse(bodyText),
-    text: async () => bodyText,
-    cookies: parseCookie(req.headers.cookie || ""),
-  };
-}
-
 app.prepare().then(() => {
   const server = express();
   const httpServer = createServer(server);
+  server.use(express.urlencoded({ extended: true }));
 
   server.get("/api/notes", async (req, res) => {
-    const data = await req.body;
-    const cookies = req.cookies;
-
-    const session = await getSessionWithRecord(cookies);
+    const data = (await req.body) as string;
+    const session = await getSessionWithRecord(req.cookies);
     if (!session) {
       res.writeHead(401, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ message: "Unauthorized" }));
       return;
     }
-    const { content } = data;
-    const newNote = { content };
-    const response = await session.createNewNote(newNote).catch(() => {});
+    const response = await serverCreateNote(session, data);
 
     if (response) {
       addContentHandler(io, session, [response]);
@@ -111,6 +97,45 @@ app.prepare().then(() => {
     }
     return;
   });
+
+  server.get(
+    "/api/share",
+    express.urlencoded({ extended: true }),
+    async (req, res) => {
+      const session = await getSessionWithRecord(req.cookies);
+      if (!session) {
+        res.writeHead(401, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ message: "Unauthorized" }));
+        return;
+      }
+
+      const protocol = req.url.split(":")[0] === "https" ? "https" : "http";
+      const redirectUrl = `${protocol}://${req.headers["host"]}/`;
+
+      try {
+        const formData = await req.body;
+        const title = formData.get("title");
+        const text = formData.get("text") as string;
+        const url = formData.get("url");
+        const files = formData.getAll("file") as File[];
+
+        console.log("Received share data:", { title, text, url, files });
+
+        if (text) {
+          await serverCreateNote(session, text);
+        }
+
+        if (files && files.length > 0) {
+          await serverUploadFiles(session, files);
+        }
+
+        return res.redirect(303, redirectUrl);
+      } catch (error) {
+        console.error("Error processing share data:", error);
+        return res.redirect(303, redirectUrl);
+      }
+    },
+  );
 
   server.all("*", (req, res) => {
     return handler(req, res);

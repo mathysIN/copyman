@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 import { serverUploadFiles } from "~/lib/serverUtils";
 import { AttachmentType } from "~/server/db/redis";
 
+const MAX_SIZE = 500 * 1024 * 1024;
+
 export async function POST(
   req: Request,
 ): Promise<
@@ -15,13 +17,22 @@ export async function POST(
   if (!files?.length)
     return NextResponse.json({ error: "No files provided" }, { status: 400 });
 
-  const startTotal = performance.now();
-
   const session = await getSessionWithCookies(cookies());
-
   if (!session)
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
+  const usedSpace = session.getUsedSpaceNumber();
+  const totalSize = files.reduce((sum, file) => sum + file.size, 0);
+  const newTotalSize = usedSpace + totalSize;
+  console.log({ usedSpace, totalSize, newTotalSize });
+  if (newTotalSize > MAX_SIZE) {
+    return NextResponse.json(
+      { message: "Session is using to much space. Please delete some files." },
+      { status: 403 },
+    );
+  }
+
+  const startTotal = performance.now();
   try {
     const startParse = performance.now();
     console.log(
@@ -37,6 +48,7 @@ export async function POST(
     console.log(
       `Total request processing took: ${performance.now() - startTotal}ms`,
     );
+    session.addUsedSpace(totalSize);
     return NextResponse.json(results);
   } catch (error) {
     console.log(

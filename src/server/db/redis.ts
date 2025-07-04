@@ -79,9 +79,10 @@ const REDIS_KEY_PREFIX = toFullRedisKey([REDIS_KEY_MAIN_PREFIX, ENVIRONMENT]);
 export type SessionType = {
   sessionId: string;
   password?: string;
-  backgroundImageURL?: string;
   createdAt: string;
   rawContentOrder?: string;
+  backgroundImageURL?: string;
+  usedSpace?: string;
 };
 
 export class Session {
@@ -90,6 +91,8 @@ export class Session {
   createdAt: string;
   rawContentOrder?: string;
   imageBackground?: URL;
+  usedSpace?: string;
+
   constructor(props: SessionType) {
     this.sessionId = props.sessionId;
     this.password = props.password;
@@ -98,6 +101,7 @@ export class Session {
     try {
       this.imageBackground = new URL(props.backgroundImageURL ?? "");
     } catch {}
+    this.usedSpace = props.usedSpace;
   }
 
   withSessionKey(...strings: string[]) {
@@ -262,12 +266,23 @@ export class Session {
     });
   }
 
+  getUsedSpaceNumber(): number {
+    return parseInt(this.usedSpace ?? "") || 0;
+  }
+
+  async addUsedSpace(usedSpace: number) {
+    return sessions.hmset(this.sessionId, {
+      usedSpace: (this.getUsedSpaceNumber() + usedSpace).toString(),
+    });
+  }
+
   toJSON(): SessionType {
     return {
       sessionId: this.sessionId,
       createdAt: this.createdAt,
       rawContentOrder: this.rawContentOrder,
       backgroundImageURL: this.imageBackground?.href,
+      usedSpace: this.usedSpace?.toString(),
     };
   }
 }

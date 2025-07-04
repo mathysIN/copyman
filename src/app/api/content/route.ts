@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getSessionWithCookies } from "~/utils/authenticate";
 import { utapi } from "~/server/uploadthing";
 import r2Client from "~/server/r2";
-import { DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { env } from "~/env";
 
 export async function GET(request: Request): Promise<NextResponse> {
@@ -46,12 +46,13 @@ export async function DELETE(request: Request): Promise<NextResponse> {
     );
 
   if (content.type === "attachment") {
-    await r2Client.send(
-      new DeleteObjectCommand({
-        Bucket: env.R2_BUCKET_NAME,
-        Key: content.fileKey,
-      }),
-    );
+    const commandHeaders = {
+      Bucket: env.R2_BUCKET_NAME,
+      Key: content.fileKey,
+    };
+    const res = await r2Client.send(new HeadObjectCommand(commandHeaders));
+    if (res.ContentLength) session.addUsedSpace(-res.ContentLength);
+    await r2Client.send(new DeleteObjectCommand(commandHeaders));
   }
 
   return NextResponse.json(content, { status: 200 });

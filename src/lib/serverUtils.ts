@@ -1,4 +1,5 @@
 import "server-only";
+import contentDisposition from 'content-disposition';
 import { AttachmentType, Session } from "~/server/db/redis";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import crypto from "crypto";
@@ -30,7 +31,7 @@ export async function serverUploadFiles(session: Session, files: File[]) {
         Key: fileKey,
         Body: stream,
         ContentType: file.type,
-        ContentDisposition: `attachment; filename="${fileName}"`,
+        ContentDisposition: contentDisposition(fileName),
       }),
     );
     console.log(

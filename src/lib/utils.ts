@@ -135,3 +135,18 @@ export function sortAttachments(
   if (indexB == -1) return 1;
   return 0;
 }
+
+export function maxStringLength(text: string, maxLength: number) {
+  const chars = text.split('');
+  let result = "";
+  let count = 0;
+  for (const char of chars) {
+    count++;
+    if (count >= maxLength) {
+      result += "...";
+      break;
+    };
+    result += char;
+  }
+  return result;
+}

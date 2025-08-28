@@ -31,7 +31,9 @@ export async function serverUploadFiles(session: Session, files: File[]) {
         Key: fileKey,
         Body: stream,
         ContentType: file.type,
-        ContentDisposition: contentDisposition(fileName),
+        ContentDisposition: contentDisposition(fileName, {
+          type: "inline"
+        }),
       }),
     );
     console.log(

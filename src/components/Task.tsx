@@ -14,6 +14,7 @@ import {
   extractLinksFromString,
   getLinkMetadataFromClient,
   isImageURL,
+  maxStringLength,
 } from "~/lib/utils";
 import type { ContentType, NoteType } from "~/server/db/redis";
 import TextareaAutosize from "react-textarea-autosize";
@@ -293,12 +294,12 @@ export function Task({
           onBlur={handleBlur}
           onChange={handleChangeEvent}
           value={value}
-          className={`${deleting && "cursor-wait"} ${!isFocused && "opacity-0"} textarea h-fit w-full flex-grow list-disc border-2`}
+          className={`${deleting && "cursor-wait"} border-r-2 pb-2 ${!isFocused && "opacity-0"} textarea h-fit w-full flex-grow list-disc border-2`}
           maxRows={20}
         />
         {!isFocused && (
           <div
-            className="absolute inset-y-0 w-full cursor-text overflow-x-hidden break-words border-2 border-neutral-100 text-black"
+            className="absolute inset-y-0 w-full cursor-text bg-neutral-100 p-1 border-r-2 overflow-x-hidden break-words border-2 border-neutral-50 text-black"
             onClick={onMarkdownRenderClick}
           >
             <ReactMarkdown
@@ -412,7 +413,7 @@ export function Task({
                 target="_blank"
                 className="flex flex-row items-center gap-2 rounded-lg border-2 bg-neutral-800 px-2 py-1 text-white"
               >
-                <p>{link.metadata.title}</p>
+                <p>{maxStringLength(link.metadata.title, 30)}</p>
                 {link.metadata.image && (
                   <img
                     src={link.metadata.image}

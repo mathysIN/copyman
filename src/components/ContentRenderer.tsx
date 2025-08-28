@@ -163,7 +163,8 @@ const ContentRenderer = ({
               <FontAwesomeIcon icon={faLink} />
             </button>
             <a
-	      download={content.attachmentPath}
+              target="_blank"
+              download={content.attachmentPath}
               href={content.attachmentURL}
               className="flex items-center justify-center text-gray-900 active:scale-95"
             >

@@ -3,6 +3,7 @@ import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension
 import { Session, sessions } from "~/server/db/redis";
 import cookie from "cookie";
 import { string } from "zod";
+import { env } from "~/env";
 
 const BANNED_SESSIONS = ["admin", "favicon.ico", "socket.io"];
 
@@ -52,6 +53,7 @@ async function getSession(
 ): Promise<Session | null> {
   const sessionIdLower = sessionId.toLowerCase();
   if (BANNED_SESSIONS.includes(sessionIdLower)) return null;
+
   let response = await sessions.hgetall(sessionIdLower);
   if (!response && !createIfNull) return null;
   if (!response && createIfNull) {

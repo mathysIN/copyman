@@ -1,10 +1,10 @@
-import { Redis, RedisConfigNodejs } from "@upstash/redis";
-import { UUID, randomUUID } from "crypto";
-import { RequestCookies } from "next/dist/compiled/@edge-runtime/cookies";
-import { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
+import { Redis, type RedisConfigNodejs } from "@upstash/redis";
+import { type UUID, randomUUID } from "crypto";
+import { type RequestCookies } from "next/dist/compiled/@edge-runtime/cookies";
+import { type ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 import { env } from "~/env";
 import { hashPassword, validatePassword } from "~/utils/password";
-import { ExcludeMatchingProperties } from "~/utils/types";
+import { type ExcludeMatchingProperties } from "~/utils/types";
 
 const globalForDb = globalThis as unknown as {
   conn: Redis | undefined;
@@ -100,7 +100,7 @@ export class Session {
     this.rawContentOrder = props.rawContentOrder;
     try {
       this.imageBackground = new URL(props.backgroundImageURL ?? "");
-    } catch {}
+    } catch { }
     this.usedSpace = props.usedSpace;
   }
 

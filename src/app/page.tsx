@@ -3,8 +3,8 @@ import { PreSession } from "~/components/sessions/PreSession";
 import { ActiveSession } from "~/components/sessions/ActiveSession";
 import { getSessionWithCookies } from "~/utils/authenticate";
 import Link from "next/link";
-import { ContentOrder, ContentType } from "~/server/db/redis";
-import { Exception } from "~/utils/types";
+import { type ContentOrder, type ContentType } from "~/server/db/redis";
+import { type Exception } from "~/utils/types";
 
 export default async function HomePage() {
   let error: undefined | Exception;
@@ -40,13 +40,6 @@ export default async function HomePage() {
               Copyman
             </h1>
           </Link>
-          {!showingSession && (
-            <>
-              <p className="py-2 text-lg">
-                {MOTDS[Math.floor(Math.random() * MOTDS.length)]}
-              </p>
-            </>
-          )}
         </div>
         <div className="flex flex-col items-center justify-center ">
           {error && (
@@ -58,8 +51,8 @@ export default async function HomePage() {
           {showingSession && (
             <ActiveSession
               session={session.toJSON()}
-              hasPassword={session.hasPassword()}
-              sessionContents={sessionContents}
+              baseHasPassword={session.hasPassword()}
+              baseSessionContent={sessionContents}
               sessionContentOrder={sessionContentOrder}
             />
           )}
@@ -68,10 +61,3 @@ export default async function HomePage() {
     </>
   );
 }
-
-const MOTDS = [
-  "5 balles de bounty à celui qui trouve une faille",
-  '"Mais Apple UC et AirDrop existe déjà", haha men fou',
-  "Un presse papier pas sécurisé mais pratique pour mon travail",
-  "L'application qui tourne sur un spaghetti code",
-];

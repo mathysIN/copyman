@@ -6,35 +6,27 @@ import { useState } from "react";
 import { uploadFiles } from "~/lib/client/uploadFile";
 import { AttachmentType } from "~/server/db/redis";
 
-interface Props {
-  className?: string;
-}
-
 export default function Upload({
-  onNewContent = () => {},
+  onUploadingFiles,
   className = "",
+  loading = false,
 }: {
-  onNewContent?: (content: AttachmentType[]) => any;
+  onUploadingFiles?: (files: File[]) => any;
   className?: string;
+  loading?: boolean;
 }) {
-  const [uploading, setUploading] = useState(false);
-
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
+    console.log(files);
     if (!files || files.length === 0) return;
 
-    setUploading(true);
-
-    const attachments = await uploadFiles(Array.from(files));
-    setUploading(false);
-    if (!attachments) return;
-    onNewContent(attachments);
+    onUploadingFiles?.(Array.from(files));
   };
 
   return (
     <button
       onClick={() => document.getElementById("file-upload")?.click()}
-      className={`${uploading ? "animate-pulse cursor-wait opacity-75" : "cursor-pointer"} flex h-16 w-full flex-col items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-black active:scale-95 active:opacity-95`}
+      className={`${loading ? "animate-pulse cursor-wait opacity-75" : "cursor-pointer"} flex h-16 w-full flex-col items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-black active:scale-95 active:opacity-95`}
     >
       <input
         id="file-upload"
@@ -44,7 +36,7 @@ export default function Upload({
         className="hidden"
       />
       <div className="flex flex-row items-center gap-2">
-        <span>{uploading ? "Mise en ligne..." : "Nouveau fichier"}</span>
+        <span>{loading ? "Mise en ligne..." : "Nouveau fichier"}</span>
         <FontAwesomeIcon icon={faUpload} />
       </div>
     </button>

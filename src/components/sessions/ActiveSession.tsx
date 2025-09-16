@@ -9,9 +9,9 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { AddNewTask, AddNewTaskRef } from "~/components/AddNewTask";
+import { AddNewTask, type AddNewTaskRef } from "~/components/AddNewTask";
 import ContentRenderer from "~/components/ContentRenderer";
-import { Task } from "~/components/Task";
+import { Task as Note } from "~/components/Task";
 import { Button } from "~/components/ui/button";
 import {
   Dialog,
@@ -25,38 +25,49 @@ import {
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { socket } from "~/lib/client/socket";
-import { deleteAllCookies, sortAttachments } from "~/lib/utils";
+import { TimeValues, deleteAllCookies, sortAttachments } from "~/lib/utils";
 import {
-  AttachmentType,
-  ContentOrder,
-  ContentType,
-  NoteType,
-  SessionType,
+  type AttachmentType,
+  type ContentOrder,
+  type ContentType,
+  type NoteType,
+  type SessionType,
 } from "~/server/db/redis";
 import { Reorder } from "framer-motion";
 import { useToast } from "~/hooks/use-toast";
 import { DialogClose } from "@radix-ui/react-dialog";
-import { User } from "~/server";
+import { type User } from "~/server";
 import Upload from "~/components/Upload";
-import { uploadFiles } from "~/lib/client/uploadFile";
+import { uploadFiles as realUploadFile } from "~/lib/client/uploadFile";
+import { api } from "~/utils/api";
+import { Progress } from "../ui/progress";
+import autoAnimate from '@formkit/auto-animate'
+
+type UploadProgress = {
+  id: string;
+  progress: number;
+  state: "active" | "error";
+  erroredAt?: Date;
+  finishedAt?: Date;
+  filename: string;
+}
 
 export function ActiveSession({
   session,
-  sessionContents,
-  hasPassword: _hasPassword,
+  baseSessionContent,
+  baseHasPassword,
   sessionContentOrder,
 }: {
   session: SessionType;
-  sessionContents: ContentType[];
-  hasPassword: boolean;
+  baseSessionContent: ContentType[];
+  baseHasPassword: boolean;
   sessionContentOrder: ContentOrder;
 }) {
   const [isConnected, setIsConnected] = useState(false);
   const [roomUsers, setRoomUsers] = useState<User[]>([]);
-  const [transport, setTransport] = useState("N/A");
-  const { toast } = useToast();
+  const [uploadProgressPourcentage, setUploadProgressPourcentage] = useState<UploadProgress[]>([]);
 
-  const [hasPassword, setHasPassword] = useState(_hasPassword);
+  const [hasPassword, setHasPassword] = useState(baseHasPassword);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [passwordModalLoading, setPasswordModalLoading] = useState(false);
   const [passwordModalContent, setPasswordModalContent] = useState("");
@@ -64,48 +75,53 @@ export function ActiveSession({
     session.backgroundImageURL ?? "",
   );
   const [bgModalLoading, setBgModalLoading] = useState(false);
-  const [hidden, setHidden] = useState(true);
   const [contentOrder, setContentOrder] =
     useState<ContentOrder>(sessionContentOrder);
-  const [cachedContents, setCachedContents] =
-    useState<ContentType[]>(sessionContents);
+  const [sessionContent, setSessionContent] =
+    useState<ContentType[]>(baseSessionContent);
+
+  const [show, setShow] = useState(false)
+  const containerAnimationUploadingRef = useRef(null)
+
+  useEffect(() => {
+    containerAnimationUploadingRef.current && autoAnimate(containerAnimationUploadingRef.current)
+  }, [containerAnimationUploadingRef])
 
   const newTaskComponent = useRef<AddNewTaskRef>(null);
 
-  function onConnect() {
+  function onConnect(): void {
     setIsConnected(true);
   }
 
-  function onDisconnect() {
+  function onDisconnect(): void {
     setIsConnected(false);
-    setTransport("N/A");
   }
 
-  const onNewContent = (content: ContentType[], emit = true) => {
+  function onNewContent(content: ContentType[], emit = true): void {
     if (emit) socket.emit("addContent", content);
-    setCachedContents((prev) => [...prev, ...content]);
+    setSessionContent((prev) => [...prev, ...content]);
   };
 
-  const onContentDelete = (contentId: string, emit = true) => {
+  function onDeleteContent(contentId: string, emit = true): void {
     if (emit) socket.emit("deleteContent", contentId);
-    setCachedContents((prev) => prev.filter((c) => c.id !== contentId));
+    setSessionContent((prev) => prev.filter((c) => c.id !== contentId));
   };
 
-  function onContentOrderUpdate(order: ContentOrder, emit = true) {
+  function onUpdateContentOrder(order: ContentOrder, emit = true): void {
     if (emit) socket.emit("updatedContentOrder", order);
     setContentOrder(order);
   }
 
-  function onRoomInsight(room: { users: User[] }) {
+  function onRoomInsight(room: { users: User[] }): void {
     setRoomUsers(room.users);
   }
 
-  function onContentUpdate(content: ContentType, emit = true) {
+  function onUpdateContent(content: ContentType, emit = true): void {
     if (emit) socket.emit("updatedContent", content);
     else {
-      const index = cachedContents.findIndex((c) => c.id == content.id);
-      if (!index && !cachedContents[index]) throw "Client unsynced with server";
-      setCachedContents((prev) =>
+      const index = sessionContent.findIndex((c) => c.id == content.id);
+      if (!index && !sessionContent[index]) throw "Client unsynced with server";
+      setSessionContent((prev) =>
         prev.map((c) => {
           if (c.id == content.id) {
             return content;
@@ -122,18 +138,18 @@ export function ActiveSession({
       onConnect();
     }
 
-    socket.on("updatedContent", (content) => onContentUpdate(content, false));
+    socket.on("updatedContent", (content) => onUpdateContent(content, false));
 
     socket.on("addContent", (content) => {
       onNewContent(content, false);
     });
 
     socket.on("deleteContent", (contentId) => {
-      onContentDelete(contentId, false);
+      onDeleteContent(contentId, false);
     });
 
     socket.on("updatedContentOrder", (order) => {
-      onContentOrderUpdate(order, false);
+      onUpdateContentOrder(order, false);
     });
 
     socket.on("roomInsight", (room) => {
@@ -154,7 +170,11 @@ export function ActiveSession({
     };
   }, []);
 
-  const handleGlobalPaste = (event: ClipboardEvent) => {
+  function onUploadingFiles(files: File[]) {
+    uploadFiles(Array.from(files));
+  }
+
+  function onPasteGlobal(event: ClipboardEvent): void {
     const activeElement = document.activeElement as HTMLElement;
 
     if (
@@ -163,62 +183,108 @@ export function ActiveSession({
     ) {
       const clipboardData = event.clipboardData;
       if (clipboardData) {
-        handleClipboardData(clipboardData);
+        uploadClipboardData(clipboardData);
       }
     }
   };
 
-  const handleDragOver = (e: DragEvent) => {
+  function onDragOver(e: DragEvent): void {
     e.preventDefault();
   };
 
-  const handleDrop = async (e: DragEvent) => {
+  async function onDrop(e: DragEvent): Promise<void> {
     e.preventDefault();
     const files = e.dataTransfer?.files;
-    if (files) {
-      const attachments = await uploadFiles(Array.from(files));
-      if (!attachments) return;
-      onNewContent(attachments);
-    }
+    if (files) await uploadFiles(Array.from(files));
   };
 
-  const handleClipboardData = async (clipboardData: DataTransfer) => {
+  async function uploadClipboardData(clipboardData: DataTransfer): Promise<void> {
     const text = clipboardData.getData("text");
     if (text) {
       newTaskComponent.current?.addTask(text);
     }
 
     const attachments: AttachmentType[] = [];
+    const files: File[] = [];
     for (const item of clipboardData.items) {
       if (item.type.startsWith("image/")) {
         const file = item.getAsFile();
         if (!file) continue;
-        const newAttachments = await uploadFiles([file]);
-        if (!newAttachments) continue;
-        attachments.push(...newAttachments);
+        files.push(file);
       }
     }
-    if (!attachments) return;
-    onNewContent(attachments);
+    uploadFiles(files);
   };
 
+  async function uploadFiles(files: File[]): Promise<AttachmentType[] | null> {
+    const uploadId = crypto.randomUUID()
+
+    const uploadedFiles = await realUploadFile(files, (progress: number) => {
+      const firstFile = files[0];
+      if (!firstFile) return;
+      setUploadProgressPourcentage(prev => {
+        const next = [...prev]
+
+        const index = next.findIndex(p => p.id === uploadId)
+        const previous = next[index]
+
+        if (previous) {
+          if (progress >= 100 && !previous.finishedAt) {
+            previous.finishedAt = new Date();
+          }
+          if (!previous.finishedAt) {
+            previous.finishedAt = new Date();
+          }
+          next[index] = { ...previous, finishedAt: new Date(), progress };
+
+        } else {
+          let uploadName: string;
+          if (files.length == 1) {
+            uploadName = firstFile.name;
+          }
+          else {
+            uploadName = `${files.length} fichiers`
+          }
+          next.push({
+            filename: uploadName,
+            id: uploadId,
+            progress: progress,
+            state: "active",
+          })
+        }
+
+        return next
+      })
+    });
+
+    setUploadProgressPourcentage(prev => {
+      const next = [...prev]
+      const index = next.findIndex(p => p.id === uploadId)
+      next.splice(index, 1);
+      return next;
+    });
+
+    if (uploadedFiles) onNewContent(uploadedFiles);
+    return uploadedFiles;
+  }
+
   useEffect(() => {
-    document.addEventListener("paste", handleGlobalPaste);
-    document.addEventListener("dragover", handleDragOver);
-    document.addEventListener("drop", handleDrop);
+    document.addEventListener("paste", onPasteGlobal);
+    document.addEventListener("dragover", onDragOver);
+    document.addEventListener("drop", onDrop);
 
     return () => {
-      document.removeEventListener("paste", handleGlobalPaste);
-      document.removeEventListener("dragover", handleDragOver);
-      document.removeEventListener("drop", handleDrop);
+      document.removeEventListener("paste", onPasteGlobal);
+      document.removeEventListener("dragover", onDragOver);
+      document.removeEventListener("drop", onDrop);
     };
   }, []);
 
-  const attachmentContent: AttachmentType[] = cachedContents
+  const attachmentContent: AttachmentType[] = sessionContent
     .filter((c: ContentType): c is AttachmentType => c.type === "attachment")
     .sort((a, b) => sortAttachments(a, b, contentOrder));
 
-  const noteContent: NoteType[] = cachedContents
+  const noteContent: NoteType[] = sessionContent
     .filter((c: ContentType): c is NoteType => c.type === "note")
     .sort((a, b) => sortAttachments(a, b, contentOrder));
 
@@ -231,18 +297,40 @@ export function ActiveSession({
     } else userAlreadyIn.quantity++;
   }
 
+  function onClickSetPassword(): void {
+    sendPasswordRequest(passwordModalContent);
+  }
+
+  function onClickRemovePassword(): void {
+    sendPasswordRequest("");
+  }
+
+  function onReorderContent(newValues: ContentType[]): void {
+    const newOrder = newValues.map((v) => v.id);
+    setContentOrder(newOrder);
+    onUpdateContentOrder([...newOrder, ...contentOrder], true);
+  }
+
+  function sendPasswordRequest(password: string): void {
+    setPasswordModalLoading(true);
+    api.setPassword(password)
+      .then(() => {
+        setHasPassword(!!password);
+      })
+      .finally(() => {
+        setPasswordModalLoading(false);
+        setPasswordModalOpen(false);
+      });
+  }
+
   return (
     <div className="w-full max-w-[1250px] select-none px-4 pb-10">
       <div className="flex flex-col items-center justify-center">
         <div className="flex flex-row items-center gap-[12px] text-xl">
           <button
             className={`cursor-pointer`}
-            onClick={() => setHidden(!hidden)}
           >
-            #
-            {hidden
-              ? new Array(session.sessionId.length).fill("*").join("")
-              : session.sessionId}
+            #{session.sessionId}
           </button>
           <div />
           <Dialog
@@ -272,35 +360,30 @@ export function ActiveSession({
                   <Input
                     onChange={(e) => setPasswordModalContent(e.target.value)}
                     value={passwordModalContent}
-                    id="password"
                     type="password"
-                    placeholder="passman"
+                    placeholder="*****"
                     className="col-span-3"
                   />
                 </div>
               </div>
               <DialogFooter>
                 <Button
-                  disabled={passwordModalLoading}
-                  type="submit"
-                  onClick={async () => {
-                    setPasswordModalLoading(true);
-                    await fetch("/api/sessions/", {
-                      method: "PATCH",
-                      body: JSON.stringify({
-                        password: passwordModalContent,
-                      }),
-                    }).then(() => setHasPassword(!!passwordModalContent));
-                    setPasswordModalLoading(false);
-                    setPasswordModalOpen(false);
-                  }}
+                  disabled={hasPassword}
+                  onClick={onClickRemovePassword}
                 >
                   {passwordModalLoading && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  {passwordModalContent
-                    ? "Sauvegarder"
-                    : "Retirer le mot de passe"}
+                  Supprimer le mot de passe
+                </Button>
+                <Button
+                  disabled={passwordModalLoading || !passwordModalContent}
+                  onClick={onClickSetPassword}
+                >
+                  {passwordModalLoading && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Sauvegarder le mot de passe
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -378,6 +461,7 @@ export function ActiveSession({
                   </DialogTitle>
                   <DialogDescription>
                     <div className="flex flex-col gap-2">
+                      <p>Users agents des utilisateurs connectés :</p>
                       {Array.from(mergedUsers.values()).map((u) => (
                         <p>
                           - {u.quantity > 1 && `(x${u.quantity}) `}
@@ -425,32 +509,39 @@ export function ActiveSession({
       </div>
       <div className="h-8" />
       <div
-        className={`} relative flex flex-col items-stretch justify-center gap-0 sm:flex-row sm:gap-16 sm:px-16`}
+        className={`relative flex flex-col items-stretch justify-center gap-0 sm:flex-row sm:gap-16 sm:px-16`}
       >
         <div className="flex flex-col gap-y-2 sm:w-1/2">
           <h2>Trucs</h2>
-          <div className="h-16">
-            <Upload onNewContent={onNewContent} />
+          <div ref={containerAnimationUploadingRef}>
+            <Upload className="h-16" onUploadingFiles={onUploadingFiles} />
+            {Array.from(uploadProgressPourcentage.values()).filter((progress) => progress.progress).map((progress) =>
+              <div className="mt-2">
+                <div className="relative h-6 ">
+                  <Progress value={progress.progress} className="h-full" />
+                  <span className="absolute mix-blend-difference inset-0 flex items-center justify-center text-sm font-medium tex text-white">
+                    {progress.filename} - {progress.progress}%
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
           <div />
           <Reorder.Group
             values={attachmentContent}
             className="flex flex-col gap-y-2"
-            onReorder={(newValues) => {
-              const newOrder = newValues.map((v) => v.id);
-              setContentOrder(newOrder);
-              onContentOrderUpdate([...newOrder, ...contentOrder], true);
-            }}
+            onReorder={onReorderContent}
           >
-            {attachmentContent.map((content, index) => (
+            {attachmentContent.map((content) => (
               <ContentRenderer
                 key={content.id}
                 content={content}
-                onContentDelete={onContentDelete}
+                onContentDelete={onDeleteContent}
               />
             ))}
           </Reorder.Group>
         </div>
+        <div className="sm:h-4 sm:h-0" />
         <div className={`flex flex-col gap-y-2 sm:w-1/2`}>
           <h2>Autres trucs</h2>
           <AddNewTask
@@ -461,19 +552,15 @@ export function ActiveSession({
           <Reorder.Group
             values={noteContent}
             className="flex flex-col gap-y-2"
-            onReorder={(newValues) => {
-              const newOrder = newValues.map((v) => v.id);
-              setContentOrder(newOrder);
-              onContentOrderUpdate([...newOrder, ...contentOrder], true);
-            }}
+            onReorder={onReorderContent}
           >
-            {noteContent.map((task, index) => (
-              <Task
-                key={task.id}
-                allContent={cachedContents}
-                content={task}
-                onDeleteTask={onContentDelete}
-                onUpdateTask={onContentUpdate}
+            {noteContent.map((note) => (
+              <Note
+                key={note.id}
+                allContent={sessionContent}
+                content={note}
+                onDeleteTask={onDeleteContent}
+                onUpdateTask={onUpdateContent}
               />
             ))}
           </Reorder.Group>

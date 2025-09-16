@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import type urlMetadata from "url-metadata";
-import { ContentOrder, ContentType } from "~/server/db/redis";
+import { type ContentOrder, type ContentType } from "~/server/db/redis";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -42,7 +42,7 @@ export async function getLinkMetadata(
 export async function getLinkMetadataFromClient(url: string) {
   return (await fetch(`/api/metadata?url=${url}`))
     .json()
-    .catch(() => {}) as any as urlMetadata.Result | null;
+    .catch(() => { }) as any as urlMetadata.Result | null;
 }
 
 export function areSetEqual<T>(set1: Set<T>, set2: Set<T>): boolean {
@@ -150,3 +150,10 @@ export function maxStringLength(text: string, maxLength: number) {
   }
   return result;
 }
+
+export const TimeValues = {
+  second: 1000,
+  minute: 60 * 1000,
+  hour: 60 * 60 * 1000,
+  day: 24 * 60 * 60 * 1000
+} as const

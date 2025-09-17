@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Show elements only when browser is offline (class added by ServiceWorkerRegister) */
+.offline-only {
+  display: none;
+}
+html.offline .offline-only {
+  display: block;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

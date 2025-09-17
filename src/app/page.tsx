@@ -1,8 +1,8 @@
 import { cookies } from "next/headers";
 import { PreSession } from "~/components/sessions/PreSession";
 import { ActiveSession } from "~/components/sessions/ActiveSession";
-import { getSessionWithCookies } from "~/utils/authenticate";
 import Link from "next/link";
+import { getSessionWithCookies } from "~/utils/authenticate";
 import { type ContentOrder, type ContentType } from "~/server/db/redis";
 import { type Exception } from "~/utils/types";
 
@@ -48,6 +48,12 @@ export default async function HomePage() {
             </p>
           )}
           {!showingSession && <PreSession />}
+          {!showingSession && (
+            <p className="offline-only mt-4 text-sm opacity-80">
+              Vous êtes hors ligne. Connectez-vous pour rejoindre ou créer une
+              session.
+            </p>
+          )}
           {showingSession && (
             <ActiveSession
               session={session.toJSON()}

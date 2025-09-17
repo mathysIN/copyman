@@ -41,7 +41,7 @@ import Upload from "~/components/Upload";
 import { uploadFiles as realUploadFile } from "~/lib/client/uploadFile";
 import { api } from "~/utils/api";
 import { Progress } from "../ui/progress";
-import autoAnimate from '@formkit/auto-animate'
+import autoAnimate from "@formkit/auto-animate";
 
 type UploadProgress = {
   id: string;
@@ -50,7 +50,7 @@ type UploadProgress = {
   erroredAt?: Date;
   finishedAt?: Date;
   filename: string;
-}
+};
 
 export function ActiveSession({
   session,
@@ -64,8 +64,11 @@ export function ActiveSession({
   sessionContentOrder: ContentOrder;
 }) {
   const [isConnected, setIsConnected] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
   const [roomUsers, setRoomUsers] = useState<User[]>([]);
-  const [uploadProgressPourcentage, setUploadProgressPourcentage] = useState<UploadProgress[]>([]);
+  const [uploadProgressPourcentage, setUploadProgressPourcentage] = useState<
+    UploadProgress[]
+  >([]);
 
   const [hasPassword, setHasPassword] = useState(baseHasPassword);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
@@ -80,12 +83,13 @@ export function ActiveSession({
   const [sessionContent, setSessionContent] =
     useState<ContentType[]>(baseSessionContent);
 
-  const [show, setShow] = useState(false)
-  const containerAnimationUploadingRef = useRef(null)
+  const [show, setShow] = useState(false);
+  const containerAnimationUploadingRef = useRef(null);
 
   useEffect(() => {
-    containerAnimationUploadingRef.current && autoAnimate(containerAnimationUploadingRef.current)
-  }, [containerAnimationUploadingRef])
+    containerAnimationUploadingRef.current &&
+      autoAnimate(containerAnimationUploadingRef.current);
+  }, [containerAnimationUploadingRef]);
 
   const newTaskComponent = useRef<AddNewTaskRef>(null);
 
@@ -100,12 +104,12 @@ export function ActiveSession({
   function onNewContent(content: ContentType[], emit = true): void {
     if (emit) socket.emit("addContent", content);
     setSessionContent((prev) => [...prev, ...content]);
-  };
+  }
 
   function onDeleteContent(contentId: string, emit = true): void {
     if (emit) socket.emit("deleteContent", contentId);
     setSessionContent((prev) => prev.filter((c) => c.id !== contentId));
-  };
+  }
 
   function onUpdateContentOrder(order: ContentOrder, emit = true): void {
     if (emit) socket.emit("updatedContentOrder", order);
@@ -133,6 +137,11 @@ export function ActiveSession({
   }
 
   useEffect(() => {
+    const updateOnline = () => setIsOnline(navigator.onLine);
+    updateOnline();
+    window.addEventListener("online", updateOnline);
+    window.addEventListener("offline", updateOnline);
+
     setIsConnected(socket.connected);
     if (socket.connected) {
       onConnect();
@@ -160,6 +169,8 @@ export function ActiveSession({
     socket.on("disconnect", onDisconnect);
 
     return () => {
+      window.removeEventListener("online", updateOnline);
+      window.removeEventListener("offline", updateOnline);
       socket.off("updatedContent");
       socket.off("addContent");
       socket.off("deleteContent");
@@ -186,19 +197,21 @@ export function ActiveSession({
         uploadClipboardData(clipboardData);
       }
     }
-  };
+  }
 
   function onDragOver(e: DragEvent): void {
     e.preventDefault();
-  };
+  }
 
   async function onDrop(e: DragEvent): Promise<void> {
     e.preventDefault();
     const files = e.dataTransfer?.files;
     if (files) await uploadFiles(Array.from(files));
-  };
+  }
 
-  async function uploadClipboardData(clipboardData: DataTransfer): Promise<void> {
+  async function uploadClipboardData(
+    clipboardData: DataTransfer,
+  ): Promise<void> {
     const text = clipboardData.getData("text");
     if (text) {
       newTaskComponent.current?.addTask(text);
@@ -214,19 +227,19 @@ export function ActiveSession({
       }
     }
     uploadFiles(files);
-  };
+  }
 
   async function uploadFiles(files: File[]): Promise<AttachmentType[] | null> {
-    const uploadId = crypto.randomUUID()
+    const uploadId = crypto.randomUUID();
 
     const uploadedFiles = await realUploadFile(files, (progress: number) => {
       const firstFile = files[0];
       if (!firstFile) return;
-      setUploadProgressPourcentage(prev => {
-        const next = [...prev]
+      setUploadProgressPourcentage((prev) => {
+        const next = [...prev];
 
-        const index = next.findIndex(p => p.id === uploadId)
-        const previous = next[index]
+        const index = next.findIndex((p) => p.id === uploadId);
+        const previous = next[index];
 
         if (previous) {
           if (progress >= 100 && !previous.finishedAt) {
@@ -236,30 +249,28 @@ export function ActiveSession({
             previous.finishedAt = new Date();
           }
           next[index] = { ...previous, finishedAt: new Date(), progress };
-
         } else {
           let uploadName: string;
           if (files.length == 1) {
             uploadName = firstFile.name;
-          }
-          else {
-            uploadName = `${files.length} fichiers`
+          } else {
+            uploadName = `${files.length} fichiers`;
           }
           next.push({
             filename: uploadName,
             id: uploadId,
             progress: progress,
             state: "active",
-          })
+          });
         }
 
-        return next
-      })
+        return next;
+      });
     });
 
-    setUploadProgressPourcentage(prev => {
-      const next = [...prev]
-      const index = next.findIndex(p => p.id === uploadId)
+    setUploadProgressPourcentage((prev) => {
+      const next = [...prev];
+      const index = next.findIndex((p) => p.id === uploadId);
       next.splice(index, 1);
       return next;
     });
@@ -313,7 +324,8 @@ export function ActiveSession({
 
   function sendPasswordRequest(password: string): void {
     setPasswordModalLoading(true);
-    api.setPassword(password)
+    api
+      .setPassword(password)
       .then(() => {
         setHasPassword(!!password);
       })
@@ -327,12 +339,12 @@ export function ActiveSession({
     <div className="w-full max-w-[1250px] select-none px-4 pb-10">
       <div className="flex flex-col items-center justify-center">
         <div className="flex flex-row items-center gap-[12px] text-xl">
-          <button
-            className={`cursor-pointer`}
-          >
-            #{session.sessionId}
-          </button>
-          <div />
+          <button className={`cursor-pointer`}>#{session.sessionId}</button>
+          {false && (
+            <span className="rounded bg-red-500/20 px-2 py-0.5 text-sm text-red-300">
+              Offline
+            </span>
+          )}
           <Dialog
             open={passwordModalOpen}
             onOpenChange={(state) => setPasswordModalOpen(state)}
@@ -367,10 +379,7 @@ export function ActiveSession({
                 </div>
               </div>
               <DialogFooter>
-                <Button
-                  disabled={hasPassword}
-                  onClick={onClickRemovePassword}
-                >
+                <Button disabled={hasPassword} onClick={onClickRemovePassword}>
                   {passwordModalLoading && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
@@ -446,7 +455,6 @@ export function ActiveSession({
           </button>
         </div>
         <span className="text-gray-200">
-          Créée le {new Date(parseInt(session.createdAt)).toLocaleDateString()}{" "}
           {isConnected && (
             <Dialog>
               <DialogTrigger>
@@ -515,16 +523,18 @@ export function ActiveSession({
           <h2>Trucs</h2>
           <div ref={containerAnimationUploadingRef}>
             <Upload className="h-16" onUploadingFiles={onUploadingFiles} />
-            {Array.from(uploadProgressPourcentage.values()).filter((progress) => progress.progress).map((progress) =>
-              <div className="mt-2">
-                <div className="relative h-6 ">
-                  <Progress value={progress.progress} className="h-full" />
-                  <span className="absolute mix-blend-difference inset-0 flex items-center justify-center text-sm font-medium tex text-white">
-                    {progress.filename} - {progress.progress}%
-                  </span>
+            {Array.from(uploadProgressPourcentage.values())
+              .filter((progress) => progress.progress)
+              .map((progress) => (
+                <div className="mt-2">
+                  <div className="relative h-6 ">
+                    <Progress value={progress.progress} className="h-full" />
+                    <span className="tex absolute inset-0 flex items-center justify-center text-sm font-medium text-white mix-blend-difference">
+                      {progress.filename} - {progress.progress}%
+                    </span>
+                  </div>
                 </div>
-              </div>
-            )}
+              ))}
           </div>
           <div />
           <Reorder.Group
@@ -541,7 +551,7 @@ export function ActiveSession({
             ))}
           </Reorder.Group>
         </div>
-        <div className="sm:h-4 sm:h-0" />
+        <div className="sm:h-0 sm:h-4" />
         <div className={`flex flex-col gap-y-2 sm:w-1/2`}>
           <h2>Autres trucs</h2>
           <AddNewTask

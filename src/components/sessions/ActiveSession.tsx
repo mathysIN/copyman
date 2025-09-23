@@ -42,6 +42,10 @@ import { uploadFiles as realUploadFile } from "~/lib/client/uploadFile";
 import { api } from "~/utils/api";
 import { Progress } from "../ui/progress";
 import autoAnimate from "@formkit/auto-animate";
+import {
+  loadOfflineSession,
+  saveOfflineSession,
+} from "~/lib/client/offlineStore";
 
 type UploadProgress = {
   id: string;
@@ -103,17 +107,37 @@ export function ActiveSession({
 
   function onNewContent(content: ContentType[], emit = true): void {
     if (emit) socket.emit("addContent", content);
-    setSessionContent((prev) => [...prev, ...content]);
+    const next = [...sessionContent, ...content];
+    setSessionContent(next);
+    void saveOfflineSession({
+      sessionId: session.sessionId,
+      content: next,
+      order: contentOrder,
+      updatedAt: Date.now(),
+    });
   }
 
   function onDeleteContent(contentId: string, emit = true): void {
     if (emit) socket.emit("deleteContent", contentId);
-    setSessionContent((prev) => prev.filter((c) => c.id !== contentId));
+    const next = sessionContent.filter((c) => c.id !== contentId);
+    setSessionContent(next);
+    void saveOfflineSession({
+      sessionId: session.sessionId,
+      content: next,
+      order: contentOrder,
+      updatedAt: Date.now(),
+    });
   }
 
   function onUpdateContentOrder(order: ContentOrder, emit = true): void {
     if (emit) socket.emit("updatedContentOrder", order);
     setContentOrder(order);
+    void saveOfflineSession({
+      sessionId: session.sessionId,
+      content: sessionContent,
+      order,
+      updatedAt: Date.now(),
+    });
   }
 
   function onRoomInsight(room: { users: User[] }): void {
@@ -125,14 +149,16 @@ export function ActiveSession({
     else {
       const index = sessionContent.findIndex((c) => c.id == content.id);
       if (!index && !sessionContent[index]) throw "Client unsynced with server";
-      setSessionContent((prev) =>
-        prev.map((c) => {
-          if (c.id == content.id) {
-            return content;
-          }
-          return c;
-        }),
+      const next = sessionContent.map((c) =>
+        c.id == content.id ? content : c,
       );
+      setSessionContent(next);
+      void saveOfflineSession({
+        sessionId: session.sessionId,
+        content: next,
+        order: contentOrder,
+        updatedAt: Date.now(),
+      });
     }
   }
 
@@ -141,6 +167,19 @@ export function ActiveSession({
     updateOnline();
     window.addEventListener("online", updateOnline);
     window.addEventListener("offline", updateOnline);
+
+    // If offline at mount, hydrate from local store
+    (async () => {
+      if (!navigator.onLine) {
+        const local = await loadOfflineSession<ContentType, ContentOrder>(
+          session.sessionId,
+        );
+        if (local) {
+          setSessionContent(local.content);
+          setContentOrder(local.order);
+        }
+      }
+    })();
 
     setIsConnected(socket.connected);
     if (socket.connected) {

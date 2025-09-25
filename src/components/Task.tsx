@@ -5,6 +5,7 @@ import {
   faLink,
   faTrash,
   faArrowUpRightFromSquare,
+  faExpand,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useRef, useState } from "react";
@@ -16,7 +17,7 @@ import {
   isImageURL,
   maxStringLength,
 } from "~/lib/utils";
-import type { ContentType, NoteType } from "~/server/db/redis";
+import type { ContentType, NoteType, SessionType } from "~/server/db/redis";
 import TextareaAutosize from "react-textarea-autosize";
 import he from "he";
 import ReactMarkdown from "react-markdown";
@@ -88,15 +89,17 @@ const replaceUncheckedWithChecked = (
 };
 
 export function Task({
+  session,
   content,
   allContent,
-  onDeleteTask = () => {},
-  onUpdateTask = () => {},
+  onDeleteTask = () => { },
+  onUpdateTask = () => { },
 }: {
+  session: SessionType;
   content: NoteType;
   allContent: ContentType[];
-  onDeleteTask: (taskId: string) => any;
-  onUpdateTask: (task: NoteType) => any;
+  onDeleteTask?: (taskId: string) => any;
+  onUpdateTask?: (task: NoteType) => any;
 }) {
   const { toast } = useToast();
   const [value, setValue] = useState(content.content ?? "");
@@ -335,7 +338,7 @@ export function Task({
                   const realInputNumber = _inputNumber - 1;
                   return (
                     <input
-                      onChange={() => {}}
+                      onChange={() => { }}
                       {...props}
                       disabled={false}
                       onClick={(e) => {
@@ -433,6 +436,12 @@ export function Task({
         <div className="flex flex-row justify-between">
           <div className="flex flex-row gap-x-2">
             <button
+              className="active:scale-95"
+              onClick={() => copyAndToast(toast, `${window.location.origin}/content/${session.sessionId}/${content.id}`)}
+            >
+              <FontAwesomeIcon icon={faLink} />
+            </button>
+            <button
               className="text-black active:scale-95"
               onClick={(e) => {
                 e.stopPropagation();
@@ -452,7 +461,7 @@ export function Task({
                   disabled={deleting}
                   className={`${deleting && "cursor-wait"} min-w-min active:scale-95`}
                 >
-                  <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
+                  <FontAwesomeIcon icon={faExpand} />
                 </button>
               </DialogTrigger>
               <DialogContent className="scale-105">

@@ -605,6 +605,7 @@ export function ActiveSession({
           >
             {noteContent.map((note) => (
               <Note
+                session={session}
                 key={note.id}
                 allContent={sessionContent}
                 content={note}

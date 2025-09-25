@@ -3,7 +3,6 @@ import { z } from "zod";
 
 export const env = createEnv({
   server: {
-    OFFLINE: z.string().nullable(),
     UPSTASH_REDIS_REST_URL: z.string(),
     UPSTASH_REDIS_REST_TOKEN: z.string(),
     R2_REGION: z.string(),
@@ -20,7 +19,6 @@ export const env = createEnv({
   },
   client: {},
   runtimeEnv: {
-    OFFLINE: process.env.OFFLINE,
     UPLOADTHING_TOKEN: process.env.UPLOADTHING_TOKEN,
     SALT: process.env.SALT,
     UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,

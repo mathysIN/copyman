@@ -25,8 +25,12 @@ export default function RootLayout({
 
   return (
     <html lang="en" className="overflow-x-hidden">
-      <body className={`relative overflow-x-hidden font-sans ${inter.variable}`}>
-        {React.cloneElement(children as React.ReactElement, { offline: isOffline })}
+      <body
+        className={`bg-brand relative overflow-x-hidden font-sans ${inter.variable}`}
+      >
+        {React.cloneElement(children as React.ReactElement, {
+          offline: isOffline,
+        })}
       </body>
       <ServiceWorkerRegister />
       <Toaster />

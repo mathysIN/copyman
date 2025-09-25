@@ -556,9 +556,9 @@ export function ActiveSession({
       </div>
       <div className="h-8" />
       <div
-        className={`relative flex flex-col items-stretch justify-center gap-0 sm:flex-row sm:gap-16 sm:px-16`}
+        className={`relative flex flex-col items-stretch justify-center gap-6 sm:flex-row sm:gap-6 sm:px-6 md:gap-16 md:px-16`}
       >
-        <div className="flex flex-col gap-y-2 sm:w-1/2">
+        <div className="flex min-w-0 flex-1 flex-col gap-y-2 ">
           <h2>Trucs</h2>
           <div ref={containerAnimationUploadingRef}>
             <Upload className="h-16" onUploadingFiles={onUploadingFiles} />
@@ -590,8 +590,7 @@ export function ActiveSession({
             ))}
           </Reorder.Group>
         </div>
-        <div className="sm:h-0 sm:h-4" />
-        <div className={`flex flex-col gap-y-2 sm:w-1/2`}>
+        <div className={`flex min-w-0 flex-1 flex-col gap-y-2 `}>
           <h2>Autres trucs</h2>
           <AddNewTask
             onNewContent={(n) => onNewContent([n])}

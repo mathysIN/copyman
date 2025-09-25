@@ -20,7 +20,7 @@ export default async function Page({
     return <div className="w-4/5 pb-10">Nop</div>;
 
   return (
-        <div className="p-10 flex flex-col gap-6 items-center">
+    <div className="flex flex-col items-center gap-6 p-10">
       <div className="mx-auto flex flex-col items-center text-center">
         <Link href="/">
           <h1 className="text-4xl font-bold text-white no-underline ">
@@ -28,8 +28,13 @@ export default async function Page({
           </h1>
         </Link>
       </div>
-      <Link href={`/join/${session.sessionId}`} className={`cursor-pointer text-xl`}>#{session.sessionId}</Link>
-      <div className="rounded-md border w-full border-gray-200 bg-white p-4 text-gray-900 shadow-sm">
+      <Link
+        href={`/join/${session.sessionId}`}
+        className="cursor-pointer text-xl text-white"
+      >
+        #{session.sessionId}
+      </Link>
+      <div className="w-full rounded-md border border-gray-200 bg-white p-4 text-gray-900 shadow-sm">
         <ReactMarkdown remarkPlugins={[remarkBreaks, remarkGfm]}>
           {content.content ?? ""}
         </ReactMarkdown>

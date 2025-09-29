@@ -15,6 +15,7 @@ const redis =
   new Redis({
     url: process.env.UPSTASH_REDIS_REST_URL,
     token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    automaticDeserialization: false,
   } as RedisConfigNodejs);
 if (env.NODE_ENV !== "production") globalForDb.conn = redis;
 
@@ -35,7 +36,18 @@ class RedisWithPrefix<T extends {}> {
     return this.client.hdel(`${this.prefix}:${key}`, ...args);
   }
   async hgetall(key: string) {
-    return this.client.hgetall<T>(`${this.prefix}:${key}`);
+    const result = await this.client.hgetall(`${this.prefix}:${key}`);
+
+    // Convert array format [key1, value1, key2, value2] to object format
+    if (Array.isArray(result)) {
+      const obj: any = {};
+      for (let i = 0; i < result.length; i += 2) {
+        obj[result[i]] = result[i + 1];
+      }
+      return obj as T;
+    }
+
+    return result as T;
   }
   async getall(pattern = "*") {
     const keys = await this.keys(pattern);
@@ -44,7 +56,19 @@ class RedisWithPrefix<T extends {}> {
       pipeline.hgetall(key);
     }
     if (keys.length === 0) return [];
-    return await pipeline.exec<T[]>();
+    const results = await pipeline.exec();
+
+    // Convert array format results to objects
+    return results.map((result: any) => {
+      if (Array.isArray(result)) {
+        const obj: any = {};
+        for (let i = 0; i < result.length; i += 2) {
+          obj[result[i]] = result[i + 1];
+        }
+        return obj as T;
+      }
+      return result as T;
+    });
   }
 
   async hmnew(key: string, value: NonNullable<T>) {
@@ -100,7 +124,7 @@ export class Session {
     this.rawContentOrder = props.rawContentOrder;
     try {
       this.imageBackground = new URL(props.backgroundImageURL ?? "");
-    } catch { }
+    } catch {}
     this.usedSpace = props.usedSpace;
   }
 

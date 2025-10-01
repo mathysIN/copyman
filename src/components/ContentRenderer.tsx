@@ -45,7 +45,7 @@ const GRADIENTS = [
 
 const ContentRenderer = ({
   content,
-  onContentDelete = () => {},
+  onContentDelete = () => { },
 }: {
   content: AttachmentType;
   onContentDelete: (contentId: string) => any;
@@ -60,9 +60,13 @@ const ContentRenderer = ({
   const [audioPlaying, setAudioPlaying] = useState(false);
   const controls = useDragControls();
 
-  const getContentType = (url: string) => {
+  const getExtension = (url: string) => {
     const urlSplited = url.split(".");
-    const stringExtension = urlSplited[urlSplited.length - 1] ?? "";
+    return urlSplited[urlSplited.length - 1] ?? "";
+  }
+
+  const getContentType = (url: string) => {
+    const stringExtension = getExtension(url);
     let extension: "video" | "image" | "audio" | null = null;
     if (["mp4", "ogg", "webm"].includes(stringExtension)) {
       extension = "video";
@@ -83,22 +87,19 @@ const ContentRenderer = ({
       case "video":
         return (
           <video
-            src={content.attachmentURL}
             controls
             className="absolute inset-0 h-full w-full object-cover"
           />
         );
       case "image":
         return (
-          <PhotoProvider>
-            <PhotoView src={content.attachmentURL}>
-              <img
-                src={content.attachmentURL}
-                alt="Content"
-                className="inset-0 h-full w-full cursor-pointer rounded-lg object-cover"
-              />
-            </PhotoView>
-          </PhotoProvider>
+          <PhotoView src={content.attachmentURL}>
+            <img
+              src={content.attachmentURL}
+              alt="Content"
+              className="inset-0 h-full w-full cursor-pointer rounded-lg object-cover"
+            />
+          </PhotoView>
         );
       case "audio":
         const index =

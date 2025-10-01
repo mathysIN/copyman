@@ -157,3 +157,7 @@ export const TimeValues = {
   hour: 60 * 60 * 1000,
   day: 24 * 60 * 60 * 1000
 } as const
+
+export function toPlural(count: number, singularText: string, pluralText: string) {
+  return count == 1 ? singularText : pluralText;
+}

@@ -25,7 +25,7 @@ import {
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { socket } from "~/lib/client/socket";
-import { TimeValues, deleteAllCookies, sortAttachments } from "~/lib/utils";
+import { deleteAllCookies, sortAttachments, toPlural } from "~/lib/utils";
 import {
   type AttachmentType,
   type ContentOrder,
@@ -46,6 +46,7 @@ import {
   loadOfflineSession,
   saveOfflineSession,
 } from "~/lib/client/offlineStore";
+import { PhotoProvider } from "react-photo-view";
 
 type UploadProgress = {
   id: string;
@@ -497,14 +498,14 @@ export function ActiveSession({
           {isConnected && (
             <Dialog>
               <DialogTrigger>
-                <div className="flex flex-row items-center justify-center space-x-2">
-                  <button> - {roomUsers.length} connectés</button>
+                <div className="flex my-1 flex-row items-center justify-center space-x-2">
+                  <button className="text-black bg-white px-4 rounded-xl">{roomUsers.length} connectés</button>
                 </div>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>
-                    Connectés à la session ({roomUsers.length})
+                    {toPlural(roomUsers.length, "Connecté", "Connectés")} à la session ({roomUsers.length})
                   </DialogTitle>
                   <DialogDescription>
                     <div className="flex flex-col gap-2">
@@ -530,9 +531,9 @@ export function ActiveSession({
         {!isConnected && (
           <Dialog>
             <DialogTrigger>
-              <div className="flex flex-row items-center justify-center space-x-2">
+              <div className="text-white my-1 bg-red-400 px-4 space-x-1 rounded-xl">
                 <FontAwesomeIcon icon={faWarning} />
-                <span className="text-red-400">
+                <span>
                   Le client est deconnecté du socket.
                 </span>
               </div>
@@ -576,19 +577,21 @@ export function ActiveSession({
               ))}
           </div>
           <div />
-          <Reorder.Group
-            values={attachmentContent}
-            className="flex flex-col gap-y-2"
-            onReorder={onReorderContent}
-          >
-            {attachmentContent.map((content) => (
-              <ContentRenderer
-                key={content.id}
-                content={content}
-                onContentDelete={onDeleteContent}
-              />
-            ))}
-          </Reorder.Group>
+          <PhotoProvider>
+            <Reorder.Group
+              values={attachmentContent}
+              className="flex flex-col gap-y-2"
+              onReorder={onReorderContent}
+            >
+              {attachmentContent.map((content) => (
+                <ContentRenderer
+                  key={content.id}
+                  content={content}
+                  onContentDelete={onDeleteContent}
+                />
+              ))}
+            </Reorder.Group>
+          </PhotoProvider>
         </div>
         <div className={`flex min-w-0 flex-1 flex-col gap-y-2 `}>
           <h2>Autres trucs</h2>

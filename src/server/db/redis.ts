@@ -1,3 +1,4 @@
+import "server-only";
 import { Redis, type RedisConfigNodejs } from "@upstash/redis";
 import { type UUID, randomUUID } from "crypto";
 import { type RequestCookies } from "next/dist/compiled/@edge-runtime/cookies";

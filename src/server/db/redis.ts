@@ -35,10 +35,14 @@ class RedisWithPrefix<T extends {}> {
   async hdel(key: string, ...args: DropFirst<Parameters<typeof redis.hdel>>) {
     return this.client.hdel(`${this.prefix}:${key}`, ...args);
   }
+  async exists(key: string) {
+    const exists = await this.client.exists(`${this.prefix}:${key}`);
+    return exists === 1;
+  }
+
   async hgetall(key: string) {
     const result = await this.client.hgetall(`${this.prefix}:${key}`);
 
-    // Convert array format [key1, value1, key2, value2] to object format
     if (Array.isArray(result)) {
       const obj: any = {};
       for (let i = 0; i < result.length; i += 2) {
@@ -58,7 +62,6 @@ class RedisWithPrefix<T extends {}> {
     if (keys.length === 0) return [];
     const results = await pipeline.exec();
 
-    // Convert array format results to objects
     return results.map((result: any) => {
       if (Array.isArray(result)) {
         const obj: any = {};
@@ -72,9 +75,9 @@ class RedisWithPrefix<T extends {}> {
   }
 
   async hmnew(key: string, value: NonNullable<T>) {
-    const exist = await this.hgetall(key);
+    const exist = await this.exists(key);
     if (!exist) {
-      return this.client.hmset(`${this.prefix}:${key}`, value);
+      return this.client.hset(`${this.prefix}:${key}`, value);
     }
   }
 
@@ -83,11 +86,6 @@ class RedisWithPrefix<T extends {}> {
   }
   async keys(pattern: string) {
     return this.client.keys(`${this.prefix}:${pattern}`);
-  }
-
-  async exists(...keys: string[]) {
-    const _keys = keys.map((k) => `${this.prefix}:${k}`);
-    return this.client.exists(..._keys);
   }
 }
 
@@ -124,7 +122,7 @@ export class Session {
     this.rawContentOrder = props.rawContentOrder;
     try {
       this.imageBackground = new URL(props.backgroundImageURL ?? "");
-    } catch { }
+    } catch {}
     this.usedSpace = props.usedSpace;
   }
 

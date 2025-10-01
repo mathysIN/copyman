@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import Link from "next/link";
+import { cn } from "~/lib/utils";
 
 export default async function Page({
   params,
@@ -35,9 +36,50 @@ export default async function Page({
         #{session.sessionId}
       </Link>
       <div className="w-full rounded-md border border-gray-200 bg-white p-4 text-gray-900 shadow-sm">
-        <ReactMarkdown remarkPlugins={[remarkBreaks, remarkGfm]}>
-          {content.content ?? ""}
-        </ReactMarkdown>
+        <ReactMarkdown
+          remarkPlugins={[remarkBreaks, remarkGfm]}
+          children={
+            content.content?.replace(/(?<=\n\n)(?![*-])/gi, "&nbsp;\n ") ?? ""
+          }
+          components={{
+            ul({ node, children, className, ...props }) {
+              return (
+                <ul className={cn(className, "list-disc pl-5")} {...props}>
+                  {children}
+                </ul>
+              );
+            },
+            a({ node, children, className, ...props }) {
+              return (
+                <a
+                  {...props}
+                  className={cn(className, "cursor-pointer underline")}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {children}
+                </a>
+              );
+            },
+            pre({ node, children, className, ...props }) {
+              return (
+                <div className="relative">
+                  <pre
+                    className={cn(className, "overflow-x-scroll")}
+                    {...props}
+                  >
+                    <br />
+                    {children}
+                    <br />
+                  </pre>
+                </div>
+              );
+            },
+            code({ node, children, ...props }) {
+              return <>{children}</>;
+            },
+          }}
+        />
       </div>
     </div>
   );

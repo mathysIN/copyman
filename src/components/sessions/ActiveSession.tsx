@@ -499,7 +499,7 @@ export function ActiveSession({
             <Dialog>
               <DialogTrigger>
                 <div className="flex my-1 flex-row items-center justify-center space-x-2">
-                  <button className="text-black bg-white px-4 rounded-xl">{roomUsers.length} connectés</button>
+                  <button className="text-black bg-white px-4 rounded-xl">{roomUsers.length} {toPlural(roomUsers.length, "connecté", "connectés")}</button>
                 </div>
               </DialogTrigger>
               <DialogContent>

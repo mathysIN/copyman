@@ -87,6 +87,7 @@ const ContentRenderer = ({
       case "video":
         return (
           <video
+            src={content.attachmentURL}
             controls
             className="absolute inset-0 h-full w-full object-cover"
           />

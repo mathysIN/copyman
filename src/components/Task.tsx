@@ -437,7 +437,7 @@ export function Task({
           <div className="flex flex-row gap-x-2">
             <button
               className="active:scale-95"
-              onClick={() => copyAndToast(toast, `${window.location.origin}/content/${session.sessionId}/${content.id}`)}
+              onClick={() => copyAndToast(toast, `${window.location.origin}/content/${session.sessionId}/${content.id}`, "Le lien de la note a bien été copié")}
             >
               <FontAwesomeIcon icon={faLink} />
             </button>
@@ -445,7 +445,7 @@ export function Task({
               className="text-black active:scale-95"
               onClick={(e) => {
                 e.stopPropagation();
-                copyAndToast(toast, value);
+                copyAndToast(toast, value, "Le contenu de la note a bien été copié");
               }}
             >
               <FontAwesomeIcon icon={faCopy} />

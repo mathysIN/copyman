@@ -160,7 +160,7 @@ const ContentRenderer = ({
           <div className="flex flex-row gap-x-2">
             <button
               className="active:scale-95"
-              onClick={() => copyAndToast(toast, content.attachmentURL)}
+              onClick={() => copyAndToast(toast, content.attachmentURL, "Le lien du contenu a bien été copié")}
             >
               <FontAwesomeIcon icon={faLink} />
             </button>

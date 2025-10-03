@@ -3,7 +3,7 @@
 import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { NoteType } from "~/server/db/redis";
 
-interface Props {}
+interface Props { }
 
 export type AddNewTaskRef = {
   addTask: (content: string) => Promise<any>;
@@ -11,7 +11,7 @@ export type AddNewTaskRef = {
 
 const _AddNewTask = forwardRef(
   (
-    { onNewContent = () => {} }: { onNewContent?: (task: NoteType) => any },
+    { onNewContent = () => { } }: { onNewContent?: (task: NoteType) => any },
     ref,
   ) => {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -36,6 +36,11 @@ const _AddNewTask = forwardRef(
         if (res.ok) {
           res.json().then((task) => {
             onNewContent(task);
+            setTimeout(() => {
+              console.log(textareaRef)
+              if (textareaRef.current == null) throw new Error("Cannot find new note textarea reference");
+              textareaRef.current.value = "";
+            }, 0);
           });
         }
       });
@@ -57,7 +62,6 @@ const _AddNewTask = forwardRef(
               const content = target.value;
               if (!content) return;
               await addTask(content);
-              setTimeout(() => (target.value = ""), 0);
             }
           }}
         />

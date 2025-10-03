@@ -14,7 +14,7 @@ import imageLogo from "~/../public/logo.png";
 import imageCreateSession from "~/../public/create-session.png";
 import imageJoinSession from "~/../public/join-session.png";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faQuestionCircle } from "@fortawesome/free-solid-svg-icons";
+import { faQuestionCircle, faAngleLeft } from "@fortawesome/free-solid-svg-icons";
 import {
   Dialog,
   DialogClose,
@@ -60,16 +60,16 @@ export function PreSession() {
     setLoading(true);
     const result:
       | (SessionType & {
-          hasPassword: boolean;
-          isValidPassword: boolean;
-          createNewSession: boolean;
-        })
+        hasPassword: boolean;
+        isValidPassword: boolean;
+        createNewSession: boolean;
+      })
       | undefined = await fetch(
-      `/api/sessions?sessionId=${sessionValue}&password=${passwordValue}&join=${joinSession}`,
-      {},
-    )
-      .then((res) => res.json())
-      .catch(() => {});
+        `/api/sessions?sessionId=${sessionValue}&password=${passwordValue}&join=${joinSession}`,
+        {},
+      )
+        .then((res) => res.json())
+        .catch(() => { });
     setLoading(false);
     if (!result) {
       setErrorMessage("Session inexistante");
@@ -97,14 +97,18 @@ export function PreSession() {
         onSubmit={handleSubmit}
         ref={formRef}
       >
+        <div className="h-12" />
         {joinSession && (
           <>
             <button
               type="button"
               onClick={() => setJoinSession(undefined)}
-              className="underline opacity-75"
+              className="flex flex-row items-center gap-2 underline opacity-75"
             >
-              retour
+              <FontAwesomeIcon icon={faAngleLeft} className="mt-1" />
+              <p>
+                retour
+              </p>
             </button>
             <p className="h-4 text-red-500">{errorMessage}</p>
             <input
@@ -165,9 +169,15 @@ export function PreSession() {
                 onClick={() => setJoinSession("create")}
                 className="flex w-full flex-row items-center justify-between space-x-4 rounded-md border-2 border-dashed border-white bg-white bg-opacity-5 px-2 py-2 hover:bg-opacity-10 active:scale-95 active:bg-opacity-30"
               >
-                <p className="min-w-32 py-[2px] text-2xl font-bold">
-                  {"Créer"}
-                </p>
+                <div className="flex justify-center w-max flex-col">
+                  <p className="min-w-32 text-2xl font-bold">
+                    {"Créer"}
+                  </p>
+                  <span className="text-xs">
+                    {"une nouvelle session"}
+                  </span>
+                </div>
+
                 <div className="flex flex-1 justify-center">
                   <Image
                     src={imageCreateSession}
@@ -185,9 +195,14 @@ export function PreSession() {
                 onClick={() => setJoinSession("join")}
                 className="flex flex-row items-center justify-center space-x-4 rounded-md border-2 border-dashed border-white bg-white bg-opacity-5 px-2 py-2 hover:bg-opacity-10 active:scale-95 active:bg-opacity-30"
               >
-                <p className="min-w-32 py-[2px] text-2xl font-bold">
-                  {"Rejoindre"}
-                </p>
+                <div className="ml-2 flex text-left w-max flex-col">
+                  <p className="min-w-32 text-2xl font-bold">
+                    {"Rejoindre"}
+                  </p>
+                  <span className="text-xs">
+                    {"une session existante"}
+                  </span>
+                </div>
                 <Image
                   src={imageJoinSession}
                   height={60}
@@ -220,7 +235,7 @@ export function PreSession() {
                   <div className="flex flex-col items-center">
                     <p className="text-5xl italic">1</p>
                     <p>
-                      Créez une session avec un identifiant et un mot de passe
+                      Créez une session
                     </p>
                   </div>
                   <Image src={imageCreate} className="w-96" alt="logo" />
@@ -228,14 +243,14 @@ export function PreSession() {
                 <div className="flex flex-col items-center font-bold">
                   <div className="flex flex-col items-center">
                     <p className="text-5xl italic">2</p>
-                    <p>Ajoutez vos textes et fichiers</p>
+                    <p>Ajoutez vos contenus : textes et fichiers</p>
                   </div>
                   <Image src={imageInSession} className="w-96" alt="logo" />
                 </div>
                 <div className="flex flex-col items-center font-bold">
                   <div className="flex flex-col items-center">
                     <p className="text-5xl italic">3</p>
-                    <p className="w-80 text-center">{`Rejoignez la session temps réel avec d'autres appareils en quelques cliques`}</p>
+                    <p className="w-80 text-center">{`Rejoignez la session avec d'autres appareils`}</p>
                   </div>
                   <Image src={imageSharing} className="w-96" alt="logo" />
                 </div>
@@ -243,12 +258,12 @@ export function PreSession() {
               <div className="px-8 text-center">
                 <p className="py-2">
                   {
-                    "Copyman permet de partager facilement du contenu en temps réel via des sessions. Pas besoin de compte, tout est rapide et pratique. Parfait pour une utilisation simple et collaborative."
+                    "Copyman permet de partager du contenu via des sessions temps réel."
                   }
                 </p>
                 <p className="py-2">
                   {
-                    "La plateforme est encore en développement (et le code est bien naze) mais l'objectif serait de la peaufiner."
+                    "Pas besoin de compte, tout est rapide et pratique. Parfait pour une utilisation simple et collaborative."
                   }
                 </p>
               </div>

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionWithCookies } from "~/utils/authenticate";
 import { cookies } from "next/headers";
 import { serverUploadFiles } from "~/lib/serverUtils";
-import { AttachmentType } from "~/server/db/redis";
+import { type AttachmentType } from "~/server/db/redis";
 
 const MAX_SIZE = 500 * 1024 * 1024;
 
@@ -13,6 +13,8 @@ export async function POST(
 > {
   const formData = await req.formData();
   const files = formData.getAll("files") as File[] | undefined;
+
+  const socketId = req.headers.get('x-socket-id') ?? undefined;
 
   if (!files?.length)
     return NextResponse.json({ error: "No files provided" }, { status: 400 });
@@ -39,7 +41,7 @@ export async function POST(
       `Parsing request JSON took: ${performance.now() - startParse}ms`,
     );
 
-    const uploadPromises = await serverUploadFiles(session, files);
+    const uploadPromises = await serverUploadFiles(session, files, socketId);
 
     const startUploads = performance.now();
     const results = await Promise.all(uploadPromises);

@@ -5,6 +5,7 @@ import { type AttachmentType } from "~/server/db/redis";
 export async function uploadFiles(
   files: File[],
   onProgress?: (percent: number) => void,
+  socketId?: string,
 ): Promise<AttachmentType[] | null> {
   if (files.length === 0) return [];
 
@@ -24,7 +25,7 @@ export async function uploadFiles(
       "/api/content/upload",
       formData,
       {
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: { "Content-Type": "multipart/form-data", "x-socket-id": socketId },
         onUploadProgress: (event) => {
           if (event.total && onProgress) {
             const percent = Math.round((event.loaded / event.total) * 100);

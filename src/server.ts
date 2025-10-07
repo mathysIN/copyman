@@ -1,15 +1,16 @@
 import "dotenv/config";
-import { createServer, IncomingMessage } from "node:http";
+import { createServer, type IncomingMessage } from "node:http";
 import next from "next";
-import { Server, Socket } from "socket.io";
+import { Server, type Socket } from "socket.io";
 import {
   getSessionWithCookieString,
   getSessionWithRecord,
 } from "~/utils/authenticate";
-import { ContentOrder, ContentType, Session } from "~/server/db/redis";
+import { type ContentOrder, type ContentType, type Session } from "~/server/db/redis";
 import { createHashId } from "~/lib/utils";
 import { parse as parseCookie } from "cookie";
 import express from "express";
+import { socketSendAddContent, rooms, setIO, socketSendUpdateContentOrder } from "./lib/socketInstance";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
@@ -53,14 +54,12 @@ export type User = {
   userAgent: string;
 };
 
-type CopymanSocket = Socket<
+export type CopymanSocket = Socket<
   ClientToServerEvents,
   ServerToClientEvents,
   InterServerEvents,
   ConnectionStart
 >;
-
-const rooms = new Map<string, Map<string, User>>();
 
 function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -88,6 +87,7 @@ app.prepare().then(() => {
   const httpServer = createServer(server);
 
   server.get("/api/notes", async (req, res) => {
+    console.log("ayo");
     const data = await req.body;
     const cookies = req.cookies;
 
@@ -99,10 +99,9 @@ app.prepare().then(() => {
     }
     const { content } = data;
     const newNote = { content };
-    const response = await session.createNewNote(newNote).catch(() => {});
+    const response = await session.createNewNote(newNote).catch(() => { });
 
     if (response) {
-      addContentHandler(io, session, [response]);
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(response));
     } else {
@@ -122,6 +121,8 @@ app.prepare().then(() => {
     InterServerEvents,
     ConnectionStart
   >(httpServer);
+
+  setIO(io);
 
   io.on("connection", async (socket) => {
     const session = await getSessionWithCookieString(
@@ -175,43 +176,34 @@ app.prepare().then(() => {
       }
     });
 
-    socket.on("addContent", async (content) => {
-      const session = await getSessionWithCookieString(
-        socket.handshake.headers.cookie ?? "",
-        true,
-      );
-      if (!session) return;
-      addContentHandler(io, session, content, socket);
-    });
-
     socket.on("deleteContent", async (contentId) => {
-      const session = await getSessionWithCookieString(
-        socket.handshake.headers.cookie ?? "",
-        true,
-      );
-      if (!session) return;
-      const sockets = rooms.get(session.sessionId);
-      if (!sockets) return;
-      for (const keyVal of sockets) {
-        const id = keyVal[0];
-        if (id === socket.id) continue;
-        io.to(id).emit("deleteContent", contentId);
-      }
+      // const session = await getSessionWithCookieString(
+      //   socket.handshake.headers.cookie ?? "",
+      //   true,
+      // );
+      // if (!session) return;
+      // const sockets = rooms.get(session.sessionId);
+      // if (!sockets) return;
+      // for (const keyVal of sockets) {
+      //   const id = keyVal[0];
+      //   if (id === socket.id) continue;
+      //   io.to(id).emit("deleteContent", contentId);
+      // }
     });
 
     socket.on("updatedContent", async (content) => {
-      const session = await getSessionWithCookieString(
-        socket.handshake.headers.cookie ?? "",
-        true,
-      );
-      if (!session) return;
-      const sockets = rooms.get(session.sessionId);
-      if (!sockets) return;
-      for (const keyVal of sockets) {
-        const id = keyVal[0];
-        if (id === socket.id) continue;
-        io.to(id).emit("updatedContent", content);
-      }
+      // const session = await getSessionWithCookieString(
+      //   socket.handshake.headers.cookie ?? "",
+      //   true,
+      // );
+      // if (!session) return;
+      // const sockets = rooms.get(session.sessionId);
+      // if (!sockets) return;
+      // for (const keyVal of sockets) {
+      //   const id = keyVal[0];
+      //   if (id === socket.id) continue;
+      //   io.to(id).emit("updatedContent", content);
+      // }
     });
 
     socket.on("updatedContentOrder", async (contentOrder) => {
@@ -220,34 +212,11 @@ app.prepare().then(() => {
         true,
       );
       if (!session) return;
-      const sockets = rooms.get(session.sessionId);
-      if (!sockets) return;
-
-      for (const keyVal of sockets) {
-        const id = keyVal[0];
-        if (id === socket.id) continue;
-        io.to(id).emit("updatedContentOrder", contentOrder);
-      }
-      session.setContentOrder(contentOrder);
+      socketSendUpdateContentOrder(session, contentOrder);
     });
   });
-  httpServer.listen(3000, () => {
+  httpServer.listen(port, () => {
     console.log(`> Ready on http://${hostname}:${port}`);
   });
 });
 
-async function addContentHandler(
-  io: Server,
-  session: Session,
-  content: ContentType[],
-  socket?: CopymanSocket,
-) {
-  if (!session) return;
-  const room = rooms.get(session.sessionId);
-  if (!room) return;
-  for (const keyVal of room) {
-    const [id] = keyVal;
-    if (id == socket?.id) continue;
-    io.to(id).emit("addContent", content);
-  }
-}

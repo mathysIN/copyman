@@ -108,26 +108,34 @@ export function ActiveSession({
 
   function onNewContent(content: ContentType[], emit = true): void {
     if (emit) socket.emit("addContent", content);
-    const next = [...sessionContent, ...content];
-    setSessionContent(next);
-    void saveOfflineSession({
-      sessionId: session.sessionId,
-      content: next,
-      order: contentOrder,
-      updatedAt: Date.now(),
+    setSessionContent(prev => {
+      const newContent = content.filter(
+        c => !prev.some(p => p.id === c.id)
+      );
+      const next = [...newContent, ...prev];
+      void saveOfflineSession({
+        sessionId: session.sessionId,
+        content: next,
+        order: contentOrder,
+        updatedAt: Date.now(),
+      });
+      return next;
     });
   }
 
   function onDeleteContent(contentId: string, emit = true): void {
     if (emit) socket.emit("deleteContent", contentId);
-    const next = sessionContent.filter((c) => c.id !== contentId);
-    setSessionContent(next);
-    void saveOfflineSession({
-      sessionId: session.sessionId,
-      content: next,
-      order: contentOrder,
-      updatedAt: Date.now(),
-    });
+    setSessionContent(prev => {
+      const next = prev.filter((c) => c.id !== contentId);
+
+      void saveOfflineSession({
+        sessionId: session.sessionId,
+        content: next,
+        order: contentOrder,
+        updatedAt: Date.now(),
+      });
+      return next;
+    })
   }
 
   function onUpdateContentOrder(order: ContentOrder, emit = true): void {
@@ -306,7 +314,7 @@ export function ActiveSession({
 
         return next;
       });
-    });
+    }, socket.id);
 
     setUploadProgressPourcentage((prev) => {
       const next = [...prev];

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSessionWithCookies } from "~/utils/authenticate";
-import { Session } from "~/server/db/redis";
-import { serverCreateNote } from "~/lib/serverUtils";
+import { NoteType, Session } from "~/server/db/redis";
+import { serverCreateNote, serverDeleteNote } from "~/lib/serverUtils";
+import { socketSendAddContent, io } from "~/lib/socketInstance";
 
 export async function POST(req: Request) {
   const data = await req.json();
@@ -10,6 +11,7 @@ export async function POST(req: Request) {
   if (!session) return new Response("Unauthorized", { status: 401 });
   const { content } = data;
   const response = await serverCreateNote(session, content);
+
   if (response) {
     return NextResponse.json(response, { status: 200 });
   } else {
@@ -41,8 +43,7 @@ export async function DELETE(req: Request) {
   if (!session) return new Response("Unauthorized", { status: 401 });
   const { taskId } = data;
 
-  const response = await session.deleteContent(taskId);
-
+  const response = await serverDeleteNote(session, taskId);
   if (response) {
     return new Response("Deleted", { status: 200 });
   } else {

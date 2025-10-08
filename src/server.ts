@@ -30,6 +30,7 @@ export type ServerToClientEvents = {
 
 export type ClientToServerEvents = {
   hello: () => void;
+  ready: () => void;
   addContent: (content: ContentType[]) => void;
   deleteContent: (contentId: string) => void;
   updatedContent: (content: ContentType) => void;
@@ -100,7 +101,12 @@ app.prepare().then(() => {
       id: socketId,
       commonId: await createHashId(commandId),
     });
-    socketSendRoomInsight(room);
+
+    socket.on("ready", () => {
+      const room = rooms.get(session.sessionId);
+      if (!room) return;
+      socketSendRoomInsight(room);
+    });
 
     socket.on("disconnect", () => {
       const room = rooms.get(session.sessionId);

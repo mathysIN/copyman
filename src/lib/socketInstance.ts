@@ -1,5 +1,5 @@
 import { type Server } from 'socket.io'
-import { Room, type CopymanSocket, type User } from '~/server';
+import { type Room, type CopymanSocket, type User } from '~/server';
 import { type ContentOrder, type ContentType, type Session } from '~/server/db/redis';
 import { createHashId } from './utils';
 
@@ -17,14 +17,14 @@ export const setIO = (serverIO: Server) => { globalForSocket.io = serverIO }
 export function socketSendAddContent(
   session: Session,
   content: ContentType[],
-  socketId?: string,
+  senderSocketId?: string,
 ) {
   if (!globalForSocket.io) return;
   const room = rooms.get(session.sessionId);
   if (!room) return;
   for (const keyVal of room) {
     const [id] = keyVal;
-    if (socketId && id == socketId) continue;
+    if (senderSocketId && id == senderSocketId) continue;
     globalForSocket.io.to(id).emit("addContent", content);
   }
 }
@@ -32,13 +32,14 @@ export function socketSendAddContent(
 export function socketSendDeleteContent(
   session: Session,
   contentId: string,
-  socket?: CopymanSocket,
+  senderSocketId?: string,
 ) {
   if (!globalForSocket.io) return;
-  const sockets = rooms.get(session.sessionId);
-  if (!sockets) return;
-  for (const keyVal of sockets) {
-    const id = keyVal[0];
+  const room = rooms.get(session.sessionId);
+  if (!room) return;
+  for (const keyVal of room) {
+    const [id] = keyVal;
+    if (senderSocketId && id === senderSocketId) continue;
     globalForSocket.io.to(id).emit("deleteContent", contentId);
   }
 }
@@ -46,14 +47,14 @@ export function socketSendDeleteContent(
 export function socketSendUpdateContent(
   session: Session,
   content: ContentType,
-  socket?: CopymanSocket,
+  senderSocketId?: string,
 ) {
   if (!globalForSocket.io) return;
-  const sockets = rooms.get(session.sessionId);
-  if (!sockets) return;
-  for (const keyVal of sockets) {
-    const id = keyVal[0];
-    if (id === socket?.id) continue;
+  const room = rooms.get(session.sessionId);
+  if (!room) return;
+  for (const keyVal of room) {
+    const [id] = keyVal;
+    if (senderSocketId && id === senderSocketId) continue;
     globalForSocket.io.to(id).emit("updatedContent", content);
   }
 }
@@ -61,14 +62,14 @@ export function socketSendUpdateContent(
 export function socketSendUpdateContentOrder(
   session: Session,
   contentOrder: ContentOrder,
-  socketId: string,
+  senderSocketId: string,
 ) {
   if (!globalForSocket.io) return;
-  const sockets = rooms.get(session.sessionId);
-  if (!sockets) return;
-  for (const keyVal of sockets) {
-    const id = keyVal[0];
-    if (id === socketId) continue;
+  const room = rooms.get(session.sessionId);
+  if (!room) return;
+  for (const keyVal of room) {
+    const [id] = keyVal;
+    if (id === senderSocketId) continue;
     globalForSocket.io.to(id).emit("updatedContentOrder", contentOrder);
   }
   session.setContentOrder(contentOrder);

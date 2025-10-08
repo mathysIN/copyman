@@ -100,6 +100,7 @@ export function ActiveSession({
 
   function onConnect(): void {
     setIsConnected(true);
+    socket.emit("ready");
   }
 
   function onDisconnect(): void {

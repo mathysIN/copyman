@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "fr.copyman.twa",
+        "sha256_cert_fingerprints": ["40:EC:05:56:DF:0C:62:0D:58:12:C4:A6:3E:AA:BB:41:66:F1:3D:A0:FF:03:B7:DD:1A:36:45:17:7B:1F:98:BE"]
+      }
+    }]

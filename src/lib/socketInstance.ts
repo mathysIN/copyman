@@ -1,11 +1,11 @@
 import { type Server } from 'socket.io'
-import { type CopymanSocket, type User } from '~/server';
+import { Room, type CopymanSocket, type User } from '~/server';
 import { type ContentOrder, type ContentType, type Session } from '~/server/db/redis';
 import { createHashId } from './utils';
 
 const globalForSocket = global as unknown as {
   io?: Server
-  rooms?: Map<string, Map<string, User>>;
+  rooms?: Map<string, Room>;
 }
 
 if (!globalForSocket.rooms) globalForSocket.rooms = new Map()
@@ -22,7 +22,6 @@ export function socketSendAddContent(
   if (!globalForSocket.io) return;
   const room = rooms.get(session.sessionId);
   if (!room) return;
-  console.log({ room })
   for (const keyVal of room) {
     const [id] = keyVal;
     if (socketId && id == socketId) continue;
@@ -62,48 +61,27 @@ export function socketSendUpdateContent(
 export function socketSendUpdateContentOrder(
   session: Session,
   contentOrder: ContentOrder,
-  socket?: CopymanSocket,
+  socketId: string,
 ) {
   if (!globalForSocket.io) return;
   const sockets = rooms.get(session.sessionId);
   if (!sockets) return;
   for (const keyVal of sockets) {
     const id = keyVal[0];
-    if (id === socket?.id) continue;
+    if (id === socketId) continue;
     globalForSocket.io.to(id).emit("updatedContentOrder", contentOrder);
   }
   session.setContentOrder(contentOrder);
 }
 
 export function socketSendRoomInsight(
-  session: Session,
-  socket?: CopymanSocket,
+  room: Room,
 ) {
-  //
-  // if (!rooms.has(session.sessionId)) {
-  //   rooms.set(session.sessionId, new Map());
-  // }
-  // const sockets = rooms.get(session.sessionId);
-  // if (sockets) {
-  //   const userAgent = socket.handshake.headers["user-agent"] ?? "Anonymous";
-  //   const socketId = socket.id;
-  //   const ip = socket.handshake.address;
-  //   const commandId = `${userAgent}:${ip}`;
-  //   sockets.set(socket.id, {
-  //     userAgent: userAgent,
-  //     id: socketId,
-  //     commonId: await createHashId(commandId),
-  //   });
-  //   const users = Array.from(sockets.values());
-  //   setTimeout(
-  //     () =>
-  //       io
-  //         .to(socket.id)
-  //         .emit("roomInsight", { connectedCount: sockets.size, users }),
-  //     1000,
-  //   ); // i cant make this work for some reason
-  //   for (const keyVal of sockets) {
-  //     const id = keyVal[0];
-  //     io.to(id).emit("roomInsight", { connectedCount: sockets.size, users });
-  //   }
+  if (!globalForSocket.io) return;
+  const users = Array.from(room.values());
+  for (const keyVal of room) {
+    const id = keyVal[0];
+    const insight = { connectedCount: room.size, users };
+    globalForSocket.io.to(id).emit("roomInsight", insight);
+  }
 }

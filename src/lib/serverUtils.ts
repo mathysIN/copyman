@@ -4,16 +4,27 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import crypto from "crypto";
 import { env } from "~/env";
 import r2Client, { getUrlFromFileR2FileKey } from "~/server/r2";
-import { socketSendAddContent, socketSendDeleteContent } from "./socketInstance";
+import { socketSendAddContent, socketSendDeleteContent, socketSendUpdateContent } from "./socketInstance";
 
 export async function serverCreateNote(session: Session, content: string) {
   const newNote = { content };
-  const response = await session.createNewNote(newNote);
-  if (response) socketSendAddContent(session, [response]);
+  const createdNote = await session.createNewNote(newNote);
+  if (createdNote) socketSendAddContent(session, [createdNote]);
+  return createdNote;
+}
+
+export async function serverUpdateNote(session: Session, content: string, contentId: string) {
+  const updateNote = { content };
+  const response = await session.updateNote(contentId, { content: content });
+  console.log({ response })
+  if (response) {
+    const updatedNote = await session.getContent(contentId); // :/
+    socketSendUpdateContent(session, updatedNote);
+  }
   return response;
 }
 
-export async function serverDeleteNote(session: Session, contentId: string) {
+export async function serverDeleteContent(session: Session, contentId: string) {
   const response = await session.deleteContent(contentId);
   if (response) socketSendDeleteContent(session, contentId);
   return response;
@@ -65,7 +76,7 @@ export async function serverUploadFiles(session: Session, files: File[], socketI
       `Processing file ${fileName} took: ${performance.now() - startFileProcess}ms`,
     );
     createdAttachments.push(content);
-    socketSendAddContent(session, createdAttachments, socketId);
   }
+  socketSendAddContent(session, createdAttachments, socketId);
   return createdAttachments;
 }

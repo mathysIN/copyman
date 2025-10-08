@@ -158,15 +158,17 @@ export function ActiveSession({
     else {
       const index = sessionContent.findIndex((c) => c.id == content.id);
       if (!index && !sessionContent[index]) throw "Client unsynced with server";
-      const next = sessionContent.map((c) =>
-        c.id == content.id ? content : c,
-      );
-      setSessionContent(next);
-      void saveOfflineSession({
-        sessionId: session.sessionId,
-        content: next,
-        order: contentOrder,
-        updatedAt: Date.now(),
+      setSessionContent(prev => {
+        const next = prev.map((c) =>
+          c.id == content.id ? content : c,
+        );
+        void saveOfflineSession({
+          sessionId: session.sessionId,
+          content: next,
+          order: contentOrder,
+          updatedAt: Date.now(),
+        });
+        return next;
       });
     }
   }

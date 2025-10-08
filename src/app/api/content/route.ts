@@ -5,6 +5,7 @@ import { utapi } from "~/server/uploadthing";
 import r2Client from "~/server/r2";
 import { DeleteObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { env } from "~/env";
+import { serverDeleteContent } from "~/lib/serverUtils";
 
 export async function GET(request: Request): Promise<NextResponse> {
   const session = await getSessionWithCookies(cookies());
@@ -37,7 +38,7 @@ export async function DELETE(request: Request): Promise<NextResponse> {
   if (!content)
     return NextResponse.json({ message: "Content not found" }, { status: 404 });
 
-  const response = await session.deleteContent(contentId);
+  const response = await serverDeleteContent(session, contentId);
 
   if (!response)
     return NextResponse.json(

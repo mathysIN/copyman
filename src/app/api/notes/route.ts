@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSessionWithCookies } from "~/utils/authenticate";
 import { NoteType, Session } from "~/server/db/redis";
-import { serverCreateNote, serverDeleteNote } from "~/lib/serverUtils";
+import { serverCreateNote, serverDeleteContent, serverUpdateNote } from "~/lib/serverUtils";
 import { socketSendAddContent, io } from "~/lib/socketInstance";
 
 export async function POST(req: Request) {
@@ -10,8 +10,8 @@ export async function POST(req: Request) {
   const session = await getSessionWithCookies(cookies());
   if (!session) return new Response("Unauthorized", { status: 401 });
   const { content } = data;
-  const response = await serverCreateNote(session, content);
 
+  const response = await serverCreateNote(session, content);
   if (response) {
     return NextResponse.json(response, { status: 200 });
   } else {
@@ -29,7 +29,7 @@ export async function PATCH(req: Request) {
     return new Response("Not found", { status: 404 });
   }
 
-  const response = await session.updateNote(taskId, { content: content });
+  const response = await serverUpdateNote(session, content, taskId);
   if (response) {
     return new Response("Updated", { status: 200 });
   } else {
@@ -43,7 +43,7 @@ export async function DELETE(req: Request) {
   if (!session) return new Response("Unauthorized", { status: 401 });
   const { taskId } = data;
 
-  const response = await serverDeleteNote(session, taskId);
+  const response = await serverDeleteContent(session, taskId);
   if (response) {
     return new Response("Deleted", { status: 200 });
   } else {

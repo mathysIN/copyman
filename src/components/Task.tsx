@@ -436,13 +436,13 @@ export function Task({
         <div className="flex flex-row justify-between">
           <div className="text-black flex flex-row gap-x-1 text-sm">
             <button
-              className="w-10 bg-neutral-200 px-1 py-1 rounded active:scale-95"
+              className="w-10 bg-neutral-100 px-1 py-1 rounded active:scale-95"
               onClick={() => copyAndToast(toast, `${window.location.origin}/content/${session.sessionId}/${content.id}`, "Le lien de la note a bien été copié")}
             >
               <FontAwesomeIcon icon={faLink} />
             </button>
             <button
-              className="w-10 bg-neutral-200 px-1 py-1 rounded active:scale-95"
+              className="w-10 bg-neutral-100 px-1 py-1 rounded active:scale-95"
               onClick={(e) => {
                 e.stopPropagation();
                 copyAndToast(toast, value, "Le contenu de la note a bien été copié");
@@ -459,7 +459,7 @@ export function Task({
               <DialogTrigger asChild>
                 <button
                   disabled={deleting}
-                  className={`${deleting && "cursor-wait"} w-10 bg-neutral-200 px-1 py-1 rounded min-w-min active:scale-95`}
+                  className={`${deleting && "cursor-wait"} w-10 bg-neutral-100 px-1 py-1 rounded min-w-min active:scale-95`}
                 >
                   <FontAwesomeIcon icon={faExpand} />
                 </button>

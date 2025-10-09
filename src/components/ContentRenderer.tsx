@@ -159,7 +159,7 @@ const ContentRenderer = ({
         <div className="flex flex-row justify-between gap-4">
           <div className="flex flex-row gap-x-1 text-sm">
             <button
-              className="w-10 bg-neutral-200 px-1 py-1 rounded active:scale-95"
+              className="w-10 bg-neutral-100 border-neutral-200 px-1 py-1 rounded active:scale-95"
               onClick={() => copyAndToast(toast, content.attachmentURL, "Le lien du contenu a bien été copié")}
             >
               <FontAwesomeIcon icon={faLink} />
@@ -168,7 +168,7 @@ const ContentRenderer = ({
               target="_blank"
               download={content.attachmentPath}
               href={content.attachmentURL}
-              className="w-10 bg-neutral-200 px-1 py-1 rounded flex items-center justify-center text-gray-900 active:scale-95"
+              className="w-10 bg-neutral-100 px-1 py-1 rounded flex items-center justify-center text-gray-900 active:scale-95"
             >
               <FontAwesomeIcon icon={faDownload} />
             </a>

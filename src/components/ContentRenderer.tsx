@@ -148,7 +148,7 @@ const ContentRenderer = ({
               style={{ paddingTop: "56.25%" }}
             >
               {contentType && (
-                <div className="absolute inset-0 overflow-hidden">
+                <div className="absolute rounded-lg inset-0 overflow-hidden">
                   {renderContent()}
                 </div>
               )}

@@ -159,7 +159,7 @@ const ContentRenderer = ({
         <div className="flex flex-row justify-between gap-4">
           <div className="flex flex-row gap-x-1 text-sm">
             <button
-              className="w-10 bg-neutral-100 border-neutral-200 px-1 py-1 rounded active:scale-95"
+              className="w-8 bg-neutral-100 border-neutral-200 py-1 rounded active:scale-95"
               onClick={() => copyAndToast(toast, content.attachmentURL, "Le lien du contenu a bien été copié")}
             >
               <FontAwesomeIcon icon={faLink} />
@@ -168,14 +168,14 @@ const ContentRenderer = ({
               target="_blank"
               download={content.attachmentPath}
               href={content.attachmentURL}
-              className="w-10 bg-neutral-100 px-1 py-1 rounded flex items-center justify-center text-gray-900 active:scale-95"
+              className="w-8 bg-neutral-100 py-1 rounded-l flex items-center justify-center text-gray-900 active:scale-95"
             >
               <FontAwesomeIcon icon={faDownload} />
             </a>
 
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <button className="w-10 bg-red-400 px-1 py-1 rounded text-white active:scale-95">
+                <button className="w-8 bg-red-400 py-1 rounded text-white active:scale-95">
                   <FontAwesomeIcon icon={faTrash} />
                 </button>
               </AlertDialogTrigger>

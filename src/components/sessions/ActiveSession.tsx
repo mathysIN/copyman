@@ -109,9 +109,9 @@ export function ActiveSession({
 
   function onNewContent(content: ContentType[], emit = true): void {
     if (emit) socket.emit("addContent", content);
-    setSessionContent(prev => {
+    setSessionContent((prev) => {
       const newContent = content.filter(
-        c => !prev.some(p => p.id === c.id)
+        (c) => !prev.some((p) => p.id === c.id),
       );
       const next = [...newContent, ...prev];
       void saveOfflineSession({
@@ -126,7 +126,7 @@ export function ActiveSession({
 
   function onDeleteContent(contentId: string, emit = true): void {
     if (emit) socket.emit("deleteContent", contentId);
-    setSessionContent(prev => {
+    setSessionContent((prev) => {
       const next = prev.filter((c) => c.id !== contentId);
 
       void saveOfflineSession({
@@ -136,7 +136,7 @@ export function ActiveSession({
         updatedAt: Date.now(),
       });
       return next;
-    })
+    });
   }
 
   function onUpdateContentOrder(order: ContentOrder, emit = true): void {
@@ -159,10 +159,8 @@ export function ActiveSession({
     else {
       const index = sessionContent.findIndex((c) => c.id == content.id);
       if (!index && !sessionContent[index]) throw "Client unsynced with server";
-      setSessionContent(prev => {
-        const next = prev.map((c) =>
-          c.id == content.id ? content : c,
-        );
+      setSessionContent((prev) => {
+        const next = prev.map((c) => (c.id == content.id ? content : c));
         void saveOfflineSession({
           sessionId: session.sessionId,
           content: next,
@@ -283,41 +281,45 @@ export function ActiveSession({
   async function uploadFiles(files: File[]): Promise<AttachmentType[] | null> {
     const uploadId = crypto.randomUUID();
 
-    const uploadedFiles = await realUploadFile(files, (progress: number) => {
-      const firstFile = files[0];
-      if (!firstFile) return;
-      setUploadProgressPourcentage((prev) => {
-        const next = [...prev];
+    const uploadedFiles = await realUploadFile(
+      files,
+      (progress: number) => {
+        const firstFile = files[0];
+        if (!firstFile) return;
+        setUploadProgressPourcentage((prev) => {
+          const next = [...prev];
 
-        const index = next.findIndex((p) => p.id === uploadId);
-        const previous = next[index];
+          const index = next.findIndex((p) => p.id === uploadId);
+          const previous = next[index];
 
-        if (previous) {
-          if (progress >= 100 && !previous.finishedAt) {
-            previous.finishedAt = new Date();
-          }
-          if (!previous.finishedAt) {
-            previous.finishedAt = new Date();
-          }
-          next[index] = { ...previous, finishedAt: new Date(), progress };
-        } else {
-          let uploadName: string;
-          if (files.length == 1) {
-            uploadName = firstFile.name;
+          if (previous) {
+            if (progress >= 100 && !previous.finishedAt) {
+              previous.finishedAt = new Date();
+            }
+            if (!previous.finishedAt) {
+              previous.finishedAt = new Date();
+            }
+            next[index] = { ...previous, finishedAt: new Date(), progress };
           } else {
-            uploadName = `${files.length} fichiers`;
+            let uploadName: string;
+            if (files.length == 1) {
+              uploadName = firstFile.name;
+            } else {
+              uploadName = `${files.length} fichiers`;
+            }
+            next.push({
+              filename: uploadName,
+              id: uploadId,
+              progress: progress,
+              state: "active",
+            });
           }
-          next.push({
-            filename: uploadName,
-            id: uploadId,
-            progress: progress,
-            state: "active",
-          });
-        }
 
-        return next;
-      });
-    }, socket.id);
+          return next;
+        });
+      },
+      socket.id,
+    );
 
     setUploadProgressPourcentage((prev) => {
       const next = [...prev];
@@ -404,7 +406,7 @@ export function ActiveSession({
               <button>
                 <FontAwesomeIcon
                   icon={faLock}
-                  className={`${hasPassword && "text-yellow-400"} active:scale-95`}
+                  className={`${hasPassword && "text-yellow-400"} active:scale-90 active:opacity-75`}
                 />
               </button>
             </DialogTrigger>
@@ -451,7 +453,10 @@ export function ActiveSession({
           <Dialog>
             <DialogTrigger asChild>
               <button>
-                <FontAwesomeIcon icon={faImage} className={`active:scale-95`} />
+                <FontAwesomeIcon
+                  icon={faImage}
+                  className={`active:scale-90 active:opacity-75`}
+                />
               </button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[480px]">
@@ -496,7 +501,7 @@ export function ActiveSession({
             </DialogContent>
           </Dialog>
           <button
-            className="active:scale-95"
+            className="active:scale-90 active:opacity-75"
             onClick={() => {
               deleteAllCookies();
               window.location.href = "/";
@@ -509,14 +514,18 @@ export function ActiveSession({
           {isConnected && (
             <Dialog>
               <DialogTrigger>
-                <div className="flex my-1 flex-row items-center justify-center space-x-2">
-                  <button className="text-black bg-white px-4 rounded-xl">{roomUsers.length} {toPlural(roomUsers.length, "connecté", "connectés")}</button>
+                <div className="my-1 flex flex-row items-center justify-center space-x-2">
+                  <button className="rounded-xl bg-white px-4 text-black">
+                    {roomUsers.length}{" "}
+                    {toPlural(roomUsers.length, "connecté", "connectés")}
+                  </button>
                 </div>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>
-                    {toPlural(roomUsers.length, "Connecté", "Connectés")} à la session ({roomUsers.length})
+                    {toPlural(roomUsers.length, "Connecté", "Connectés")} à la
+                    session ({roomUsers.length})
                   </DialogTitle>
                   <DialogDescription>
                     <div className="flex flex-col gap-2">
@@ -542,11 +551,9 @@ export function ActiveSession({
         {!isConnected && (
           <Dialog>
             <DialogTrigger>
-              <div className="text-white my-1 bg-red-400 px-4 space-x-1 rounded-xl">
+              <div className="my-1 space-x-1 rounded-xl bg-red-400 px-4 text-white">
                 <FontAwesomeIcon icon={faWarning} />
-                <span>
-                  Le client est deconnecté du socket.
-                </span>
+                <span>Le client est deconnecté du socket.</span>
               </div>
             </DialogTrigger>
             <DialogContent>

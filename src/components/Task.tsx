@@ -92,8 +92,8 @@ export function Task({
   session,
   content,
   allContent,
-  onDeleteTask = () => { },
-  onUpdateTask = () => { },
+  onDeleteTask = () => {},
+  onUpdateTask = () => {},
 }: {
   session: SessionType;
   content: NoteType;
@@ -302,7 +302,7 @@ export function Task({
         />
         {!isFocused && (
           <div
-            className="absolute inset-y-0 w-full cursor-text bg-neutral-100 p-1 border-r-2 overflow-x-hidden break-words border-2 border-neutral-50 text-black"
+            className="absolute inset-y-0 w-full cursor-text overflow-x-hidden break-words border-2 border-r-2 border-neutral-50 bg-neutral-100 p-1 text-black"
             onClick={onMarkdownRenderClick}
           >
             <ReactMarkdown
@@ -338,7 +338,7 @@ export function Task({
                   const realInputNumber = _inputNumber - 1;
                   return (
                     <input
-                      onChange={() => { }}
+                      onChange={() => {}}
                       {...props}
                       disabled={false}
                       onClick={(e) => {
@@ -372,7 +372,7 @@ export function Task({
                   return (
                     <>
                       <button
-                        className="absolute right-0 top-0 m-1 rounded-md bg-white px-2 py-1 text-black active:scale-95"
+                        className="absolute right-0 top-0 m-1 rounded-md bg-white px-2 py-1 text-black active:scale-90 active:opacity-75"
                         onClick={(e) => {
                           e.stopPropagation();
                           copyAndToast(toast, `${children}`);
@@ -434,18 +434,28 @@ export function Task({
         )}
 
         <div className="flex flex-row justify-between">
-          <div className="text-black text-center flex gap-x-1 flex-row text-sm">
+          <div className="flex flex-row gap-x-1 text-center text-sm text-black">
             <button
-              className="w-8 bg-neutral-100 py-1 rounded active:scale-95"
-              onClick={() => copyAndToast(toast, `${window.location.origin}/content/${session.sessionId}/${content.id}`, "Le lien de la note a bien été copié")}
+              className="w-8 rounded bg-neutral-100 py-1 active:scale-90 active:opacity-75"
+              onClick={() =>
+                copyAndToast(
+                  toast,
+                  `${window.location.origin}/content/${session.sessionId}/${content.id}`,
+                  "Le lien de la note a bien été copié",
+                )
+              }
             >
               <FontAwesomeIcon icon={faLink} />
             </button>
             <button
-              className="w-8 bg-neutral-100 py-1 rounded active:scale-95"
+              className="w-8 rounded bg-neutral-100 py-1 active:scale-90 active:opacity-75"
               onClick={(e) => {
                 e.stopPropagation();
-                copyAndToast(toast, value, "Le contenu de la note a bien été copié");
+                copyAndToast(
+                  toast,
+                  value,
+                  "Le contenu de la note a bien été copié",
+                );
               }}
             >
               <FontAwesomeIcon icon={faCopy} />
@@ -459,7 +469,7 @@ export function Task({
               <DialogTrigger asChild>
                 <button
                   disabled={deleting}
-                  className={`${deleting && "cursor-wait"} w-8 bg-neutral-100 py-1 rounded min-w-min active:scale-95`}
+                  className={`${deleting && "cursor-wait"} w-8 min-w-min rounded bg-neutral-100 py-1 active:scale-90 active:opacity-75`}
                 >
                   <FontAwesomeIcon icon={faExpand} />
                 </button>
@@ -472,7 +482,7 @@ export function Task({
               <AlertDialogTrigger asChild>
                 <button
                   disabled={deleting}
-                  className={`${deleting && "cursor-wait"} w-8 bg-red-400 min-w-min text-white py-1 rounded active:scale-95`}
+                  className={`${deleting && "cursor-wait"} w-8 min-w-min rounded bg-red-400 py-1 text-white active:scale-90 active:opacity-75`}
                 >
                   <FontAwesomeIcon icon={faTrash} />
                 </button>

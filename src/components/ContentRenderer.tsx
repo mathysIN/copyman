@@ -45,7 +45,7 @@ const GRADIENTS = [
 
 const ContentRenderer = ({
   content,
-  onContentDelete = () => { },
+  onContentDelete = () => {},
 }: {
   content: AttachmentType;
   onContentDelete: (contentId: string) => any;
@@ -63,7 +63,7 @@ const ContentRenderer = ({
   const getExtension = (url: string) => {
     const urlSplited = url.split(".");
     return urlSplited[urlSplited.length - 1] ?? "";
-  }
+  };
 
   const getContentType = (url: string) => {
     const stringExtension = getExtension(url);
@@ -148,7 +148,7 @@ const ContentRenderer = ({
               style={{ paddingTop: "56.25%" }}
             >
               {contentType && (
-                <div className="absolute rounded-lg inset-0 overflow-hidden">
+                <div className="absolute inset-0 overflow-hidden rounded-lg">
                   {renderContent()}
                 </div>
               )}
@@ -159,8 +159,14 @@ const ContentRenderer = ({
         <div className="flex flex-row justify-between gap-4">
           <div className="flex flex-row gap-x-1 text-sm">
             <button
-              className="w-8 bg-neutral-100 border-neutral-200 py-1 rounded active:scale-95"
-              onClick={() => copyAndToast(toast, content.attachmentURL, "Le lien du contenu a bien été copié")}
+              className="w-8 rounded border-neutral-200 bg-neutral-100 py-1 active:scale-90 active:opacity-75"
+              onClick={() =>
+                copyAndToast(
+                  toast,
+                  content.attachmentURL,
+                  "Le lien du contenu a bien été copié",
+                )
+              }
             >
               <FontAwesomeIcon icon={faLink} />
             </button>
@@ -168,14 +174,14 @@ const ContentRenderer = ({
               target="_blank"
               download={content.attachmentPath}
               href={content.attachmentURL}
-              className="w-8 bg-neutral-100 py-1 rounded-l flex items-center justify-center text-gray-900 active:scale-95"
+              className="flex w-8 items-center justify-center rounded-l bg-neutral-100 py-1 text-gray-900 active:scale-90 active:opacity-75"
             >
               <FontAwesomeIcon icon={faDownload} />
             </a>
 
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <button className="w-8 bg-red-400 py-1 rounded text-white active:scale-95">
+                <button className="w-8 rounded bg-red-400 py-1 text-white active:scale-90 active:opacity-75">
                   <FontAwesomeIcon icon={faTrash} />
                 </button>
               </AlertDialogTrigger>

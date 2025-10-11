@@ -92,8 +92,8 @@ export function Task({
   session,
   content,
   allContent,
-  onDeleteTask = () => {},
-  onUpdateTask = () => {},
+  onDeleteTask = () => { },
+  onUpdateTask = () => { },
 }: {
   session: SessionType;
   content: NoteType;
@@ -102,6 +102,7 @@ export function Task({
   onUpdateTask?: (task: NoteType) => any;
 }) {
   const { toast } = useToast();
+  const [dragging, setDragging] = useState(false);
   const [value, setValue] = useState(content.content ?? "");
   const [timerId, setTimerId] = useState<NodeJS.Timeout | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -338,7 +339,7 @@ export function Task({
                   const realInputNumber = _inputNumber - 1;
                   return (
                     <input
-                      onChange={() => {}}
+                      onChange={() => { }}
                       {...props}
                       disabled={false}
                       onClick={(e) => {
@@ -401,10 +402,12 @@ export function Task({
       dragControls={controls}
       dragListener={false}
       layout={"position"}
+      onDragStart={() => setDragging(true)}
+      onDragEnd={() => setDragging(false)}
     >
       <div
         key={content.id}
-        className={`${deleting && "animate-pulse cursor-wait opacity-75"} flex flex-col gap-2 rounded-md border-2 border-gray-300 bg-white px-2 py-2 text-black`}
+        className={`${deleting && "animate-pulse cursor-wait opacity-75"} ${dragging && "scale-105 shadow-2xl"} transition-all delay-150 flex flex-col gap-2 rounded-md border-2 border-gray-300 bg-white px-2 py-2 text-black`}
       >
         <div className="relative flex flex-col gap-2">{textEditContent()}</div>
         {linksWithMeta.length > 0 && (

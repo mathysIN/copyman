@@ -45,12 +45,13 @@ const GRADIENTS = [
 
 const ContentRenderer = ({
   content,
-  onContentDelete = () => {},
+  onContentDelete = () => { },
 }: {
   content: AttachmentType;
   onContentDelete: (contentId: string) => any;
 }) => {
   const { toast } = useToast();
+  const [dragging, setDragging] = useState(false);
   const [isHolding, setIsHolding] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
@@ -137,9 +138,11 @@ const ContentRenderer = ({
       layoutScroll={true}
       dragControls={controls}
       dragListener={isHolding}
+      onDragStart={() => setDragging(true)}
+      onDragEnd={() => setDragging(false)}
     >
       <div
-        className={`${deleting && "animate-pulse cursor-wait opacity-75"} space-y h-fit rounded-md border-2 border-gray-300 bg-white p-2 text-gray-900`}
+        className={`${deleting && "animate-pulse cursor-wait opacity-75"} ${dragging && "scale-105 shadow-2xl"} transition-all delay-150 space-y h-fit rounded-md border-2 border-gray-300 bg-white p-2 text-gray-900`}
       >
         {contentType && (
           <>

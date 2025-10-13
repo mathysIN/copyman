@@ -142,7 +142,7 @@ const ContentRenderer = ({
       onDragEnd={() => setDragging(false)}
     >
       <div
-        className={`${deleting && "animate-pulse cursor-wait opacity-75"} ${dragging && "scale-105 shadow-2xl"} transition-all delay-150 space-y h-fit rounded-md border-2 border-gray-300 bg-white p-2 text-gray-900`}
+        className={`${deleting && "animate-pulse cursor-wait opacity-75"} ${dragging && "scale-105 shadow-2xl"} transition-all space-y h-fit rounded-md border-2 border-gray-300 bg-white p-2 text-gray-900`}
       >
         {contentType && (
           <>
@@ -177,7 +177,7 @@ const ContentRenderer = ({
               target="_blank"
               download={content.attachmentPath}
               href={content.attachmentURL}
-              className="flex w-8 items-center justify-center rounded-l bg-neutral-100 py-1 text-gray-900 active:scale-90 active:opacity-75"
+              className="flex w-8 items-center justify-center rounded bg-neutral-100 py-1 text-gray-900 active:scale-90 active:opacity-75"
             >
               <FontAwesomeIcon icon={faDownload} />
             </a>

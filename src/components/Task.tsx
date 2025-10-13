@@ -407,7 +407,7 @@ export function Task({
     >
       <div
         key={content.id}
-        className={`${deleting && "animate-pulse cursor-wait opacity-75"} ${dragging && "scale-105 shadow-2xl"} transition-all delay-150 flex flex-col gap-2 rounded-md border-2 border-gray-300 bg-white px-2 py-2 text-black`}
+        className={`${deleting && "animate-pulse cursor-wait opacity-75"} ${dragging && "scale-105 shadow-2xl"} transition-all flex flex-col gap-2 rounded-md border-2 border-gray-300 bg-white px-2 py-2 text-black`}
       >
         <div className="relative flex flex-col gap-2">{textEditContent()}</div>
         {linksWithMeta.length > 0 && (

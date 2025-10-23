@@ -6,31 +6,29 @@ import { env } from "~/env";
 import r2Client, { getUrlFromFileR2FileKey } from "~/server/r2";
 import { socketSendAddContent, socketSendDeleteContent, socketSendUpdateContent } from "./socketInstance";
 
-export async function serverCreateNote(session: Session, content: string) {
+export async function serverCreateNote(session: Session, content: string, senderSocketId?: string) {
   const newNote = { content };
   const createdNote = await session.createNewNote(newNote);
-  if (createdNote) socketSendAddContent(session, [createdNote]);
+  if (createdNote) socketSendAddContent(session, [createdNote], senderSocketId);
   return createdNote;
 }
 
-export async function serverUpdateNote(session: Session, content: string, contentId: string) {
-  const updateNote = { content };
+export async function serverUpdateNote(session: Session, content: string, contentId: string, senderSocketId?: string) {
   const response = await session.updateNote(contentId, { content: content });
-  console.log({ response })
   if (response) {
     const updatedNote = await session.getContent(contentId); // :/
-    socketSendUpdateContent(session, updatedNote);
+    socketSendUpdateContent(session, updatedNote, senderSocketId);
   }
   return response;
 }
 
-export async function serverDeleteContent(session: Session, contentId: string) {
+export async function serverDeleteContent(session: Session, contentId: string, senderSocketId?: string) {
   const response = await session.deleteContent(contentId);
-  if (response) socketSendDeleteContent(session, contentId);
+  if (response) socketSendDeleteContent(session, contentId, senderSocketId);
   return response;
 }
 
-export async function serverUploadFiles(session: Session, files: File[], socketId?: string) {
+export async function serverUploadFiles(session: Session, files: File[], senderSocketId?: string) {
   const createdAttachments: AttachmentType[] = [];
   for (const file of files) {
     const startFileProcess = performance.now();
@@ -77,6 +75,6 @@ export async function serverUploadFiles(session: Session, files: File[], socketI
     );
     createdAttachments.push(content);
   }
-  socketSendAddContent(session, createdAttachments, socketId);
+  socketSendAddContent(session, createdAttachments, senderSocketId);
   return createdAttachments;
 }

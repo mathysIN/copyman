@@ -81,7 +81,7 @@ export function socketSendRoomInsight(
   if (!globalForSocket.io) return;
   const users = Array.from(room.values());
   for (const keyVal of room) {
-    const id = keyVal[0];
+    const [id] = keyVal;
     const insight = { connectedCount: room.size, users };
     globalForSocket.io.to(id).emit("roomInsight", insight);
   }

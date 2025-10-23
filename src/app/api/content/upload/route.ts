@@ -14,7 +14,7 @@ export async function POST(
   const formData = await req.formData();
   const files = formData.getAll("files") as File[] | undefined;
 
-  const socketId = req.headers.get('x-socket-id') ?? undefined;
+  const socketUserId = req.headers.get("X-Socket-User-Id") ?? undefined;
 
   if (!files?.length)
     return NextResponse.json({ error: "No files provided" }, { status: 400 });
@@ -41,7 +41,7 @@ export async function POST(
       `Parsing request JSON took: ${performance.now() - startParse}ms`,
     );
 
-    const uploadPromises = await serverUploadFiles(session, files, socketId);
+    const uploadPromises = await serverUploadFiles(session, files, socketUserId);
 
     const startUploads = performance.now();
     const results = await Promise.all(uploadPromises);

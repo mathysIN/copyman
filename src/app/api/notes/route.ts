@@ -7,11 +7,12 @@ import { socketSendAddContent, io } from "~/lib/socketInstance";
 
 export async function POST(req: Request) {
   const data = await req.json();
+  const socketUserId = req.headers.get("X-Socket-User-Id") ?? undefined;
   const session = await getSessionWithCookies(cookies());
   if (!session) return new Response("Unauthorized", { status: 401 });
   const { content } = data;
 
-  const response = await serverCreateNote(session, content);
+  const response = await serverCreateNote(session, content, socketUserId);
   if (response) {
     return NextResponse.json(response, { status: 200 });
   } else {
@@ -21,6 +22,7 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
   const data = await req.json();
+  const socketUserId = req.headers.get("X-Socket-User-Id") ?? undefined;
   const session = await getSessionWithCookies(cookies());
   if (!session) return new Response("Unauthorized", { status: 401 });
   const { content, taskId } = data;
@@ -29,7 +31,7 @@ export async function PATCH(req: Request) {
     return new Response("Not found", { status: 404 });
   }
 
-  const response = await serverUpdateNote(session, content, taskId);
+  const response = await serverUpdateNote(session, content, taskId, socketUserId);
   if (response) {
     return new Response("Updated", { status: 200 });
   } else {
@@ -39,11 +41,12 @@ export async function PATCH(req: Request) {
 
 export async function DELETE(req: Request) {
   const data = await req.json();
+  const socketUserId = req.headers.get("X-Socket-User-Id") ?? undefined;
   const session = await getSessionWithCookies(cookies());
   if (!session) return new Response("Unauthorized", { status: 401 });
   const { taskId } = data;
 
-  const response = await serverDeleteContent(session, taskId);
+  const response = await serverDeleteContent(session, taskId, socketUserId);
   if (response) {
     return new Response("Deleted", { status: 200 });
   } else {

@@ -22,6 +22,7 @@ export async function GET(request: Request): Promise<NextResponse> {
 
 export async function DELETE(request: Request): Promise<NextResponse> {
   const session = await getSessionWithCookies(cookies());
+  const socketUserId = request.headers.get("X-Socket-User-Id") ?? undefined;
   if (!session)
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   const { searchParams } = new URL(request.url);
@@ -38,7 +39,7 @@ export async function DELETE(request: Request): Promise<NextResponse> {
   if (!content)
     return NextResponse.json({ message: "Content not found" }, { status: 404 });
 
-  const response = await serverDeleteContent(session, contentId);
+  const response = await serverDeleteContent(session, contentId, socketUserId);
 
   if (!response)
     return NextResponse.json(

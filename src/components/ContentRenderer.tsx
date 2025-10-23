@@ -46,9 +46,11 @@ const GRADIENTS = [
 const ContentRenderer = ({
   content,
   onContentDelete = () => { },
+  socketUserId
 }: {
   content: AttachmentType;
   onContentDelete: (contentId: string) => any;
+  socketUserId?: string;
 }) => {
   const { toast } = useToast();
   const [dragging, setDragging] = useState(false);
@@ -205,6 +207,9 @@ const ContentRenderer = ({
                     onClick={async () => {
                       setDeleting(true);
                       await fetch(`/api/content?contentId=${content.id}`, {
+                        headers: {
+                          "X-Socket-User-Id": socketUserId ?? ""
+                        },
                         method: "DELETE",
                       }).then(() => onContentDelete(content.id));
                       setDeleting(false);

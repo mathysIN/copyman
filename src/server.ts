@@ -21,6 +21,7 @@ const handler = app.getRequestHandler();
 export type Room = Map<string, User>;
 
 export type ServerToClientEvents = {
+  welcome: (commonId: string) => void;
   addContent: (content: ContentType[]) => void;
   deleteContent: (contentId: string) => void;
   updatedContent: (content: ContentType) => void;
@@ -30,7 +31,6 @@ export type ServerToClientEvents = {
 
 export type ClientToServerEvents = {
   hello: () => void;
-  ready: () => void;
   addContent: (content: ContentType[]) => void;
   deleteContent: (contentId: string) => void;
   updatedContent: (content: ContentType) => void;
@@ -102,9 +102,10 @@ app.prepare().then(() => {
       commonId: await createHashId(commandId),
     });
 
-    socket.on("ready", () => {
+    socket.on("hello", () => {
       const room = rooms.get(session.sessionId);
       if (!room) return;
+      socket.emit("welcome", socketId);
       socketSendRoomInsight(room);
     });
 

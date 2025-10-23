@@ -122,7 +122,7 @@ export class Session {
     this.rawContentOrder = props.rawContentOrder;
     try {
       this.imageBackground = new URL(props.backgroundImageURL ?? "");
-    } catch {}
+    } catch { }
     this.usedSpace = props.usedSpace;
   }
 

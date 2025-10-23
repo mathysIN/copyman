@@ -92,12 +92,14 @@ export function Task({
   session,
   content,
   allContent,
+  socketUserId,
   onDeleteTask = () => { },
   onUpdateTask = () => { },
 }: {
   session: SessionType;
   content: NoteType;
   allContent: ContentType[];
+  socketUserId?: string;
   onDeleteTask?: (taskId: string) => any;
   onUpdateTask?: (task: NoteType) => any;
 }) {
@@ -240,6 +242,9 @@ export function Task({
 
     fetch("/api/notes", {
       method: "PATCH",
+      headers: {
+        "X-Socket-User-Id": socketUserId ?? ""
+      },
       body: JSON.stringify({ content: newValue, taskId: content.id }),
     }).then(() => {
       setTimerId(null);
@@ -508,6 +513,9 @@ export function Task({
                       setDeleting(true);
                       fetch("/api/notes", {
                         method: "DELETE",
+                        headers: {
+                          "X-Socket-User-Id": socketUserId
+                        },
                         body: JSON.stringify({ taskId: content.id }),
                       })
                         .then(() => {

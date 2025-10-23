@@ -79,6 +79,7 @@ export function ActiveSession({
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [passwordModalLoading, setPasswordModalLoading] = useState(false);
   const [passwordModalContent, setPasswordModalContent] = useState("");
+  const [socketUserId, setSocketUserId] = useState<string | undefined>(undefined);
   const [bgModalContent, setBgModalContent] = useState(
     session.backgroundImageURL ?? "",
   );
@@ -100,7 +101,11 @@ export function ActiveSession({
 
   function onConnect(): void {
     setIsConnected(true);
-    socket.emit("ready");
+    socket.emit("hello");
+  }
+
+  function onWelcome(socketUserId: string): void {
+    setSocketUserId(socketUserId);
   }
 
   function onDisconnect(): void {
@@ -215,6 +220,7 @@ export function ActiveSession({
     });
 
     socket.on("connect", onConnect);
+    socket.on("welcome", onWelcome);
     socket.on("disconnect", onDisconnect);
 
     return () => {
@@ -318,7 +324,7 @@ export function ActiveSession({
           return next;
         });
       },
-      socket.id,
+      socketUserId,
     );
 
     setUploadProgressPourcentage((prev) => {
@@ -615,6 +621,7 @@ export function ActiveSession({
           <h2>Autres trucs</h2>
           <AddNewTask
             onNewContent={(n) => onNewContent([n])}
+            socketUserId={socketUserId}
             ref={newTaskComponent}
           />
           <div />
@@ -629,6 +636,7 @@ export function ActiveSession({
                 key={note.id}
                 allContent={sessionContent}
                 content={note}
+                socketUserId={socketUserId}
                 onDeleteTask={onDeleteContent}
                 onUpdateTask={onUpdateContent}
               />

@@ -9,65 +9,70 @@ export type AddNewTaskRef = {
   addTask: (content: string) => Promise<any>;
 };
 
-const _AddNewTask = forwardRef(
-  (
-    { onNewContent = () => { } }: { onNewContent?: (task: NoteType) => any },
+const _AddNewTask = forwardRef(({
+  onNewContent = () => { },
+  socketUserId
+}: {
+  onNewContent?: (task: NoteType) => any,
+  socketUserId?: string
+}, ref,) => {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [loading, setLoading] = useState(false);
+
+  useImperativeHandle(
     ref,
-  ) => {
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const [loading, setLoading] = useState(false);
+    () =>
+      ({
+        addTask,
+      }) satisfies AddNewTaskRef,
+  );
 
-    useImperativeHandle(
-      ref,
-      () =>
-        ({
-          addTask,
-        }) satisfies AddNewTaskRef,
-    );
+  const addTask = async (content: string) => {
+    if (loading) return;
+    if (textareaRef?.current) textareaRef.current.value = content;
+    setLoading(true);
+    await fetch("/api/notes", {
+      method: "POST",
+      headers: {
+        "X-Socket-User-Id": socketUserId ?? ""
+      },
+      body: JSON.stringify({ content: content } as NoteType),
+    }).then((res) => {
+      if (res.ok) {
+        res.json().then((task) => {
+          onNewContent(task);
+          setTimeout(() => {
+            console.log(textareaRef)
+            if (textareaRef.current == null) throw new Error("Cannot find new note textarea reference");
+            textareaRef.current.value = "";
+          }, 0);
+        });
+      }
+    });
+    setLoading(false);
+  };
 
-    const addTask = async (content: string) => {
-      if (loading) return;
-      if (textareaRef?.current) textareaRef.current.value = content;
-      setLoading(true);
-      await fetch("/api/notes", {
-        method: "POST",
-        body: JSON.stringify({ content: content } as NoteType),
-      }).then((res) => {
-        if (res.ok) {
-          res.json().then((task) => {
-            onNewContent(task);
-            setTimeout(() => {
-              console.log(textareaRef)
-              if (textareaRef.current == null) throw new Error("Cannot find new note textarea reference");
-              textareaRef.current.value = "";
-            }, 0);
-          });
-        }
-      });
-      setLoading(false);
-    };
-
-    return (
-      <div
-        className={`${loading && "animate-pulse cursor-wait opacity-75"} flex h-16 flex-col gap-2 rounded-xl bg-white px-2 py-2 text-black`}
-      >
-        <textarea
-          ref={textareaRef}
-          disabled={loading}
-          placeholder="Nouvelle note"
-          className="h-full"
-          onKeyDown={async (e) => {
-            if (e.key === "Enter") {
-              const target = e.currentTarget;
-              const content = target.value;
-              if (!content) return;
-              await addTask(content);
-            }
-          }}
-        />
-      </div>
-    );
-  },
+  return (
+    <div
+      className={`${loading && "animate-pulse cursor-wait opacity-75"} flex h-16 flex-col gap-2 rounded-xl bg-white px-2 py-2 text-black`}
+    >
+      <textarea
+        ref={textareaRef}
+        disabled={loading}
+        placeholder="Nouvelle note"
+        className="h-full"
+        onKeyDown={async (e) => {
+          if (e.key === "Enter") {
+            const target = e.currentTarget;
+            const content = target.value;
+            if (!content) return;
+            await addTask(content);
+          }
+        }}
+      />
+    </div>
+  );
+},
 );
 
 _AddNewTask.displayName = "AddNewTask";

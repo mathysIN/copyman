@@ -29,7 +29,7 @@
       "files": [
         {
           "name": "file",
-          "accept": ["image/*", "text/*", "application/pdf"]
+          "accept": ["image/*", "video/*", "audio/*", "text/*", "application/*"]
         }
       ]
     }

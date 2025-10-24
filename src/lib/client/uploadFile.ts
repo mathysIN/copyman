@@ -5,7 +5,7 @@ import { type AttachmentType } from "~/server/db/redis";
 export async function uploadFiles(
   files: File[],
   onProgress?: (percent: number) => void,
-  socketUserId?: string
+  socketUserId?: string,
 ): Promise<AttachmentType[] | null> {
   if (files.length === 0) return [];
 
@@ -14,8 +14,9 @@ export async function uploadFiles(
 
   try {
     toast({
-      description: `Mise en ligne de ${uniqueFile ? uniqueFile.name : `${files.length} fichiers`
-        } en cours...`,
+      description: `Mise en ligne de ${
+        uniqueFile ? uniqueFile.name : `${files.length} fichiers`
+      } en cours...`,
     });
 
     const formData = new FormData();
@@ -27,7 +28,7 @@ export async function uploadFiles(
       {
         headers: {
           "Content-Type": "multipart/form-data",
-          "X-Socket-User-Id": socketUserId ?? ""
+          "X-Socket-User-Id": socketUserId ?? "",
         },
         onUploadProgress: (event) => {
           if (event.total && onProgress) {

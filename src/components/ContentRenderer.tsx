@@ -45,8 +45,8 @@ const GRADIENTS = [
 
 const ContentRenderer = ({
   content,
-  onContentDelete = () => { },
-  socketUserId
+  onContentDelete = () => {},
+  socketUserId,
 }: {
   content: AttachmentType;
   onContentDelete: (contentId: string) => any;
@@ -57,9 +57,6 @@ const ContentRenderer = ({
   const [isHolding, setIsHolding] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
-  const [contentType, setContentType] = useState<
-    "video" | "image" | "audio" | null
-  >(null);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const controls = useDragControls();
 
@@ -81,9 +78,8 @@ const ContentRenderer = ({
     return extension;
   };
 
-  useEffect(() => {
-    setContentType(getContentType(content.attachmentPath));
-  }, [content]);
+  const contentType = getContentType(content.attachmentURL);
+
 
   const renderContent = () => {
     switch (contentType) {
@@ -144,7 +140,7 @@ const ContentRenderer = ({
       onDragEnd={() => setDragging(false)}
     >
       <div
-        className={`${deleting && "animate-pulse cursor-wait opacity-75"} ${dragging && "scale-105 shadow-2xl"} transition-all space-y h-fit rounded-md border-2 border-gray-300 bg-white p-2 text-gray-900`}
+        className={`${deleting && "animate-pulse cursor-wait opacity-75"} ${dragging && "scale-105 shadow-2xl"} space-y h-fit rounded-md border-2 border-gray-300 bg-white p-2 text-gray-900 transition-all`}
       >
         {contentType && (
           <>
@@ -208,7 +204,7 @@ const ContentRenderer = ({
                       setDeleting(true);
                       await fetch(`/api/content?contentId=${content.id}`, {
                         headers: {
-                          "X-Socket-User-Id": socketUserId ?? ""
+                          "X-Socket-User-Id": socketUserId ?? "",
                         },
                         method: "DELETE",
                       }).then(() => onContentDelete(content.id));

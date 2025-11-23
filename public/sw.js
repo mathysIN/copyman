@@ -119,6 +119,24 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  if (request.url.endsWith("/share-target")) {
+    event.respondWith(
+      (async () => {
+        const clonedRequest = event.request.clone();
+        const response = await fetch("/api/share", {
+          method: "POST",
+          body: await clonedRequest.formData(),
+          headers: {
+            cookie: request.headers.get("cookie") || "",
+          },
+          credentials: "include"
+        });
+
+        return Response.redirect("/close", 303);
+      })()
+    );
+  }
+
   // Handle other requests with cache-first strategy
   event.respondWith(
     (async () => {

@@ -514,7 +514,7 @@ export function Task({
                       fetch("/api/notes", {
                         method: "DELETE",
                         headers: {
-                          "X-Socket-User-Id": socketUserId
+                          "X-Socket-User-Id": socketUserId ?? ""
                         },
                         body: JSON.stringify({ taskId: content.id }),
                       })

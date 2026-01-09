@@ -22,6 +22,15 @@ export async function serverUpdateNote(session: Session, content: string, conten
   return response;
 }
 
+export async function serverRenameFile(session: Session, contentId: string, fileName: string, senderSocketId?: string) {
+  const response = await session.updateAttachment(contentId, { attachmentPath: fileName });
+  if (response) {
+    const updatedAttachment = await session.getContent(contentId); // :/
+    socketSendUpdateContent(session, updatedAttachment, senderSocketId);
+  }
+  return response;
+}
+
 export async function serverDeleteContent(session: Session, contentId: string, senderSocketId?: string) {
   const response = await session.deleteContent(contentId);
   if (response) socketSendDeleteContent(session, contentId, senderSocketId);

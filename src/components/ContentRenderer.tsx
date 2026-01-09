@@ -26,7 +26,8 @@ import {
 import { copyAndToast } from "~/lib/client/toast";
 import { useToast } from "~/hooks/use-toast";
 import { Reorder, useDragControls } from "framer-motion";
-import { Dialog, DialogContent, DialogTrigger } from "./ui/dialog";
+import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogFooter, DialogTitle, DialogDescription, DialogClose } from "./ui/dialog";
+import { Button } from "./ui/button";
 
 const GRADIENTS = [
   "bg-gradient-to-r from-green-400 to-blue-500",
@@ -45,7 +46,7 @@ const GRADIENTS = [
 
 const ContentRenderer = ({
   content,
-  onContentDelete = () => {},
+  onContentDelete = () => { },
   socketUserId,
 }: {
   content: AttachmentType;
@@ -59,6 +60,14 @@ const ContentRenderer = ({
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const controls = useDragControls();
+  const fileNameInputRef = useRef<HTMLInputElement>(null);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [newName, setNewName] = useState(content.attachmentPath);
+  const [renaming, setRenaming] = useState(false);
+
+  useEffect(() => {
+    setNewName(content.attachmentPath);
+  }, [content.attachmentPath]);
 
   const getExtension = (url: string) => {
     const urlSplited = url.split(".");
@@ -79,6 +88,16 @@ const ContentRenderer = ({
   };
 
   const contentType = getContentType(content.attachmentURL);
+
+
+  const handleChange = async (newValue: string) => {
+    await fetch(`/api/content?contentId=${content.id}&fileName=${encodeURIComponent(newValue)}`, {
+      headers: {
+        "X-Socket-User-Id": socketUserId ?? "",
+      },
+      method: "PATCH",
+    });
+  };
 
 
   const renderContent = () => {
@@ -217,10 +236,57 @@ const ContentRenderer = ({
               </AlertDialogContent>
             </AlertDialog>
           </div>
-          <div className="flex select-text items-center gap-2 overflow-hidden ">
-            <p className="center flex-1 overflow-hidden whitespace-nowrap text-right  align-middle text-sm text-gray-500 sm:w-64">
-              {content.attachmentPath}
-            </p>
+          <div className="flex items-center gap-2 overflow-hidden ">
+            <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+              <DialogTrigger asChild>
+                <button className="center flex-1 overflow-hidden text-right align-middle text-sm text-gray-500 sm:w-64">
+                  {content.attachmentPath}
+                </button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Renommer le fichier</DialogTitle>
+                  <DialogDescription>Modifiez le nom du fichier puis appuyez sur OK.</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <input
+                    ref={fileNameInputRef}
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    onKeyDown={async (e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (!newName || newName.trim() === "") return;
+                        setRenaming(true);
+                        await handleChange(newName);
+                        setRenaming(false);
+                        setRenameOpen(false);
+                      }
+                    }}
+                    className="w-full rounded border px-3 py-2 text-sm"
+                    type="text"
+                  />
+                </div>
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button variant="outline" size="sm">Annuler</Button>
+                  </DialogClose>
+                  <Button
+                    size="sm"
+                    onClick={async () => {
+                      if (!newName || newName.trim() === "") return;
+                      setRenaming(true);
+                      await handleChange(newName);
+                      setRenaming(false);
+                      setRenameOpen(false);
+                    }}
+                    disabled={renaming || !newName || newName.trim() === ""}
+                  >
+                    {renaming ? "Renommage..." : "OK"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             <div
               className="flex cursor-grab touch-none flex-row items-center justify-center"
               onPointerDown={(e) => controls?.start(e)}

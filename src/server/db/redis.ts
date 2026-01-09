@@ -5,6 +5,7 @@ import { type ReadonlyRequestCookies } from "next/dist/server/web/spec-extension
 import { env } from "~/env";
 import { hashPassword, validatePassword } from "~/utils/password";
 import { type ExcludeMatchingProperties } from "~/utils/types";
+import { getCDNUrlFromFileKey } from "../r2";
 
 const globalForDb = globalThis as unknown as {
   conn: Redis | undefined;
@@ -173,6 +174,7 @@ export class Session {
       ...attachment,
       type: "attachment",
     } satisfies AttachmentType;
+    newContent.attachmentURL = getCDNUrlFromFileKey(newContent.attachmentPath, newContent.fileKey);
     return contents
       .hmnew(key, newContent)
       .then(() => newContent)
@@ -197,6 +199,11 @@ export class Session {
       >
     >,
   ) {
+    if(attachment.attachmentPath) {
+      const previousAttachmentData = await this.getContent(id); // :/
+      if(previousAttachmentData.type != "attachment") return;
+      attachment.attachmentURL = getCDNUrlFromFileKey(attachment.attachmentPath, previousAttachmentData.fileKey);
+    }
     return contents.hmset(
       this.withSessionKey(REDIS_CONTENT_PREFIX, id),
       attachment,

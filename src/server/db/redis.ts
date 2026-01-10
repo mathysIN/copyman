@@ -3,9 +3,9 @@ import { type UUID, randomUUID } from "crypto";
 import { type RequestCookies } from "next/dist/compiled/@edge-runtime/cookies";
 import { type ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 import { env } from "~/env";
+import { getCDNUrlFromFileKey } from "~/lib/utils";
 import { hashPassword, validatePassword } from "~/utils/password";
 import { type ExcludeMatchingProperties } from "~/utils/types";
-import { getCDNUrlFromFileKey } from "../r2";
 
 const globalForDb = globalThis as unknown as {
   conn: Redis | undefined;
@@ -199,9 +199,9 @@ export class Session {
       >
     >,
   ) {
-    if(attachment.attachmentPath) {
+    if (attachment.attachmentPath) {
       const previousAttachmentData = await this.getContent(id); // :/
-      if(previousAttachmentData.type != "attachment") return;
+      if (previousAttachmentData.type != "attachment") return;
       attachment.attachmentURL = getCDNUrlFromFileKey(attachment.attachmentPath, previousAttachmentData.fileKey);
     }
     return contents.hmset(

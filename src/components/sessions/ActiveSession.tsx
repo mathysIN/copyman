@@ -79,7 +79,9 @@ export function ActiveSession({
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [passwordModalLoading, setPasswordModalLoading] = useState(false);
   const [passwordModalContent, setPasswordModalContent] = useState("");
-  const [socketUserId, setSocketUserId] = useState<string | undefined>(undefined);
+  const [socketUserId, setSocketUserId] = useState<string | undefined>(
+    undefined,
+  );
   const [bgModalContent, setBgModalContent] = useState(
     session.backgroundImageURL ?? "",
   );
@@ -99,8 +101,13 @@ export function ActiveSession({
 
   const newTaskComponent = useRef<AddNewTaskRef>(null);
 
+  const lastHelloSocketIdRef = useRef<string | null>(null);
+
   function onConnect(): void {
     setIsConnected(true);
+    // Avoid emitting "hello" twice for the same socket.id (e.g., mount + connect event)
+    if (lastHelloSocketIdRef.current === socket.id) return;
+    lastHelloSocketIdRef.current = socket.id ?? null;
     socket.emit("hello");
   }
 
@@ -119,6 +126,21 @@ export function ActiveSession({
         (c) => !prev.some((p) => p.id === c.id),
       );
       const next = [...newContent, ...prev];
+      void saveOfflineSession({
+        sessionId: session.sessionId,
+        content: next,
+        order: contentOrder,
+        updatedAt: Date.now(),
+      });
+      return next;
+    });
+  }
+
+  function onContentRename(contentId: string, newName: string, emit = true): void {
+    if (emit) socket.emit("deleteContent", contentId);
+    setSessionContent((prev) => {
+      const next = prev.filter((c) => c.id !== contentId);
+
       void saveOfflineSession({
         sessionId: session.sessionId,
         content: next,
@@ -183,7 +205,6 @@ export function ActiveSession({
     window.addEventListener("online", updateOnline);
     window.addEventListener("offline", updateOnline);
 
-    // If offline at mount, hydrate from local store
     (async () => {
       if (!navigator.onLine) {
         const local = await loadOfflineSession<ContentType, ContentOrder>(
@@ -232,6 +253,7 @@ export function ActiveSession({
       socket.off("updatedContentOrder");
       socket.off("roomInsight");
       socket.off("connect");
+      socket.off("welcome");
       socket.off("disconnect");
     };
   }, []);
@@ -612,6 +634,7 @@ export function ActiveSession({
                   key={content.id}
                   content={content}
                   onContentDelete={onDeleteContent}
+                  onContentUpdate={onUpdateContent}
                 />
               ))}
             </Reorder.Group>

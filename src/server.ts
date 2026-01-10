@@ -103,6 +103,7 @@ app.prepare().then(() => {
     });
 
     socket.on("hello", () => {
+      console.log(`${socketId} hello!`)
       const room = rooms.get(session.sessionId);
       if (!room) return;
       socket.emit("welcome", socketId);
@@ -110,6 +111,7 @@ app.prepare().then(() => {
     });
 
     socket.on("disconnect", () => {
+      console.log(`${socketId} disconnected!`)
       const room = rooms.get(session.sessionId);
       if (!room) return;
       room.delete(socket.id);

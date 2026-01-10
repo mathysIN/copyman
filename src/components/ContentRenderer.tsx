@@ -11,7 +11,7 @@ import "react-photo-view/dist/react-photo-view.css";
 
 import { use, useEffect, useRef, useState } from "react";
 import type { AttachmentType } from "~/server/db/redis";
-import { removeFileExtension, stringToHash } from "~/lib/utils";
+import { getCDNUrlFromFileKey, removeFileExtension, stringToHash } from "~/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,10 +47,12 @@ const GRADIENTS = [
 const ContentRenderer = ({
   content,
   onContentDelete = () => { },
+  onContentUpdate = () => { },
   socketUserId,
 }: {
   content: AttachmentType;
   onContentDelete: (contentId: string) => any;
+  onContentUpdate: (content: AttachmentType) => any;
   socketUserId?: string;
 }) => {
   const { toast } = useToast();
@@ -62,12 +64,19 @@ const ContentRenderer = ({
   const controls = useDragControls();
   const fileNameInputRef = useRef<HTMLInputElement>(null);
   const [renameOpen, setRenameOpen] = useState(false);
+  const [attachmentPath, setAttachmentPath] = useState(content.attachmentPath);
+  const [attachmentURL, setAttachmentURL] = useState(content.attachmentURL);
   const [newName, setNewName] = useState(content.attachmentPath);
   const [renaming, setRenaming] = useState(false);
 
   useEffect(() => {
     setNewName(content.attachmentPath);
+    setAttachmentPath(content.attachmentPath);
   }, [content.attachmentPath]);
+
+  useEffect(() => {
+    setAttachmentURL(content.attachmentURL);
+  }, [content.attachmentURL]);
 
   const getExtension = (url: string) => {
     const urlSplited = url.split(".");
@@ -87,7 +96,7 @@ const ContentRenderer = ({
     return extension;
   };
 
-  const contentType = getContentType(content.attachmentURL);
+  const contentType = getContentType(attachmentURL);
 
 
   const handleChange = async (newValue: string) => {
@@ -96,6 +105,15 @@ const ContentRenderer = ({
         "X-Socket-User-Id": socketUserId ?? "",
       },
       method: "PATCH",
+    }).then(() => {
+      const newObject = {
+        ...content,
+        attachmentPath: newName,
+        attachmentURL: getCDNUrlFromFileKey(newValue, content.fileKey)
+      };
+      setAttachmentPath(newName);
+      setAttachmentURL(getCDNUrlFromFileKey(newValue, content.fileKey));
+      onContentUpdate(newObject)
     });
   };
 
@@ -105,16 +123,16 @@ const ContentRenderer = ({
       case "video":
         return (
           <video
-            src={content.attachmentURL}
+            src={attachmentURL}
             controls
             className="absolute inset-0 h-full w-full object-cover"
           />
         );
       case "image":
         return (
-          <PhotoView src={content.attachmentURL}>
+          <PhotoView src={attachmentURL}>
             <img
-              src={content.attachmentURL}
+              src={attachmentURL}
               alt="Content"
               className="inset-0 h-full w-full cursor-pointer rounded-lg object-cover"
             />
@@ -122,7 +140,7 @@ const ContentRenderer = ({
         );
       case "audio":
         const index =
-          Math.abs(stringToHash(content.attachmentURL)) % GRADIENTS.length;
+          Math.abs(stringToHash(content.fileKey)) % GRADIENTS.length;
         const randomGradient = GRADIENTS[index];
         return (
           <>
@@ -130,20 +148,20 @@ const ContentRenderer = ({
               className={`absolute bottom-0 left-0 right-0 top-0 z-20 mx-auto my-auto flex h-fit w-fit items-center justify-center bg-clip-text font-extrabold text-white`}
             >
               <p className="overflow-hidden text-center text-2xl">
-                {removeFileExtension(content.attachmentPath)}
+                {removeFileExtension(attachmentPath)}
               </p>
             </div>
             <audio
               onPlay={() => setAudioPlaying(true)}
               onPause={() => setAudioPlaying(false)}
-              src={content.attachmentURL}
+              src={attachmentURL}
               controls
               className={`${randomGradient} ${audioPlaying && "animate-gradient"} absolute inset-0 h-full w-full bg-opacity-25 bg-[length:200%_auto] object-cover`}
             ></audio>
           </>
         );
       default:
-        return <p>{content.attachmentPath}</p>;
+        return <p>{attachmentPath}</p>;
     }
   };
 
@@ -183,7 +201,7 @@ const ContentRenderer = ({
               onClick={() =>
                 copyAndToast(
                   toast,
-                  content.attachmentURL,
+                  attachmentURL,
                   "Le lien du contenu a bien été copié",
                 )
               }
@@ -192,8 +210,8 @@ const ContentRenderer = ({
             </button>
             <a
               target="_blank"
-              download={content.attachmentPath}
-              href={content.attachmentURL}
+              download={attachmentPath}
+              href={attachmentURL}
               className="flex w-8 items-center justify-center rounded bg-neutral-100 py-1 text-gray-900 active:scale-90 active:opacity-75"
             >
               <FontAwesomeIcon icon={faDownload} />
@@ -240,7 +258,7 @@ const ContentRenderer = ({
             <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
               <DialogTrigger asChild>
                 <button className="center flex-1 overflow-hidden text-right align-middle text-sm text-gray-500 sm:w-64">
-                  {content.attachmentPath}
+                  {attachmentPath}
                 </button>
               </DialogTrigger>
               <DialogContent>

@@ -161,3 +161,8 @@ export const TimeValues = {
 export function toPlural(count: number, singularText: string, pluralText: string) {
   return count == 1 ? singularText : pluralText;
 }
+
+export function getCDNUrlFromFileKey(fileName: string, fileKey: string) {
+  return `https://cdn.copyman.fr/${fileKey}/${fileName}`;
+}
+

@@ -15,8 +15,4 @@ export function getUrlFromFileR2FileKey(fileKey: string) {
   return `https://files.copyman.fr/${env.R2_BUCKET_NAME}/${fileKey}`;
 }
 
-export function getCDNUrlFromFileKey(fileName: string, fileKey: string) {
-  return `https://cdn.copyman.fr/${fileKey}/${fileName}`;
-}
-
 export default r2Client;

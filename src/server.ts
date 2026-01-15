@@ -102,13 +102,10 @@ app.prepare().then(() => {
       commonId: await createHashId(commandId),
     });
 
-    socket.on("hello", () => {
-      console.log(`${socketId} hello!`)
-      const room = rooms.get(session.sessionId);
-      if (!room) return;
-      socket.emit("welcome", socketId);
-      socketSendRoomInsight(room);
-    });
+    console.log(`${socketId} hello!`)
+    if (!room) return;
+    socket.emit("welcome", socketId);
+    socketSendRoomInsight(room);
 
     socket.on("disconnect", () => {
       console.log(`${socketId} disconnected!`)

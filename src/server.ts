@@ -105,7 +105,10 @@ app.prepare().then(() => {
     console.log(`${socketId} hello!`)
     if (!room) return;
     socket.emit("welcome", socketId);
-    socketSendRoomInsight(room);
+
+    socket.on("hello", () => {
+      socketSendRoomInsight(room);
+    })
 
     socket.on("disconnect", () => {
       console.log(`${socketId} disconnected!`)

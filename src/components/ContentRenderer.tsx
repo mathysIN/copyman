@@ -257,7 +257,7 @@ const ContentRenderer = ({
           <div className="flex items-center gap-2 overflow-hidden ">
             <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
               <DialogTrigger asChild>
-                <button className="center flex-1 overflow-hidden text-right align-middle text-sm text-gray-500 sm:w-64">
+                <button className="center flex-1 overflow-hidden whitespace-nowrap text-right align-middle text-sm text-gray-500 sm:w-64">
                   {attachmentPath}
                 </button>
               </DialogTrigger>

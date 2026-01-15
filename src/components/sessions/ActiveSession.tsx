@@ -91,7 +91,8 @@ export function ActiveSession({
   const [sessionContent, setSessionContent] =
     useState<ContentType[]>(baseSessionContent);
 
-  const [show, setShow] = useState(false);
+  const [showTrucs, setShowTrucs] = useState(true);
+  const [showAutresTrucs, setShowAutresTrucs] = useState(true);
   const containerAnimationUploadingRef = useRef(null);
 
   useEffect(() => {
@@ -136,7 +137,11 @@ export function ActiveSession({
     });
   }
 
-  function onContentRename(contentId: string, newName: string, emit = true): void {
+  function onContentRename(
+    contentId: string,
+    newName: string,
+    emit = true,
+  ): void {
     if (emit) socket.emit("deleteContent", contentId);
     setSessionContent((prev) => {
       const next = prev.filter((c) => c.id !== contentId);
@@ -605,66 +610,114 @@ export function ActiveSession({
       <div
         className={`relative flex flex-col items-stretch justify-center gap-6 sm:flex-row sm:gap-6 sm:px-6 md:gap-16 md:px-16`}
       >
-        <div className="flex min-w-0 flex-1 flex-col gap-y-2 ">
-          <h2>Trucs</h2>
-          <div ref={containerAnimationUploadingRef}>
-            <Upload className="h-16" onUploadingFiles={onUploadingFiles} />
-            {Array.from(uploadProgressPourcentage.values())
-              .filter((progress) => progress.progress)
-              .map((progress) => (
-                <div className="mt-2">
-                  <div className="relative h-6 ">
-                    <Progress value={progress.progress} className="h-full" />
-                    <span className="tex absolute inset-0 flex items-center justify-center text-sm font-medium text-white mix-blend-difference">
-                      {progress.filename} - {progress.progress}%
-                    </span>
-                  </div>
-                </div>
-              ))}
+        <div className="flex min-w-0 flex-1 flex-col gap-y-2">
+          <div className="flex items-center justify-between">
+            <h2>Trucs</h2>
+            <button
+              onClick={() => setShowTrucs((prev) => !prev)}
+              className="text-white/70 transition-colors hover:text-white sm:hidden"
+            >
+              <svg
+                className={`h-4 w-4 transition-transform ${showTrucs ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
           </div>
-          <div />
-          <PhotoProvider>
+          <div
+            className={`${showTrucs ? "flex" : "hidden"} flex-col gap-y-2 md:flex`}
+          >
+            <div ref={containerAnimationUploadingRef}>
+              <Upload className="h-16" onUploadingFiles={onUploadingFiles} />
+              {Array.from(uploadProgressPourcentage.values())
+                .filter((progress) => progress.progress)
+                .map((progress) => (
+                  <div className="mt-2">
+                    <div className="relative h-6 ">
+                      <Progress value={progress.progress} className="h-full" />
+                      <span className="tex absolute inset-0 flex items-center justify-center text-sm font-medium text-white mix-blend-difference">
+                        {progress.filename} - {progress.progress}%
+                      </span>
+                    </div>
+                  </div>
+                ))}
+            </div>
+            <div />
+            <PhotoProvider>
+              <Reorder.Group
+                values={attachmentContent}
+                className="flex flex-col gap-y-2 transition-none"
+                onReorder={onReorderContent}
+              >
+                {attachmentContent.map((content) => (
+                  <ContentRenderer
+                    key={content.id}
+                    content={content}
+                    onContentDelete={onDeleteContent}
+                    onContentUpdate={onUpdateContent}
+                  />
+                ))}
+              </Reorder.Group>
+            </PhotoProvider>
+          </div>
+        </div>
+        <div className={`flex min-w-0 flex-1 flex-col gap-y-2 `}>
+          <div className="flex items-center justify-between">
+            <h2>Autres trucs</h2>
+            <button
+              onClick={() => setShowAutresTrucs((prev) => !prev)}
+              className="text-white/70 transition-colors hover:text-white sm:hidden"
+            >
+              <svg
+                className={`h-4 w-4 transition-transform ${showAutresTrucs ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+          </div>
+          <div
+            className={`${showAutresTrucs ? "flex" : "hidden"} flex-col gap-y-2 md:flex`}
+          >
+            <AddNewTask
+              onNewContent={(n) => onNewContent([n])}
+              socketUserId={socketUserId}
+              ref={newTaskComponent}
+            />
+            <div />
             <Reorder.Group
-              values={attachmentContent}
-              className="flex flex-col gap-y-2"
+              values={noteContent}
+              className="flex flex-col gap-y-2 transition-none"
               onReorder={onReorderContent}
             >
-              {attachmentContent.map((content) => (
-                <ContentRenderer
-                  key={content.id}
-                  content={content}
-                  onContentDelete={onDeleteContent}
-                  onContentUpdate={onUpdateContent}
+              {noteContent.map((note) => (
+                <Note
+                  session={session}
+                  key={note.id}
+                  allContent={sessionContent}
+                  content={note}
+                  socketUserId={socketUserId}
+                  onDeleteTask={onDeleteContent}
+                  onUpdateTask={onUpdateContent}
                 />
               ))}
             </Reorder.Group>
-          </PhotoProvider>
-        </div>
-        <div className={`flex min-w-0 flex-1 flex-col gap-y-2 `}>
-          <h2>Autres trucs</h2>
-          <AddNewTask
-            onNewContent={(n) => onNewContent([n])}
-            socketUserId={socketUserId}
-            ref={newTaskComponent}
-          />
-          <div />
-          <Reorder.Group
-            values={noteContent}
-            className="flex flex-col gap-y-2"
-            onReorder={onReorderContent}
-          >
-            {noteContent.map((note) => (
-              <Note
-                session={session}
-                key={note.id}
-                allContent={sessionContent}
-                content={note}
-                socketUserId={socketUserId}
-                onDeleteTask={onDeleteContent}
-                onUpdateTask={onUpdateContent}
-              />
-            ))}
-          </Reorder.Group>
+          </div>
         </div>
       </div>
     </div>

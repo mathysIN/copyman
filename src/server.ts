@@ -1,16 +1,22 @@
 import "dotenv/config";
-import { createServer, type IncomingMessage } from "node:http";
+import { createServer } from "node:http";
 import next from "next";
 import { Server, type Socket } from "socket.io";
 import {
-  getSessionWithCookieString,
-  getSessionWithRecord,
+  getSessionWithCookieString
 } from "~/utils/authenticate";
-import { type ContentOrder, type ContentType, type Session } from "~/server/db/redis";
+import {
+  type ContentOrder,
+  type ContentType
+} from "~/server/db/redis";
 import { createHashId } from "~/lib/utils";
-import { parse as parseCookie } from "cookie";
 import express from "express";
-import { socketSendAddContent, rooms, setIO, socketSendUpdateContentOrder, socketSendRoomInsight } from "./lib/socketInstance";
+import {
+  rooms,
+  setIO,
+  socketSendUpdateContentOrder,
+  socketSendRoomInsight
+} from "./lib/socketInstance";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
@@ -27,7 +33,7 @@ export type ServerToClientEvents = {
   updatedContent: (content: ContentType) => void;
   updatedContentOrder: (content: ContentOrder) => void;
   roomInsight: (room: RoomInsight) => void;
-}
+};
 
 export type ClientToServerEvents = {
   hello: () => void;
@@ -35,16 +41,16 @@ export type ClientToServerEvents = {
   deleteContent: (contentId: string) => void;
   updatedContent: (content: ContentType) => void;
   updatedContentOrder: (content: ContentOrder) => void;
-}
+};
 
 export type InterServerEvents = {
   ping: () => void;
-}
+};
 
 export type ConnectionStart = {
   sessionId: string;
   password?: string;
-}
+};
 
 export type RoomInsight = {
   connectedCount: number;
@@ -102,20 +108,30 @@ app.prepare().then(() => {
       commonId: await createHashId(commandId),
     });
 
-    console.log(`${socketId} hello!`)
+    console.log(`${socketId} hello!`);
     if (!room) return;
     socket.emit("welcome", socketId);
 
+    const allContent = await session.getAllContent();
+    if (allContent.length > 0) {
+      socket.emit("addContent", allContent);
+    }
+
+    const contentOrder = await session.getContentOrder();
+    if (contentOrder.length > 0) {
+      socket.emit("updatedContentOrder", contentOrder);
+    }
+
     socket.on("hello", () => {
       socketSendRoomInsight(room);
-    })
+    });
 
     socket.on("disconnect", () => {
-      console.log(`${socketId} disconnected!`)
+      console.log(`${socketId} disconnected!`);
       const room = rooms.get(session.sessionId);
       if (!room) return;
       room.delete(socket.id);
-      socketSendRoomInsight(room)
+      socketSendRoomInsight(room);
     });
 
     socket.on("updatedContentOrder", async (contentOrder) => {
@@ -132,4 +148,3 @@ app.prepare().then(() => {
     console.log(`> Ready on http://${hostname}:${port}`);
   });
 });
-

@@ -94,3 +94,8 @@ html.offline .offline-only {
     @apply w-full rounded-sm bg-neutral-700 px-2 text-white;
   }
 }
+
+/* Prevent layout shift when dialog opens */
+[data-radix-scroll-lock] {
+  padding-right: var(--radix-scroll-bar-width);
+}

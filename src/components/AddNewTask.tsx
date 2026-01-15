@@ -4,8 +4,7 @@ import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaste } from "@fortawesome/free-solid-svg-icons";
 import { NoteType } from "~/server/db/redis";
-
-interface Props {}
+import { toast } from "~/hooks/use-toast";
 
 export type AddNewTaskRef = {
   addTask: (content: string) => Promise<any>;
@@ -37,26 +36,38 @@ const _AddNewTask = forwardRef(
       if (loading) return;
       if (textareaRef?.current) textareaRef.current.value = content;
       setLoading(true);
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(), 8000);
       await fetch("/api/notes", {
         method: "POST",
+        signal: controller.signal,
         headers: {
           "X-Socket-User-Id": socketUserId ?? "",
         },
         body: JSON.stringify({ content: content } as NoteType),
-      }).then((res) => {
-        if (res.ok) {
-          res.json().then((task) => {
-            onNewContent(task);
-            setTimeout(() => {
-              console.log(textareaRef);
-              if (textareaRef.current == null)
-                throw new Error("Cannot find new note textarea reference");
-              textareaRef.current.value = "";
-            }, 0);
+      })
+        .then((res) => {
+          if (res.ok) {
+            res.json().then((task) => {
+              onNewContent(task);
+              setTimeout(() => {
+                if (textareaRef.current == null)
+                  throw new Error("Cannot find new note textarea reference");
+                textareaRef.current.value = "";
+              }, 0);
+            });
+          }
+        })
+        .catch((error) => {
+          console.error("Task creation error:", error);
+          toast({
+            description: `Une erreur a eu lieu lors de la création de la note`,
+            variant: "destructive",
           });
-        }
-      });
-      setLoading(false);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     };
 
     return (
@@ -66,7 +77,7 @@ const _AddNewTask = forwardRef(
         <textarea
           ref={textareaRef}
           disabled={loading}
-          placeholder="Nouvelle note"
+          placeholder="Nouvelle note (CTRL+V pour coller instantanément)"
           className="h-full flex-1"
           onKeyDown={async (e) => {
             if (e.key === "Enter") {

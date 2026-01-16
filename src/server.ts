@@ -111,8 +111,8 @@ app.prepare().then(() => {
     console.log(`${socketId} hello!`);
     if (!room) return;
 
+    socket.emit("welcome", socketId);
     socket.on("hello", async () => {
-      socket.emit("welcome", socketId);
 
       const allContent = await session.getAllContent();
       if (allContent.length > 0) {

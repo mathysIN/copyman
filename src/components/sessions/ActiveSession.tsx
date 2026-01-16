@@ -105,15 +105,14 @@ export function ActiveSession({
   const lastHelloSocketIdRef = useRef<string | null>(null);
 
   function onConnect(): void {
-    setIsConnected(true);
-    // Avoid emitting "hello" twice for the same socket.id (e.g., mount + connect event)
-    if (lastHelloSocketIdRef.current === socket.id) return;
-    lastHelloSocketIdRef.current = socket.id ?? null;
-    socket.emit("hello");
+    console.log("connected to socket")
   }
 
   function onWelcome(socketUserId: string): void {
+    console.log("welcome!")
+    setIsConnected(true);
     setSocketUserId(socketUserId);
+    socket.emit("hello");
   }
 
   function onDisconnect(): void {

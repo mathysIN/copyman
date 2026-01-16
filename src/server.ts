@@ -110,19 +110,19 @@ app.prepare().then(() => {
 
     console.log(`${socketId} hello!`);
     if (!room) return;
-    socket.emit("welcome", socketId);
 
-    const allContent = await session.getAllContent();
-    if (allContent.length > 0) {
-      socket.emit("addContent", allContent);
-    }
+    socket.on("hello", async () => {
+      socket.emit("welcome", socketId);
 
-    const contentOrder = await session.getContentOrder();
-    if (contentOrder.length > 0) {
-      socket.emit("updatedContentOrder", contentOrder);
-    }
+      const allContent = await session.getAllContent();
+      if (allContent.length > 0) {
+        socket.emit("addContent", allContent);
+      }
 
-    socket.on("hello", () => {
+      const contentOrder = await session.getContentOrder();
+      if (contentOrder.length > 0) {
+        socket.emit("updatedContentOrder", contentOrder);
+      }
       socketSendRoomInsight(room);
     });
 

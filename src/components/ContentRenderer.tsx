@@ -11,7 +11,11 @@ import "react-photo-view/dist/react-photo-view.css";
 
 import { use, useEffect, useRef, useState } from "react";
 import type { AttachmentType } from "~/server/db/redis";
-import { getCDNUrlFromFileKey, removeFileExtension, stringToHash } from "~/lib/utils";
+import {
+  getCDNUrlFromFileKey,
+  removeFileExtension,
+  stringToHash,
+} from "~/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +30,16 @@ import {
 import { copyAndToast } from "~/lib/client/toast";
 import { useToast } from "~/hooks/use-toast";
 import { Reorder, useDragControls } from "framer-motion";
-import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogFooter, DialogTitle, DialogDescription, DialogClose } from "./ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+} from "./ui/dialog";
 import { Button } from "./ui/button";
 
 const GRADIENTS = [
@@ -46,8 +59,8 @@ const GRADIENTS = [
 
 const ContentRenderer = ({
   content,
-  onContentDelete = () => { },
-  onContentUpdate = () => { },
+  onContentDelete = () => {},
+  onContentUpdate = () => {},
   socketUserId,
 }: {
   content: AttachmentType;
@@ -98,25 +111,43 @@ const ContentRenderer = ({
 
   const contentType = getContentType(attachmentURL);
 
+  const handleDownload = async () => {
+    try {
+      const response = await fetch(attachmentURL);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = attachmentPath;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Download failed:", error);
+    }
+  };
 
   const handleChange = async (newValue: string) => {
-    await fetch(`/api/content?contentId=${content.id}&fileName=${encodeURIComponent(newValue)}`, {
-      headers: {
-        "X-Socket-User-Id": socketUserId ?? "",
+    await fetch(
+      `/api/content?contentId=${content.id}&fileName=${encodeURIComponent(newValue)}`,
+      {
+        headers: {
+          "X-Socket-User-Id": socketUserId ?? "",
+        },
+        method: "PATCH",
       },
-      method: "PATCH",
-    }).then(() => {
+    ).then(() => {
       const newObject = {
         ...content,
         attachmentPath: newName,
-        attachmentURL: getCDNUrlFromFileKey(newValue, content.fileKey)
+        attachmentURL: getCDNUrlFromFileKey(newValue, content.fileKey),
       };
       setAttachmentPath(newName);
       setAttachmentURL(getCDNUrlFromFileKey(newValue, content.fileKey));
-      onContentUpdate(newObject)
+      onContentUpdate(newObject);
     });
   };
-
 
   const renderContent = () => {
     switch (contentType) {
@@ -208,13 +239,18 @@ const ContentRenderer = ({
             >
               <FontAwesomeIcon icon={faLink} />
             </button>
+            <button
+              className="flex w-8 items-center justify-center rounded bg-neutral-100 py-1 text-gray-900 active:scale-90 active:opacity-75"
+              onClick={handleDownload}
+            >
+              <FontAwesomeIcon icon={faDownload} />
+            </button>
             <a
               target="_blank"
-              download={attachmentPath}
               href={attachmentURL}
               className="flex w-8 items-center justify-center rounded bg-neutral-100 py-1 text-gray-900 active:scale-90 active:opacity-75"
             >
-              <FontAwesomeIcon icon={faDownload} />
+              <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
             </a>
 
             <AlertDialog>
@@ -264,7 +300,9 @@ const ContentRenderer = ({
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Renommer le fichier</DialogTitle>
-                  <DialogDescription>Modifiez le nom du fichier puis appuyez sur OK.</DialogDescription>
+                  <DialogDescription>
+                    Modifiez le nom du fichier puis appuyez sur OK.
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <input
@@ -272,7 +310,7 @@ const ContentRenderer = ({
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                     onKeyDown={async (e) => {
-                      if (e.key === 'Enter') {
+                      if (e.key === "Enter") {
                         e.preventDefault();
                         if (!newName || newName.trim() === "") return;
                         setRenaming(true);
@@ -287,7 +325,9 @@ const ContentRenderer = ({
                 </div>
                 <DialogFooter>
                   <DialogClose asChild>
-                    <Button variant="outline" size="sm">Annuler</Button>
+                    <Button variant="outline" size="sm">
+                      Annuler
+                    </Button>
                   </DialogClose>
                   <Button
                     size="sm"

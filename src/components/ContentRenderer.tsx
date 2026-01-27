@@ -59,8 +59,8 @@ const GRADIENTS = [
 
 const ContentRenderer = ({
   content,
-  onContentDelete = () => { },
-  onContentUpdate = () => { },
+  onContentDelete = () => {},
+  onContentUpdate = () => {},
   socketUserId,
 }: {
   content: AttachmentType;
@@ -160,12 +160,10 @@ const ContentRenderer = ({
           />
         );
       case "image":
-        const lowerQualityAttachment = new URL(attachmentURL);
-        lowerQualityAttachment.searchParams.append("q", "60");
         return (
           <PhotoView src={attachmentURL}>
             <img
-              src={lowerQualityAttachment.href}
+              src={attachmentURL}
               alt="Content"
               className="inset-0 h-full w-full cursor-pointer rounded-lg object-cover"
             />

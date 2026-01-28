@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  faDoorOpen,
-  faImage,
-  faLock,
-  faWarning,
-} from "@fortawesome/free-solid-svg-icons";
+import { faEye, faPerson, faUser, faWarning } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -82,6 +77,7 @@ export function ActiveSession({
   const [socketUserId, setSocketUserId] = useState<string | undefined>(
     undefined,
   );
+  const [bgModalOpen, setBgModalOpen] = useState(false);
   const [bgModalContent, setBgModalContent] = useState(
     session.backgroundImageURL ?? "",
   );
@@ -90,6 +86,7 @@ export function ActiveSession({
     useState<ContentOrder>(sessionContentOrder);
   const [sessionContent, setSessionContent] =
     useState<ContentType[]>(baseSessionContent);
+  const [optionsModalOpen, setOptionsModalOpen] = useState(false);
 
   const [showTrucs, setShowTrucs] = useState(true);
   const [showAutresTrucs, setShowAutresTrucs] = useState(true);
@@ -105,11 +102,11 @@ export function ActiveSession({
   const lastHelloSocketIdRef = useRef<string | null>(null);
 
   function onConnect(): void {
-    console.log("connected to socket")
+    console.log("connected to socket");
   }
 
   function onWelcome(socketUserId: string): void {
-    console.log("welcome!")
+    console.log("welcome!");
     setIsConnected(true);
     setSocketUserId(socketUserId);
     socket.emit("hello");
@@ -423,187 +420,293 @@ export function ActiveSession({
   return (
     <div className="w-full max-w-[1250px] select-none px-4 pb-10">
       <div className="flex flex-col items-center justify-center">
-        <div className="flex flex-row items-center gap-[12px] text-xl">
+        <div className="flex flex-row justify-center items-baseline gap-[12px] text-xl">
           <button className={`cursor-pointer`}>#{session.sessionId}</button>
-          {false && (
-            <span className="rounded bg-red-500/20 px-2 py-0.5 text-sm text-red-300">
-              Offline
-            </span>
-          )}
-          <Dialog
-            open={passwordModalOpen}
-            onOpenChange={(state) => setPasswordModalOpen(state)}
-          >
-            <DialogTrigger asChild>
-              <button>
-                <FontAwesomeIcon
-                  icon={faLock}
-                  className={`${hasPassword && "text-yellow-400"} active:scale-90 active:opacity-75`}
-                />
-              </button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[480px]">
-              <DialogHeader>
-                <DialogTitle>
-                  {hasPassword && "Modifier le mot de passe existant"}
-                  {!hasPassword && "Créer un nouveau mot de passe"}
-                </DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="name" className="text-right">
-                    Mot de passe
-                  </Label>
-                  <Input
-                    onChange={(e) => setPasswordModalContent(e.target.value)}
-                    value={passwordModalContent}
-                    type="password"
-                    placeholder="*****"
-                    className="col-span-3"
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button disabled={hasPassword} onClick={onClickRemovePassword}>
-                  {passwordModalLoading && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Supprimer le mot de passe
-                </Button>
-                <Button
-                  disabled={passwordModalLoading || !passwordModalContent}
-                  onClick={onClickSetPassword}
-                >
-                  {passwordModalLoading && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Sauvegarder le mot de passe
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          <Dialog>
-            <DialogTrigger asChild>
-              <button>
-                <FontAwesomeIcon
-                  icon={faImage}
-                  className={`active:scale-90 active:opacity-75`}
-                />
-              </button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[480px]">
-              <DialogHeader>
-                <DialogTitle>{"Mettre un fond d'écran"}</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="name" className="text-right">
-                    {"URL du fond d'écran"}
-                  </Label>
-                  <Input
-                    onChange={(e) => setBgModalContent(e.target.value)}
-                    value={bgModalContent}
-                    type="url"
-                    placeholder="https://files.copyman.fr/content/bg.jpg"
-                    className="col-span-3"
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  disabled={bgModalLoading}
-                  type="submit"
-                  onClick={async () => {
-                    setBgModalLoading(true);
-                    await fetch("/api/sessions/background", {
-                      method: "PATCH",
-                      body: JSON.stringify({
-                        background: bgModalContent,
-                      }),
-                    }).then(() => location.reload());
-                    setBgModalLoading(false);
-                  }}
-                >
-                  {bgModalLoading && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  {bgModalContent ? "Sauvegarder" : "Retirer le fond d'écran"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          <button
-            className="active:scale-90 active:opacity-75"
-            onClick={() => {
-              deleteAllCookies();
-              window.location.href = "/";
-            }}
-          >
-            <FontAwesomeIcon icon={faDoorOpen} />
-          </button>
         </div>
-        <span className="text-gray-200">
-          {isConnected && (
+      </div>
+      <div className="h-4" />
+      <div className="flex flex-row justify-center gap-4">
+        <Dialog open={optionsModalOpen} onOpenChange={setOptionsModalOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline">Paramètres</Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Paramètres de session</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-6 py-4">
+              <div>
+                <h3 className="mb-3 text-lg font-semibold">Informations</h3>
+                <div className="space-y-3 rounded-lg border p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      Nom de session
+                    </span>
+                    <span className="font-medium">#{session.sessionId}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      Lien de partage
+                    </span>
+                    <div className="flex gap-2">
+                      <Input
+                        value={`https://copyman.fr/session/${session.sessionId}`}
+                        readOnly
+                        className="h-8 w-[300px] text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="mb-3 text-lg font-semibold">Paramètres</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between rounded-lg border p-4">
+                    <div>
+                      <p className="font-medium">Fond d'écran</p>
+                      <p className="text-sm text-muted-foreground">
+                        {session.backgroundImageURL || "Aucun fond d'écran"}
+                      </p>
+                    </div>
+                    <Dialog open={bgModalOpen} onOpenChange={setBgModalOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          Changer
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[480px]">
+                        <DialogHeader>
+                          <DialogTitle>
+                            {"Mettre un fond d'écran"}
+                          </DialogTitle>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="name" className="text-right">
+                              {"URL du fond d'écran"}
+                            </Label>
+                            <Input
+                              onChange={(e) =>
+                                setBgModalContent(e.target.value)
+                              }
+                              value={bgModalContent}
+                              type="url"
+                              placeholder="https://files.copyman.fr/content/bg.jpg"
+                              className="col-span-3"
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button
+                            disabled={bgModalLoading}
+                            type="submit"
+                            onClick={async () => {
+                              setBgModalLoading(true);
+                              await fetch("/api/sessions/background", {
+                                method: "PATCH",
+                                body: JSON.stringify({
+                                  background: bgModalContent,
+                                }),
+                              }).then(() => location.reload());
+                              setBgModalLoading(false);
+                            }}
+                          >
+                            {bgModalLoading && (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            )}
+                            {bgModalContent
+                              ? "Sauvegarder"
+                              : "Retirer le fond d'écran"}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border p-4">
+                    <div>
+                      <p className="font-medium">Mot de passe</p>
+                      <p className="text-sm text-muted-foreground">
+                        {hasPassword
+                          ? "Mot de passe activé"
+                          : "Aucun mot de passe"}
+                      </p>
+                    </div>
+                    <Dialog
+                      open={passwordModalOpen}
+                      onOpenChange={(state) => setPasswordModalOpen(state)}
+                    >
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          {hasPassword ? "Modifier" : "Définir"}
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[480px]">
+                        <DialogHeader>
+                          <DialogTitle>
+                            {hasPassword &&
+                              "Modifier le mot de passe existant"}
+                            {!hasPassword && "Créer un nouveau mot de passe"}
+                          </DialogTitle>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="name" className="text-right">
+                              Mot de passe
+                            </Label>
+                            <Input
+                              onChange={(e) =>
+                                setPasswordModalContent(e.target.value)
+                              }
+                              value={passwordModalContent}
+                              type="password"
+                              placeholder="*****"
+                              className="col-span-3"
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button
+                            disabled={!hasPassword}
+                            onClick={onClickRemovePassword}
+                          >
+                            {passwordModalLoading && (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            )}
+                            Supprimer le mot de passe
+                          </Button>
+                          <Button
+                            disabled={
+                              passwordModalLoading || !passwordModalContent
+                            }
+                            onClick={onClickSetPassword}
+                          >
+                            {passwordModalLoading && (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            )}
+                            Sauvegarder le mot de passe
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border p-4">
+                    <div>
+                      <p className="font-medium">Quitter la session</p>
+                      <p className="text-sm text-muted-foreground">
+                        Quitter la session en cours
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        deleteAllCookies();
+                        window.location.href = "/";
+                      }}
+                    >
+                      Quitter
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:bg-red-950/20">
+                <h3 className="mb-3 text-lg font-semibold text-red-900 dark:text-red-100">
+                  Zone de danger
+                </h3>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Supprimer la session</p>
+                    <p className="text-sm text-muted-foreground">
+                      Cette action est irréversible
+                    </p>
+                  </div>
+                  <Button
+                    disabled
+                    variant="destructive"
+                    size="sm"
+                    onClick={async () => {
+                      await fetch(`/api/sessions/${session.sessionId}`, {
+                        method: "DELETE",
+                      });
+                      deleteAllCookies();
+                      window.location.href = "/";
+                    }}
+                  >
+                    Supprimer
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+        <Button variant={"outline"} disabled>Changer de session</Button>
+        <div className="text-sm">
+          <span className="text-gray-200">
+            {isConnected && (
+              <Dialog>
+                <DialogTrigger>
+                  <div className="flex flex-row items-center justify-end space-x-2">
+                    <Button variant={"outline"}>
+                      <p>{roomUsers.length}</p> <FontAwesomeIcon icon={faUser} />
+                    </Button>
+                  </div>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>
+                      {toPlural(roomUsers.length, "Connecté", "Connectés")} à la
+                      session ({roomUsers.length})
+                    </DialogTitle>
+                    <DialogDescription>
+                      <div className="flex flex-col gap-2">
+                        <p>Users agents des utilisateurs connectés :</p>
+                        {Array.from(mergedUsers.values()).map((u) => (
+                          <p>
+                            - {u.quantity > 1 && `(x${u.quantity}) `}
+                            {u.userAgent}
+                          </p>
+                        ))}
+                      </div>
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <DialogClose>
+                      <Button>Cool</Button>
+                    </DialogClose>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+          </span>
+          {!isConnected && (
             <Dialog>
               <DialogTrigger>
-                <div className="my-1 flex flex-row items-center justify-center space-x-2">
-                  <button className="rounded-xl bg-white px-4 text-black">
-                    {roomUsers.length}{" "}
-                    {toPlural(roomUsers.length, "connecté", "connectés")}
-                  </button>
+                <div className="">
+                  <Button variant={"outline_destructive"}>
+                    <span>Déconecté</span>
+                    <FontAwesomeIcon icon={faWarning} />
+                  </Button>
                 </div>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>
-                    {toPlural(roomUsers.length, "Connecté", "Connectés")} à la
-                    session ({roomUsers.length})
-                  </DialogTitle>
+                  <DialogTitle>Le client est deconnecté du socket.</DialogTitle>
                   <DialogDescription>
-                    <div className="flex flex-col gap-2">
-                      <p>Users agents des utilisateurs connectés :</p>
-                      {Array.from(mergedUsers.values()).map((u) => (
-                        <p>
-                          - {u.quantity > 1 && `(x${u.quantity}) `}
-                          {u.userAgent}
-                        </p>
-                      ))}
-                    </div>
+                    {`Les changements en direct sont désactivés. Rafraichissez la
+                  page pour voir les changements d'autres clients connectés.`}
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
                   <DialogClose>
-                    <Button>Cool</Button>
+                    <Button>Bruh</Button>
                   </DialogClose>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
           )}
-        </span>
-        {!isConnected && (
-          <Dialog>
-            <DialogTrigger>
-              <div className="my-1 space-x-1 rounded-xl bg-red-400 px-4 text-white">
-                <FontAwesomeIcon icon={faWarning} />
-                <span>Le client est deconnecté du socket.</span>
-              </div>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Le client est deconnecté du socket.</DialogTitle>
-                <DialogDescription>
-                  {`Les changements en direct sont désactivés. Rafraichissez la
-                  page pour voir les changements d'autres clients connectés.`}
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <DialogClose>
-                  <Button>Bruh</Button>
-                </DialogClose>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        )}
+        </div>
       </div>
       <div className="h-8" />
       <div

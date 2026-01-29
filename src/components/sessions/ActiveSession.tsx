@@ -425,7 +425,7 @@ export function ActiveSession({
         </div>
       </div>
       <div className="h-4" />
-      <div className="flex flex-row justify-center gap-4">
+      <div className="flex flex-row justify-center gap-2">
         <Dialog open={optionsModalOpen} onOpenChange={setOptionsModalOpen}>
           <DialogTrigger asChild>
             <Button variant="outline">Paramètres</Button>
@@ -446,15 +446,9 @@ export function ActiveSession({
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">
-                      Lien de partage
+                      Date de création
                     </span>
-                    <div className="flex gap-2">
-                      <Input
-                        value={`https://copyman.fr/session/${session.sessionId}`}
-                        readOnly
-                        className="h-8 w-[300px] text-sm"
-                      />
-                    </div>
+                    <span className="font-medium">{new Date(Number(session.createdAt)).toLocaleDateString()}</span>
                   </div>
                 </div>
               </div>
@@ -464,14 +458,14 @@ export function ActiveSession({
                 <div className="space-y-3">
                   <div className="flex items-center justify-between rounded-lg border p-4">
                     <div>
-                      <p className="font-medium">Fond d'écran</p>
+                      <p className="font-medium">{"Fond d'écran"}</p>
                       <p className="text-sm text-muted-foreground">
                         {session.backgroundImageURL || "Aucun fond d'écran"}
                       </p>
                     </div>
                     <Dialog open={bgModalOpen} onOpenChange={setBgModalOpen}>
                       <DialogTrigger asChild>
-                        <Button variant="outline" size="sm">
+                        <Button size="sm">
                           Changer
                         </Button>
                       </DialogTrigger>
@@ -537,7 +531,7 @@ export function ActiveSession({
                       onOpenChange={(state) => setPasswordModalOpen(state)}
                     >
                       <DialogTrigger asChild>
-                        <Button variant="outline" size="sm">
+                        <Button size="sm">
                           {hasPassword ? "Modifier" : "Définir"}
                         </Button>
                       </DialogTrigger>
@@ -590,52 +584,55 @@ export function ActiveSession({
                       </DialogContent>
                     </Dialog>
                   </div>
-                  <div className="flex items-center justify-between rounded-lg border p-4">
-                    <div>
-                      <p className="font-medium">Quitter la session</p>
-                      <p className="text-sm text-muted-foreground">
-                        Quitter la session en cours
-                      </p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        deleteAllCookies();
-                        window.location.href = "/";
-                      }}
-                    >
-                      Quitter
-                    </Button>
-                  </div>
                 </div>
-              </div>
 
-              <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:bg-red-950/20">
-                <h3 className="mb-3 text-lg font-semibold text-red-900 dark:text-red-100">
-                  Zone de danger
-                </h3>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Supprimer la session</p>
-                    <p className="text-sm text-muted-foreground">
-                      Cette action est irréversible
-                    </p>
+                <div className="h-4" />
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:bg-red-950/20">
+                  <h3 className="mb-3 text-lg font-semibold text-red-900 dark:text-red-100">
+                    Zone de danger
+                  </h3>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-center justify-between rounded-lg ">
+                      <div>
+                        <p className="font-medium">Quitter la session</p>
+                        <p className="text-sm text-muted-foreground">
+                          Quitter la session en cours
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant={"destructive"}
+                        onClick={() => {
+                          deleteAllCookies();
+                          window.location.href = "/";
+                        }}
+                      >
+                        Quitter
+                      </Button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Supprimer la session</p>
+                        <p className="text-sm text-muted-foreground">
+                          Cette action est irréversible
+                        </p>
+                      </div>
+                      <Button
+                        disabled
+                        variant="destructive"
+                        size="sm"
+                        onClick={async () => {
+                          await fetch(`/api/sessions/${session.sessionId}`, {
+                            method: "DELETE",
+                          });
+                          deleteAllCookies();
+                          window.location.href = "/";
+                        }}
+                      >
+                        Supprimer
+                      </Button>
+                    </div>
                   </div>
-                  <Button
-                    disabled
-                    variant="destructive"
-                    size="sm"
-                    onClick={async () => {
-                      await fetch(`/api/sessions/${session.sessionId}`, {
-                        method: "DELETE",
-                      });
-                      deleteAllCookies();
-                      window.location.href = "/";
-                    }}
-                  >
-                    Supprimer
-                  </Button>
                 </div>
               </div>
             </div>
@@ -649,7 +646,9 @@ export function ActiveSession({
                 <DialogTrigger>
                   <div className="flex flex-row items-center justify-end space-x-2">
                     <Button variant={"outline"}>
-                      <p>{roomUsers.length}</p> <FontAwesomeIcon icon={faUser} />
+                      <div className="flex flex-row font-semibold items-center justify-center gap-1">
+                        <p>{roomUsers.length}</p> <FontAwesomeIcon icon={faUser} />
+                      </div>
                     </Button>
                   </div>
                 </DialogTrigger>
@@ -685,8 +684,10 @@ export function ActiveSession({
               <DialogTrigger>
                 <div className="">
                   <Button variant={"outline_destructive"}>
-                    <span>Déconecté</span>
-                    <FontAwesomeIcon icon={faWarning} />
+                    <div className="flex flex-row justify-center items-center gap-2">
+                      <span>Déconnecté</span>
+                      <FontAwesomeIcon icon={faWarning} />
+                    </div>
                   </Button>
                 </div>
               </DialogTrigger>

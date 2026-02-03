@@ -108,7 +108,7 @@ app.prepare().then(() => {
       commonId: await createHashId(commandId),
     });
 
-    console.log(`${socketId} hello!`);
+    console.log(`${socketId} hello in ${session.sessionId}!`);
     if (!room) return;
 
     socket.emit("welcome", socketId);

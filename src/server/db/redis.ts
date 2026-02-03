@@ -15,8 +15,7 @@ const redis =
   globalForDb.conn ??
   new Redis({
     url: process.env.UPSTASH_REDIS_REST_URL,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN,
-    automaticDeserialization: false,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN
   } as RedisConfigNodejs);
 if (env.NODE_ENV !== "production") globalForDb.conn = redis;
 
@@ -42,17 +41,7 @@ class RedisWithPrefix<T extends {}> {
   }
 
   async hgetall(key: string) {
-    const result = await this.client.hgetall(`${this.prefix}:${key}`);
-
-    if (Array.isArray(result)) {
-      const obj: any = {};
-      for (let i = 0; i < result.length; i += 2) {
-        obj[result[i]] = result[i + 1];
-      }
-      return obj as T;
-    }
-
-    return result as T;
+    return this.client.hgetall<T>(`${this.prefix}:${key}`);
   }
   async getall(pattern = "*") {
     const keys = await this.keys(pattern);
@@ -61,18 +50,7 @@ class RedisWithPrefix<T extends {}> {
       pipeline.hgetall(key);
     }
     if (keys.length === 0) return [];
-    const results = await pipeline.exec();
-
-    return results.map((result: any) => {
-      if (Array.isArray(result)) {
-        const obj: any = {};
-        for (let i = 0; i < result.length; i += 2) {
-          obj[result[i]] = result[i + 1];
-        }
-        return obj as T;
-      }
-      return result as T;
-    });
+    return await pipeline.exec<T[]>();
   }
 
   async hmnew(key: string, value: NonNullable<T>) {
@@ -95,7 +73,7 @@ export function toFullRedisKey(elements: string[]) {
 }
 
 const REDIS_KEY_MAIN_PREFIX = "copyman";
-const ENVIRONMENT = "production";
+const ENVIRONMENT = env.NODE_ENV;
 
 const REDIS_KEY_PREFIX = toFullRedisKey([REDIS_KEY_MAIN_PREFIX, ENVIRONMENT]);
 
@@ -174,7 +152,10 @@ export class Session {
       ...attachment,
       type: "attachment",
     } satisfies AttachmentType;
-    newContent.attachmentURL = getCDNUrlFromFileKey(newContent.attachmentPath, newContent.fileKey);
+    newContent.attachmentURL = getCDNUrlFromFileKey(
+      newContent.attachmentPath,
+      newContent.fileKey,
+    );
     return contents
       .hmnew(key, newContent)
       .then(() => newContent)
@@ -202,7 +183,10 @@ export class Session {
     if (attachment.attachmentPath) {
       const previousAttachmentData = await this.getContent(id); // :/
       if (previousAttachmentData.type != "attachment") return;
-      attachment.attachmentURL = getCDNUrlFromFileKey(attachment.attachmentPath, previousAttachmentData.fileKey);
+      attachment.attachmentURL = getCDNUrlFromFileKey(
+        attachment.attachmentPath,
+        previousAttachmentData.fileKey,
+      );
     }
     return contents.hmset(
       this.withSessionKey(REDIS_CONTENT_PREFIX, id),
@@ -314,6 +298,22 @@ export class Session {
       usedSpace: this.usedSpace?.toString(),
     };
   }
+
+  async delete() {
+    return sessions.del(this.sessionId);
+  }
+}
+
+export async function deleteSession(sessionId: string) {
+  const contentKeys = await contents.keys(`session:${sessionId}:content:*`);
+  if (contentKeys.length > 0) {
+    const pipeline = redis.pipeline();
+    for (const key of contentKeys) {
+      pipeline.del(key);
+    }
+    await pipeline.exec();
+  }
+  return sessions.del(sessionId);
 }
 
 const REDIS_SESSION_PREFIX = "session";

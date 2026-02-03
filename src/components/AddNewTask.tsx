@@ -3,7 +3,7 @@
 import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaste } from "@fortawesome/free-solid-svg-icons";
-import { NoteType } from "~/server/db/redis";
+import { type NoteType } from "~/server/db/redis";
 import { toast } from "~/hooks/use-toast";
 
 export type AddNewTaskRef = {
@@ -13,7 +13,7 @@ export type AddNewTaskRef = {
 const _AddNewTask = forwardRef(
   (
     {
-      onNewContent = () => {},
+      onNewContent = () => { },
       socketUserId,
     }: {
       onNewContent?: (task: NoteType) => any;
@@ -78,7 +78,7 @@ const _AddNewTask = forwardRef(
           ref={textareaRef}
           disabled={loading}
           placeholder="Nouvelle note (CTRL+V pour coller instantanément)"
-          className="h-full flex-1"
+          className="h-full flex-1 resize-none"
           onKeyDown={async (e) => {
             if (e.key === "Enter") {
               const target = e.currentTarget;

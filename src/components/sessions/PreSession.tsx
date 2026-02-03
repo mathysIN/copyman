@@ -122,7 +122,7 @@ export function PreSession() {
               <div className="h-1" />
               <input
                 name="session"
-                type="password"
+                type="text"
                 value={sessionValue}
                 onChange={(e) => setSessionValue(e.target.value)}
                 onKeyDown={sumbitForm}

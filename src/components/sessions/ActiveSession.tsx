@@ -1,6 +1,11 @@
 "use client";
 
-import { faEye, faPerson, faUser, faWarning } from "@fortawesome/free-solid-svg-icons";
+import {
+  faEye,
+  faPerson,
+  faUser,
+  faWarning,
+} from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -20,7 +25,12 @@ import {
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { socket } from "~/lib/client/socket";
-import { deleteAllCookies, sortAttachments, toPlural } from "~/lib/utils";
+import {
+  deleteAllCookies,
+  sortAttachments,
+  toPlural,
+  uuidv4Insecure,
+} from "~/lib/utils";
 import {
   type AttachmentType,
   type ContentOrder,
@@ -42,6 +52,7 @@ import {
   saveOfflineSession,
 } from "~/lib/client/offlineStore";
 import { PhotoProvider } from "react-photo-view";
+import { UAParser } from "ua-parser-js";
 
 type UploadProgress = {
   id: string;
@@ -87,6 +98,8 @@ export function ActiveSession({
   const [sessionContent, setSessionContent] =
     useState<ContentType[]>(baseSessionContent);
   const [optionsModalOpen, setOptionsModalOpen] = useState(false);
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const [showTrucs, setShowTrucs] = useState(true);
   const [showAutresTrucs, setShowAutresTrucs] = useState(true);
@@ -308,7 +321,7 @@ export function ActiveSession({
   }
 
   async function uploadFiles(files: File[]): Promise<AttachmentType[] | null> {
-    const uploadId = crypto.randomUUID();
+    const uploadId = crypto?.randomUUID?.() ?? uuidv4Insecure();
 
     const uploadedFiles = await realUploadFile(
       files,
@@ -420,7 +433,7 @@ export function ActiveSession({
   return (
     <div className="w-full max-w-[1250px] select-none px-4 pb-10">
       <div className="flex flex-col items-center justify-center">
-        <div className="flex flex-row justify-center items-baseline gap-[12px] text-xl">
+        <div className="flex flex-row items-baseline justify-center gap-[12px] text-xl">
           <button className={`cursor-pointer`}>#{session.sessionId}</button>
         </div>
       </div>
@@ -430,7 +443,7 @@ export function ActiveSession({
           <DialogTrigger asChild>
             <Button variant="outline">Paramètres</Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
+          <DialogContent className="">
             <DialogHeader>
               <DialogTitle>Paramètres de session</DialogTitle>
             </DialogHeader>
@@ -448,7 +461,9 @@ export function ActiveSession({
                     <span className="text-sm text-muted-foreground">
                       Date de création
                     </span>
-                    <span className="font-medium">{new Date(Number(session.createdAt)).toLocaleDateString()}</span>
+                    <span className="font-medium">
+                      {new Date(Number(session.createdAt)).toLocaleDateString()}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -459,21 +474,19 @@ export function ActiveSession({
                   <div className="flex items-center justify-between rounded-lg border p-4">
                     <div>
                       <p className="font-medium">{"Fond d'écran"}</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="max-w-48 truncate text-sm text-muted-foreground">
                         {session.backgroundImageURL || "Aucun fond d'écran"}
                       </p>
                     </div>
                     <Dialog open={bgModalOpen} onOpenChange={setBgModalOpen}>
                       <DialogTrigger asChild>
-                        <Button size="sm">
+                        <Button size="sm" className="min-w-[100px]">
                           Changer
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="sm:max-w-[480px]">
                         <DialogHeader>
-                          <DialogTitle>
-                            {"Mettre un fond d'écran"}
-                          </DialogTitle>
+                          <DialogTitle>{"Mettre un fond d'écran"}</DialogTitle>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
                           <div className="grid grid-cols-4 items-center gap-4">
@@ -531,15 +544,14 @@ export function ActiveSession({
                       onOpenChange={(state) => setPasswordModalOpen(state)}
                     >
                       <DialogTrigger asChild>
-                        <Button size="sm">
+                        <Button size="sm" className="min-w-[100px]">
                           {hasPassword ? "Modifier" : "Définir"}
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="sm:max-w-[480px]">
                         <DialogHeader>
                           <DialogTitle>
-                            {hasPassword &&
-                              "Modifier le mot de passe existant"}
+                            {hasPassword && "Modifier le mot de passe existant"}
                             {!hasPassword && "Créer un nouveau mot de passe"}
                           </DialogTitle>
                         </DialogHeader>
@@ -587,10 +599,10 @@ export function ActiveSession({
                 </div>
 
                 <div className="h-4" />
+                <h3 className="mb-3 text-lg font-semibold text-red-900 dark:text-red-100">
+                  Zone de danger
+                </h3>
                 <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:bg-red-950/20">
-                  <h3 className="mb-3 text-lg font-semibold text-red-900 dark:text-red-100">
-                    Zone de danger
-                  </h3>
                   <div className="flex flex-col gap-4">
                     <div className="flex items-center justify-between rounded-lg ">
                       <div>
@@ -599,16 +611,42 @@ export function ActiveSession({
                           Quitter la session en cours
                         </p>
                       </div>
-                      <Button
-                        size="sm"
-                        variant={"destructive"}
-                        onClick={() => {
-                          deleteAllCookies();
-                          window.location.href = "/";
-                        }}
+                      <Dialog
+                        open={leaveConfirmOpen}
+                        onOpenChange={setLeaveConfirmOpen}
                       >
-                        Quitter
-                      </Button>
+                        <DialogTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant={"destructive"}
+                            className="min-w-[100px]"
+                          >
+                            Quitter
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Confirmer</DialogTitle>
+                            <DialogDescription>
+                              Voulez-vous vraiment quitter la session ?
+                            </DialogDescription>
+                          </DialogHeader>
+                          <DialogFooter>
+                            <DialogClose asChild>
+                              <Button variant="outline">Annuler</Button>
+                            </DialogClose>
+                            <Button
+                              variant="destructive"
+                              onClick={() => {
+                                deleteAllCookies();
+                                window.location.href = "/";
+                              }}
+                            >
+                              Quitter
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
@@ -617,20 +655,49 @@ export function ActiveSession({
                           Cette action est irréversible
                         </p>
                       </div>
-                      <Button
-                        disabled
-                        variant="destructive"
-                        size="sm"
-                        onClick={async () => {
-                          await fetch(`/api/sessions/${session.sessionId}`, {
-                            method: "DELETE",
-                          });
-                          deleteAllCookies();
-                          window.location.href = "/";
-                        }}
+                      <Dialog
+                        open={deleteConfirmOpen}
+                        onOpenChange={setDeleteConfirmOpen}
                       >
-                        Supprimer
-                      </Button>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="min-w-[100px]"
+                          >
+                            Supprimer
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Confirmer la suppression</DialogTitle>
+                            <DialogDescription>
+                              Voulez-vous vraiment supprimer cette session ?
+                              Cette action est irréversible.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <DialogFooter>
+                            <DialogClose asChild>
+                              <Button variant="outline">Annuler</Button>
+                            </DialogClose>
+                            <Button
+                              variant="destructive"
+                              onClick={async () => {
+                                await fetch(
+                                  `/api/sessions/${session.sessionId}`,
+                                  {
+                                    method: "DELETE",
+                                  },
+                                );
+                                deleteAllCookies();
+                                window.location.href = "/";
+                              }}
+                            >
+                              Supprimer
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
                     </div>
                   </div>
                 </div>
@@ -638,7 +705,9 @@ export function ActiveSession({
             </div>
           </DialogContent>
         </Dialog>
-        <Button variant={"outline"} disabled>Changer de session</Button>
+        <Button variant={"outline"} disabled>
+          Changer de session
+        </Button>
         <div className="text-sm">
           <span className="text-gray-200">
             {isConnected && (
@@ -646,8 +715,9 @@ export function ActiveSession({
                 <DialogTrigger>
                   <div className="flex flex-row items-center justify-end space-x-2">
                     <Button variant={"outline"}>
-                      <div className="flex flex-row font-semibold items-center justify-center gap-1">
-                        <p>{roomUsers.length}</p> <FontAwesomeIcon icon={faUser} />
+                      <div className="flex flex-row items-center justify-center gap-1 font-semibold">
+                        <p>{roomUsers.length}</p>{" "}
+                        <FontAwesomeIcon icon={faUser} />
                       </div>
                     </Button>
                   </div>
@@ -659,14 +729,48 @@ export function ActiveSession({
                       session ({roomUsers.length})
                     </DialogTitle>
                     <DialogDescription>
-                      <div className="flex flex-col gap-2">
-                        <p>Users agents des utilisateurs connectés :</p>
-                        {Array.from(mergedUsers.values()).map((u) => (
-                          <p>
-                            - {u.quantity > 1 && `(x${u.quantity}) `}
-                            {u.userAgent}
-                          </p>
-                        ))}
+                      <div className="flex flex-col gap-3">
+                        {Array.from(mergedUsers.values()).map((u) => {
+                          const parser = new UAParser(u.userAgent);
+                          const result = parser.getResult();
+                          const device = result.device.type || "Desktop";
+                          const os = result.os.name || "Inconnu";
+                          const browser = result.browser.name || "Inconnu";
+
+                          return (
+                            <div
+                              key={u.commonId}
+                              className="flex flex-row rounded-lg border p-3"
+                            >
+                              <div className="flex items-center gap-2">
+                                <FontAwesomeIcon icon={faUser} />
+                                <span className="w-2 font-medium">
+                                  {u.quantity}x
+                                </span>
+                              </div>
+                              <div className="ml-6 mt-1 text-left space-y-1 text-sm">
+                                <p>
+                                  <span className="text-muted-foreground">
+                                    Appareil:
+                                  </span>{" "}
+                                  {device}
+                                </p>
+                                <p>
+                                  <span className="text-muted-foreground">
+                                    OS:
+                                  </span>{" "}
+                                  {os}
+                                </p>
+                                <p>
+                                  <span className="text-muted-foreground">
+                                    Navigateur:
+                                  </span>{" "}
+                                  {browser}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </DialogDescription>
                   </DialogHeader>
@@ -684,7 +788,7 @@ export function ActiveSession({
               <DialogTrigger>
                 <div className="">
                   <Button variant={"outline_destructive"}>
-                    <div className="flex flex-row justify-center items-center gap-2">
+                    <div className="flex flex-row items-center justify-center gap-2">
                       <span>Déconnecté</span>
                       <FontAwesomeIcon icon={faWarning} />
                     </div>

@@ -35,7 +35,8 @@ export async function POST(req: Request) {
   const rawPassword = data.get("password")?.toString();
   const password = rawPassword && hashPassword(rawPassword);
   const join = data.get("join")?.toString() == "true";
-  if (!isValidSessionId(sessionId)) return redirect("/?msg=invalid_session_id");
+  if (!isValidSessionId(sessionId))
+    return NextResponse.json({ error: "invalid_session_id" }, { status: 400 });
   let canJoin = false;
   if (join) {
     const session = await getSessionWithSessionId(
@@ -44,7 +45,11 @@ export async function POST(req: Request) {
       true,
       false,
     );
-    if (!session) return redirect("/?msg=invalid_session_id");
+    if (!session)
+      return NextResponse.json(
+        { error: "invalid_session_id" },
+        { status: 400 },
+      );
     canJoin = true;
   } else {
     const sessionData: {
@@ -63,7 +68,8 @@ export async function POST(req: Request) {
       .hmnew(sessionId, sessionData)
       .catch(() => {});
 
-    if (!newSession) return redirect("/?msg=session_exists");
+    if (!newSession)
+      return NextResponse.json({ error: "session_exists" }, { status: 400 });
     canJoin = true;
   }
 
@@ -76,7 +82,7 @@ export async function POST(req: Request) {
         expires: Date.now() + 10 * 365 * 24 * 60 * 60 * 1000,
       });
   }
-  return redirect("/");
+  return NextResponse.json({ success: true });
 }
 
 export async function PATCH(req: Request) {

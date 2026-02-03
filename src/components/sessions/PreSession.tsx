@@ -14,7 +14,10 @@ import imageLogo from "~/../public/logo.png";
 import imageCreateSession from "~/../public/create-session.png";
 import imageJoinSession from "~/../public/join-session.png";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faQuestionCircle, faAngleLeft } from "@fortawesome/free-solid-svg-icons";
+import {
+  faQuestionCircle,
+  faAngleLeft,
+} from "@fortawesome/free-solid-svg-icons";
 import {
   Dialog,
   DialogClose,
@@ -52,6 +55,7 @@ export function PreSession() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     setErrorMessage("");
     e.preventDefault();
+    if (loading) return;
     if (!sessionValue) {
       setErrorMessage("Session inexistante");
       return;
@@ -60,18 +64,21 @@ export function PreSession() {
     setLoading(true);
     const result:
       | (SessionType & {
-        hasPassword: boolean;
-        isValidPassword: boolean;
-        createNewSession: boolean;
-      })
+          hasPassword: boolean;
+          isValidPassword: boolean;
+          createNewSession: boolean;
+        })
       | undefined = await fetch(
-        `/api/sessions?sessionId=${sessionValue}&password=${passwordValue}&join=${joinSession}`,
-        {},
-      )
-        .then((res) => res.json())
-        .catch(() => { });
+      `/api/sessions?sessionId=${sessionValue}&password=${passwordValue}&join=${joinSession}`,
+      {},
+    )
+      .then((res) => res.json())
+      .catch(() => {});
     setLoading(false);
-    if (!result) {
+    if (
+      !result ||
+      (!result.createNewSession && (!result.sessionId || !result.createdAt))
+    ) {
       setErrorMessage("Session inexistante");
       return;
     }
@@ -86,13 +93,30 @@ export function PreSession() {
         return;
       }
     }
-    formRef.current?.submit();
+
+    const postResult = await fetch("/api/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        session: sessionValue,
+        password: passwordValue,
+        join: `${joinSession == "join"}`,
+        create: "true",
+      }),
+    }).then((res) => res.json());
+    if (postResult?.error) {
+      if (postResult.error === "session_exists") {
+        setErrorMessage("Ce nom de session est déjà utilisé");
+      } else {
+        setErrorMessage("Erreur lors de la création de la session");
+      }
+      return;
+    }
+    window.location.href = "/";
   };
   return (
     <>
       <form
-        method="post"
-        action="/api/sessions"
         className="flex h-full flex-col items-center justify-center gap-4"
         onSubmit={handleSubmit}
         ref={formRef}
@@ -106,22 +130,13 @@ export function PreSession() {
               className="flex flex-row items-center gap-2 underline opacity-75"
             >
               <FontAwesomeIcon icon={faAngleLeft} className="mt-1" />
-              <p>
-                retour
-              </p>
+              <p>retour</p>
             </button>
             <p className="h-4 text-red-500">{errorMessage}</p>
-            <input
-              name="join"
-              value={`${joinSession == "join"}`}
-              readOnly
-              hidden
-            />
             <span className="flex flex-row space-x-[1px] rounded-xl border-blue-600 bg-white p-2 text-black">
               <span className="w-6 px-1">#</span>
               <div className="h-1" />
               <input
-                name="session"
                 type="text"
                 value={sessionValue}
                 onChange={(e) => setSessionValue(e.target.value)}
@@ -129,13 +144,11 @@ export function PreSession() {
                 className="outline-none"
                 placeholder="session"
               />
-              <input name="create" defaultValue="true" hidden />
             </span>
             <span className="flex flex-row space-x-[1px] rounded-xl border-blue-600 bg-white p-2 text-black">
               <span className="w-6 px-1">**</span>
               <div className="h-1" />
               <input
-                name="password"
                 type="password"
                 value={passwordValue}
                 onChange={(e) => setPasswordValue(e.target.value)}
@@ -148,7 +161,8 @@ export function PreSession() {
             <div className="flex w-full flex-col items-center justify-center">
               <button
                 type="submit"
-                className="flex w-full flex-row items-center justify-between space-x-4 rounded-md border-2 border-dashed border-white bg-white bg-opacity-5 px-2 py-2 hover:bg-opacity-10 active:scale-95 active:bg-opacity-30"
+                disabled={loading}
+                className="flex w-full flex-row items-center justify-between space-x-4 rounded-md border-2 border-dashed border-white bg-white bg-opacity-5 px-2 py-2 hover:bg-opacity-10 active:scale-95 active:bg-opacity-30 disabled:opacity-50"
               >
                 <p className="min-w-32 py-[2px] text-2xl font-bold">
                   {joinSession == "create" ? "Créer" : "Rejoindre"}
@@ -167,15 +181,12 @@ export function PreSession() {
               <button
                 type="button"
                 onClick={() => setJoinSession("create")}
-                className="flex w-full flex-row items-center justify-between space-x-4 rounded-md border-2 border-dashed border-white bg-white bg-opacity-5 px-2 py-2 hover:bg-opacity-10 active:scale-95 active:bg-opacity-30"
+                disabled={loading}
+                className="flex w-full flex-row items-center justify-between space-x-4 rounded-md border-2 border-dashed border-white bg-white bg-opacity-5 px-2 py-2 hover:bg-opacity-10 active:scale-95 active:bg-opacity-30 disabled:opacity-50"
               >
-                <div className="flex justify-center w-max flex-col">
-                  <p className="min-w-32 text-2xl font-bold">
-                    {"Créer"}
-                  </p>
-                  <span className="text-xs">
-                    {"une nouvelle session"}
-                  </span>
+                <div className="flex w-max flex-col justify-center">
+                  <p className="min-w-32 text-2xl font-bold">{"Créer"}</p>
+                  <span className="text-xs">{"une nouvelle session"}</span>
                 </div>
 
                 <div className="flex flex-1 justify-center">
@@ -193,15 +204,12 @@ export function PreSession() {
               <button
                 type="button"
                 onClick={() => setJoinSession("join")}
-                className="flex flex-row items-center justify-center space-x-4 rounded-md border-2 border-dashed border-white bg-white bg-opacity-5 px-2 py-2 hover:bg-opacity-10 active:scale-95 active:bg-opacity-30"
+                disabled={loading}
+                className="flex flex-row items-center justify-center space-x-4 rounded-md border-2 border-dashed border-white bg-white bg-opacity-5 px-2 py-2 hover:bg-opacity-10 active:scale-95 active:bg-opacity-30 disabled:opacity-50"
               >
-                <div className="ml-2 flex text-left w-max flex-col">
-                  <p className="min-w-32 text-2xl font-bold">
-                    {"Rejoindre"}
-                  </p>
-                  <span className="text-xs">
-                    {"une session existante"}
-                  </span>
+                <div className="ml-2 flex w-max flex-col text-left">
+                  <p className="min-w-32 text-2xl font-bold">{"Rejoindre"}</p>
+                  <span className="text-xs">{"une session existante"}</span>
                 </div>
                 <Image
                   src={imageJoinSession}
@@ -234,9 +242,7 @@ export function PreSession() {
                 <div className="flex flex-col items-center text-center font-bold">
                   <div className="flex flex-col items-center">
                     <p className="text-5xl italic">1</p>
-                    <p>
-                      Créez une session
-                    </p>
+                    <p>Créez une session</p>
                   </div>
                   <Image src={imageCreate} className="w-96" alt="logo" />
                 </div>

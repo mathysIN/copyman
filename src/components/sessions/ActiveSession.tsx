@@ -5,6 +5,7 @@ import {
   faPerson,
   faUser,
   faWarning,
+  faWifi,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Loader2 } from "lucide-react";
@@ -100,6 +101,11 @@ export function ActiveSession({
   const [optionsModalOpen, setOptionsModalOpen] = useState(false);
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [changeSessionOpen, setChangeSessionOpen] = useState(false);
+  const [changeSessionValue, setChangeSessionValue] = useState("");
+  const [changePasswordValue, setChangePasswordValue] = useState("");
+  const [changeSessionError, setChangeSessionError] = useState("");
+  const [changeSessionLoading, setChangeSessionLoading] = useState(false);
 
   const [showTrucs, setShowTrucs] = useState(true);
   const [showAutresTrucs, setShowAutresTrucs] = useState(true);
@@ -430,6 +436,53 @@ export function ActiveSession({
       });
   }
 
+  async function handleChangeSession(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setChangeSessionError("");
+    if (!changeSessionValue) {
+      setChangeSessionError("Session inexistante");
+      return;
+    }
+
+    setChangeSessionLoading(true);
+    const result = await fetch(
+      `/api/sessions?sessionId=${changeSessionValue}&password=${changePasswordValue}&join=true`,
+      {},
+    )
+      .then((res) => res.json())
+      .catch(() => undefined);
+    setChangeSessionLoading(false);
+
+    if (
+      !result ||
+      (!result.createNewSession && (!result.sessionId || !result.createdAt))
+    ) {
+      setChangeSessionError("Session inexistante");
+      return;
+    }
+
+    if (result.hasPassword && !result.isValidPassword) {
+      setChangeSessionError("Mot de passe incorrect");
+      return;
+    }
+
+    deleteAllCookies();
+    const postResult = await fetch("/api/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        session: changeSessionValue,
+        password: changePasswordValue,
+        join: "true",
+      }),
+    }).then((res) => res.json());
+    if (postResult?.error) {
+      setChangeSessionError("Session inexistante");
+      return;
+    }
+    window.location.href = "/";
+  }
+
   return (
     <div className="w-full max-w-[1250px] select-none px-4 pb-10">
       <div className="flex flex-col items-center justify-center">
@@ -705,9 +758,64 @@ export function ActiveSession({
             </div>
           </DialogContent>
         </Dialog>
-        <Button variant={"outline"} disabled>
-          Changer de session
-        </Button>
+        <Dialog open={changeSessionOpen} onOpenChange={setChangeSessionOpen}>
+          <DialogTrigger asChild>
+            <Button variant={"outline"}>Changer de session</Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[480px]">
+            <DialogHeader>
+              <DialogTitle>Changer de session</DialogTitle>
+              <DialogDescription>
+                Rejoindre une autre session existante
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleChangeSession} className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="session">Session</Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">#</span>
+                  <Input
+                    id="session"
+                    value={changeSessionValue}
+                    onChange={(e) => setChangeSessionValue(e.target.value)}
+                    placeholder="session"
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Mot de passe</Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">**</span>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={changePasswordValue}
+                    onChange={(e) => setChangePasswordValue(e.target.value)}
+                    placeholder="mot de passe"
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+              <div className="min-h-[20px]">
+                {changeSessionError && (
+                  <p className="text-sm text-red-500">{changeSessionError}</p>
+                )}
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">Annuler</Button>
+                </DialogClose>
+                <Button type="submit" disabled={changeSessionLoading}>
+                  {changeSessionLoading && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Rejoindre
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
         <div className="text-sm">
           <span className="text-gray-200">
             {isConnected && (
@@ -748,7 +856,7 @@ export function ActiveSession({
                                   {u.quantity}x
                                 </span>
                               </div>
-                              <div className="ml-6 mt-1 text-left space-y-1 text-sm">
+                              <div className="ml-6 mt-1 space-y-1 text-left text-sm">
                                 <p>
                                   <span className="text-muted-foreground">
                                     Appareil:
@@ -789,8 +897,7 @@ export function ActiveSession({
                 <div className="">
                   <Button variant={"outline_destructive"}>
                     <div className="flex flex-row items-center justify-center gap-2">
-                      <span>Déconnecté</span>
-                      <FontAwesomeIcon icon={faWarning} />
+                      <FontAwesomeIcon icon={faWifi} className="animate-slow-blink" />
                     </div>
                   </Button>
                 </div>

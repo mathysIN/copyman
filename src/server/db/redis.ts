@@ -182,7 +182,7 @@ export class Session {
   ) {
     if (attachment.attachmentPath) {
       const previousAttachmentData = await this.getContent(id); // :/
-      if (previousAttachmentData.type != "attachment") return;
+      if (previousAttachmentData?.type != "attachment") return;
       attachment.attachmentURL = getCDNUrlFromFileKey(
         attachment.attachmentPath,
         previousAttachmentData.fileKey,

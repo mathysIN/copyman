@@ -17,6 +17,7 @@ export async function serverUpdateNote(session: Session, content: string, conten
   const response = await session.updateNote(contentId, { content: content });
   if (response) {
     const updatedNote = await session.getContent(contentId); // :/
+    if (!updatedNote) return;
     socketSendUpdateContent(session, updatedNote, senderSocketId);
   }
   return response;
@@ -26,6 +27,7 @@ export async function serverRenameFile(session: Session, contentId: string, file
   const response = await session.updateAttachment(contentId, { attachmentPath: fileName });
   if (response) {
     const updatedAttachment = await session.getContent(contentId); // :/
+    if (!updatedAttachment) return;
     socketSendUpdateContent(session, updatedAttachment, senderSocketId);
   }
   return response;

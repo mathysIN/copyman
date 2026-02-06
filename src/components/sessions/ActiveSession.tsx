@@ -101,6 +101,7 @@ export function ActiveSession({
   const [optionsModalOpen, setOptionsModalOpen] = useState(false);
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteConfirmValue, setDeleteConfirmValue] = useState("");
   const [changeSessionOpen, setChangeSessionOpen] = useState(false);
   const [changeSessionValue, setChangeSessionValue] = useState("");
   const [changePasswordValue, setChangePasswordValue] = useState("");
@@ -671,7 +672,7 @@ export function ActiveSession({
                         <DialogTrigger asChild>
                           <Button
                             size="sm"
-                            variant={"destructive"}
+                            variant={"warning"}
                             className="min-w-[100px]"
                           >
                             Quitter
@@ -689,7 +690,7 @@ export function ActiveSession({
                               <Button variant="outline">Annuler</Button>
                             </DialogClose>
                             <Button
-                              variant="destructive"
+                              variant="warning"
                               onClick={() => {
                                 deleteAllCookies();
                                 window.location.href = "/";
@@ -710,7 +711,10 @@ export function ActiveSession({
                       </div>
                       <Dialog
                         open={deleteConfirmOpen}
-                        onOpenChange={setDeleteConfirmOpen}
+                        onOpenChange={(open) => {
+                          setDeleteConfirmOpen(open);
+                          if (!open) setDeleteConfirmValue("");
+                        }}
                       >
                         <DialogTrigger asChild>
                           <Button
@@ -725,16 +729,31 @@ export function ActiveSession({
                           <DialogHeader>
                             <DialogTitle>Confirmer la suppression</DialogTitle>
                             <DialogDescription>
-                              Voulez-vous vraiment supprimer cette session ?
-                              Cette action est irréversible.
+                              Voulez-vous vraiment supprimer cette session ?{" "}
+                              <b>Cette action est irréversible.</b>
                             </DialogDescription>
                           </DialogHeader>
+                          <div className="space-y-2">
+                            <Label htmlFor="delete-confirm">
+                              Tapez <span className="font-bold">SUPPRIMER</span>{" "}
+                              pour confirmer
+                            </Label>
+                            <Input
+                              id="delete-confirm"
+                              value={deleteConfirmValue}
+                              onChange={(e) =>
+                                setDeleteConfirmValue(e.target.value)
+                              }
+                              placeholder="SUPPRIMER"
+                            />
+                          </div>
                           <DialogFooter>
                             <DialogClose asChild>
                               <Button variant="outline">Annuler</Button>
                             </DialogClose>
                             <Button
                               variant="destructive"
+                              disabled={deleteConfirmValue !== "SUPPRIMER"}
                               onClick={async () => {
                                 await fetch(
                                   `/api/sessions/${session.sessionId}`,
@@ -897,7 +916,10 @@ export function ActiveSession({
                 <div className="">
                   <Button variant={"outline_destructive"}>
                     <div className="flex flex-row items-center justify-center gap-2">
-                      <FontAwesomeIcon icon={faWifi} className="animate-slow-blink" />
+                      <FontAwesomeIcon
+                        icon={faWifi}
+                        className="animate-slow-blink"
+                      />
                     </div>
                   </Button>
                 </div>

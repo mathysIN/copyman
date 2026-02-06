@@ -85,7 +85,7 @@ export type SessionType = {
   backgroundImageURL?: string;
   usedSpace?: string;
   expiresAt?: string;
-  isTemporary?: string;
+  isTemporary?: boolean;
 };
 
 export class Session {
@@ -96,7 +96,7 @@ export class Session {
   imageBackground?: URL;
   usedSpace?: string;
   expiresAt?: string;
-  isTemporary?: string;
+  isTemporary?: boolean;
 
   constructor(props: SessionType) {
     this.sessionId = props.sessionId;
@@ -309,8 +309,9 @@ export class Session {
     return sessions.del(this.sessionId);
   }
 
+  // fucking useless btw
   isTemporarySession(): boolean {
-    return this.isTemporary === "true";
+    return this.isTemporary ?? false;
   }
 
   isExpired(): boolean {

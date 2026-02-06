@@ -54,6 +54,7 @@ import {
 } from "~/lib/client/offlineStore";
 import { PhotoProvider } from "react-photo-view";
 import { UAParser } from "ua-parser-js";
+import { copyAndToast } from "~/lib/client/toast";
 
 type UploadProgress = {
   id: string;
@@ -114,6 +115,7 @@ export function ActiveSession({
   const [showTrucs, setShowTrucs] = useState(true);
   const [showAutresTrucs, setShowAutresTrucs] = useState(true);
   const containerAnimationUploadingRef = useRef(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     containerAnimationUploadingRef.current &&
@@ -569,7 +571,7 @@ export function ActiveSession({
 
       <div className="flex flex-col items-center justify-center">
         <div className="flex flex-row items-baseline justify-center gap-[12px] text-xl">
-          <button className={`cursor-pointer`}>#{session.sessionId}</button>
+          <button className={`cursor-pointer`} onClick={() => copyAndToast(toast, session.sessionId, "L'id de la session a été copié")}>#{session.sessionId}</button>
         </div>
       </div>
       <div className="h-4" />

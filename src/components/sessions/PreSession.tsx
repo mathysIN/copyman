@@ -44,6 +44,7 @@ export function PreSession() {
     searchParams.get("msg") ?? "",
   );
   const [loading, setLoading] = useState(false);
+  const [tempLoading, setTempLoading] = useState(false);
 
   const sumbitForm = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -114,6 +115,30 @@ export function PreSession() {
     }
     window.location.href = "/";
   };
+
+  const handleCreateTempSession = async () => {
+    setErrorMessage("");
+    if (tempLoading) return;
+
+    setTempLoading(true);
+
+    const postResult = await fetch("/api/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        temporary: "true",
+      }),
+    }).then((res) => res.json());
+
+    if (postResult?.error) {
+      setTempLoading(false);
+      setErrorMessage("Erreur lors de la création de la session temporaire");
+      return;
+    }
+
+    setTempLoading(false);
+    window.location.href = "/";
+  };
   return (
     <>
       <form
@@ -177,7 +202,7 @@ export function PreSession() {
         )}
         {!joinSession && (
           <>
-            <div className="flex w-full flex-col items-center justify-center">
+            <div className="flex w-full flex-col items-center justify-center gap-4">
               <button
                 type="button"
                 onClick={() => setJoinSession("create")}
@@ -199,13 +224,42 @@ export function PreSession() {
                 </div>
                 {loading && <Loading />}
               </button>
+
+              <button
+                type="button"
+                onClick={handleCreateTempSession}
+                disabled={tempLoading}
+                className="flex w-full flex-row items-center justify-between space-x-4 rounded-md border-2 border-dashed border-yellow-400 bg-yellow-400 bg-opacity-10 px-2 py-2 hover:bg-opacity-20 active:scale-95 active:bg-opacity-30 disabled:opacity-50"
+              >
+                <div className="flex w-max flex-col justify-center">
+                  <p className="min-w-32 text-2xl font-bold text-yellow-400">
+                    {"Créer"}
+                  </p>
+                  <span className="text-xs text-yellow-300">
+                    {"une session temporaire (4h)"}
+                  </span>
+                </div>
+
+                <div className="flex flex-1 justify-center">
+                  <Image
+                    src={imageCreateSession}
+                    height={60}
+                    className="invert"
+                    alt="logo"
+                  />
+                </div>
+                {tempLoading && <Loading />}
+              </button>
             </div>
+
+            <div className="w-full border-b-2 border-white border-opacity-50" />
+
             <div className="flex w-full flex-col items-center justify-center">
               <button
                 type="button"
                 onClick={() => setJoinSession("join")}
                 disabled={loading}
-                className="flex flex-row items-center justify-center space-x-4 rounded-md border-2 border-dashed border-white bg-white bg-opacity-5 px-2 py-2 hover:bg-opacity-10 active:scale-95 active:bg-opacity-30 disabled:opacity-50"
+                className="flex w-full flex-row items-center justify-between space-x-4 rounded-md border-2 border-dashed border-white bg-white bg-opacity-5 px-2 py-2 hover:bg-opacity-10 active:scale-95 active:bg-opacity-30 disabled:opacity-50"
               >
                 <div className="ml-2 flex w-max flex-col text-left">
                   <p className="min-w-32 text-2xl font-bold">{"Rejoindre"}</p>

@@ -107,6 +107,9 @@ export function ActiveSession({
   const [changePasswordValue, setChangePasswordValue] = useState("");
   const [changeSessionError, setChangeSessionError] = useState("");
   const [changeSessionLoading, setChangeSessionLoading] = useState(false);
+  const [warningModalOpen, setWarningModalOpen] = useState(false);
+  const [deletedModalOpen, setDeletedModalOpen] = useState(false);
+  const [extendLoading, setExtendLoading] = useState(false);
 
   const [showTrucs, setShowTrucs] = useState(true);
   const [showAutresTrucs, setShowAutresTrucs] = useState(true);
@@ -261,6 +264,15 @@ export function ActiveSession({
       onRoomInsight(room);
     });
 
+    socket.on("sessionWarning", () => {
+      setWarningModalOpen(true);
+    });
+
+    socket.on("sessionDeleted", () => {
+      setDeletedModalOpen(true);
+      deleteAllCookies();
+    });
+
     socket.on("connect", onConnect);
     socket.on("welcome", onWelcome);
     socket.on("disconnect", onDisconnect);
@@ -273,6 +285,8 @@ export function ActiveSession({
       socket.off("deleteContent");
       socket.off("updatedContentOrder");
       socket.off("roomInsight");
+      socket.off("sessionWarning");
+      socket.off("sessionDeleted");
       socket.off("connect");
       socket.off("welcome");
       socket.off("disconnect");
@@ -486,6 +500,73 @@ export function ActiveSession({
 
   return (
     <div className="w-full max-w-[1250px] select-none px-4 pb-10">
+      <Dialog open={warningModalOpen} onOpenChange={setWarningModalOpen}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FontAwesomeIcon icon={faWarning} className="text-yellow-500" />
+              Session expirant bientôt
+            </DialogTitle>
+            <DialogDescription>
+              Cette session temporaire expirera dans moins d&apos;une heure.
+              Voulez-vous l&apos;étendre ?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Ignorer</Button>
+            </DialogClose>
+            <Button
+              disabled={extendLoading}
+              onClick={async () => {
+                setExtendLoading(true);
+                try {
+                  await fetch(`/api/sessions/${session.sessionId}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ hours: 1 }),
+                  });
+                  setWarningModalOpen(false);
+                } catch (error) {
+                  console.error("Error extending session:", error);
+                }
+                setExtendLoading(false);
+              }}
+            >
+              {extendLoading && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Étendre de 1 heure
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deletedModalOpen} onOpenChange={setDeletedModalOpen}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FontAwesomeIcon icon={faWarning} className="text-red-500" />
+              {"Session supprimée"}
+            </DialogTitle>
+            <DialogDescription>
+              {
+                "Cette session temporaire a expiré et a été supprimée. Vous serez redirigé vers la page d'accueil."
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                window.location.href = "/";
+              }}
+            >
+              {"Retour à l'accueil"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex flex-col items-center justify-center">
         <div className="flex flex-row items-baseline justify-center gap-[12px] text-xl">
           <button className={`cursor-pointer`}>#{session.sessionId}</button>

@@ -51,8 +51,8 @@ async function getSession(
   ignorePassword = false,
   createIfNull = false,
 ): Promise<Session | null> {
-  console.log("getting session " + sessionId);
   const sessionIdLower = sessionId.toLowerCase();
+  console.log("getting session " + sessionIdLower);
   if (BANNED_SESSIONS.includes(sessionIdLower)) return null;
 
   let response = await sessions.hgetall(sessionIdLower);
@@ -68,7 +68,7 @@ async function getSession(
     response = await sessions.hgetall(sessionIdLower);
   }
   if (!response) return null;
-  console.log(response)
+  console.log(response);
   const session = new Session(response);
   if (
     !ignorePassword &&

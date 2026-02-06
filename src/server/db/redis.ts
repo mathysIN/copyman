@@ -15,7 +15,7 @@ const redis =
   globalForDb.conn ??
   new Redis({
     url: process.env.UPSTASH_REDIS_REST_URL,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN
+    token: process.env.UPSTASH_REDIS_REST_TOKEN,
   } as RedisConfigNodejs);
 if (env.NODE_ENV !== "production") globalForDb.conn = redis;
 
@@ -84,6 +84,8 @@ export type SessionType = {
   rawContentOrder?: string;
   backgroundImageURL?: string;
   usedSpace?: string;
+  expiresAt?: string;
+  isTemporary?: string;
 };
 
 export class Session {
@@ -93,6 +95,8 @@ export class Session {
   rawContentOrder?: string;
   imageBackground?: URL;
   usedSpace?: string;
+  expiresAt?: string;
+  isTemporary?: string;
 
   constructor(props: SessionType) {
     this.sessionId = props.sessionId;
@@ -103,6 +107,8 @@ export class Session {
       this.imageBackground = new URL(props.backgroundImageURL ?? "");
     } catch { }
     this.usedSpace = props.usedSpace;
+    this.expiresAt = props.expiresAt;
+    this.isTemporary = props.isTemporary;
   }
 
   withSessionKey(...strings: string[]) {
@@ -301,6 +307,36 @@ export class Session {
 
   async delete() {
     return sessions.del(this.sessionId);
+  }
+
+  isTemporarySession(): boolean {
+    return this.isTemporary === "true";
+  }
+
+  isExpired(): boolean {
+    if (!this.expiresAt) return false;
+    return Date.now() > parseInt(this.expiresAt);
+  }
+
+  shouldSendWarning(): boolean {
+    if (!this.expiresAt) return false;
+    const expiresAt = parseInt(this.expiresAt);
+    const now = Date.now();
+    const warningThreshold = 60 * 60 * 1000;
+    return now >= expiresAt - warningThreshold && now < expiresAt;
+  }
+
+  getExpiresAt(): number | undefined {
+    return this.expiresAt ? parseInt(this.expiresAt) : undefined;
+  }
+
+  async extendSession(hours = 1): Promise<void> {
+    if (!this.expiresAt) return;
+    const newExpiresAt =
+      Math.max(Date.now(), parseInt(this.expiresAt)) + hours * 60 * 60 * 1000;
+    await sessions.hmset(this.sessionId, {
+      expiresAt: newExpiresAt.toString(),
+    });
   }
 }
 

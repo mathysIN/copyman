@@ -2,12 +2,12 @@ import "dotenv/config";
 import { createServer } from "node:http";
 import next from "next";
 import { Server, type Socket } from "socket.io";
-import {
-  getSessionWithCookieString
-} from "~/utils/authenticate";
+import { getSessionWithCookieString } from "~/utils/authenticate";
 import {
   type ContentOrder,
-  type ContentType
+  type ContentType,
+  sessions,
+  deleteSession,
 } from "~/server/db/redis";
 import { createHashId } from "~/lib/utils";
 import express from "express";
@@ -15,7 +15,8 @@ import {
   rooms,
   setIO,
   socketSendUpdateContentOrder,
-  socketSendRoomInsight
+  socketSendRoomInsight,
+  socketSendToRoom,
 } from "./lib/socketInstance";
 
 const dev = process.env.NODE_ENV !== "production";
@@ -33,6 +34,8 @@ export type ServerToClientEvents = {
   updatedContent: (content: ContentType) => void;
   updatedContentOrder: (content: ContentOrder) => void;
   roomInsight: (room: RoomInsight) => void;
+  sessionWarning: (expiresAt: number) => void;
+  sessionDeleted: () => void;
 };
 
 export type ClientToServerEvents = {
@@ -93,6 +96,16 @@ app.prepare().then(() => {
       true,
     );
     if (!session) return;
+
+    socket.join(session.sessionId);
+
+    if (session.isExpired()) {
+      socket.emit("sessionDeleted");
+      socket.leave(session.sessionId);
+      socket.disconnect();
+      return;
+    }
+
     if (!rooms.has(session.sessionId)) {
       rooms.set(session.sessionId, new Map());
     }
@@ -112,8 +125,15 @@ app.prepare().then(() => {
     if (!room) return;
 
     socket.emit("welcome", socketId);
-    socket.on("hello", async () => {
 
+    if (session.isTemporarySession()) {
+      const expiresAt = session.getExpiresAt();
+      if (expiresAt && session.shouldSendWarning()) {
+        socket.emit("sessionWarning", expiresAt);
+      }
+    }
+
+    socket.on("hello", async () => {
       const allContent = await session.getAllContent();
       if (allContent.length > 0) {
         socket.emit("addContent", allContent);
@@ -147,4 +167,41 @@ app.prepare().then(() => {
   httpServer.listen(port, () => {
     console.log(`> Ready on http://${hostname}:${port}`);
   });
+
+  async function cleanupExpiredSessions() {
+    try {
+      const allSessionKeys = await sessions.keys("*");
+      for (const key of allSessionKeys) {
+        const sessionId = key.split(":").pop();
+        if (!sessionId) continue;
+        const sessionData = await sessions.hgetall(sessionId);
+        if (!sessionData) continue;
+
+        const isTemp = sessionData.isTemporary === "true";
+        const expiresAt = sessionData.expiresAt
+          ? parseInt(sessionData.expiresAt)
+          : null;
+        const now = Date.now();
+        const warningThreshold = 60 * 60 * 1000;
+
+        if (isTemp && expiresAt) {
+          if (now > expiresAt) {
+            console.log(`Deleting expired temporary session: ${sessionId}`);
+            socketSendToRoom(sessionId, "sessionDeleted", null);
+            await deleteSession(sessionId);
+          } else if (now >= expiresAt - warningThreshold && now < expiresAt) {
+            console.log(
+              `Sending warning for expiring temporary session: ${sessionId}`,
+            );
+            socketSendToRoom(sessionId, "sessionWarning", expiresAt);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error cleaning up expired sessions:", error);
+    }
+  }
+
+  setInterval(cleanupExpiredSessions, 60 * 60 * 1000);
+  cleanupExpiredSessions();
 });

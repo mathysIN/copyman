@@ -1,18 +1,29 @@
-import { type Server } from 'socket.io'
-import { type Room, type CopymanSocket, type User } from '~/server';
-import { type ContentOrder, type ContentType, type Session } from '~/server/db/redis';
-import { createHashId } from './utils';
+import { type Server } from "socket.io";
+import { type Room, type CopymanSocket, type User } from "~/server";
+import {
+  type ContentOrder,
+  type ContentType,
+  type Session,
+} from "~/server/db/redis";
+import { createHashId } from "./utils";
 
 const globalForSocket = global as unknown as {
-  io?: Server
+  io?: Server;
   rooms?: Map<string, Room>;
+};
+
+if (!globalForSocket.rooms) globalForSocket.rooms = new Map();
+
+export const rooms = globalForSocket.rooms;
+export const io = globalForSocket.io;
+export const setIO = (serverIO: Server) => {
+  globalForSocket.io = serverIO;
+};
+
+export function socketSendToRoom(sessionId: string, event: string, data: any) {
+  if (!globalForSocket.io) return;
+  globalForSocket.io.to(sessionId).emit(event, data);
 }
-
-if (!globalForSocket.rooms) globalForSocket.rooms = new Map()
-
-export const rooms = globalForSocket.rooms
-export const io = globalForSocket.io
-export const setIO = (serverIO: Server) => { globalForSocket.io = serverIO }
 
 export function socketSendAddContent(
   session: Session,
@@ -75,9 +86,7 @@ export function socketSendUpdateContentOrder(
   session.setContentOrder(contentOrder);
 }
 
-export function socketSendRoomInsight(
-  room: Room,
-) {
+export function socketSendRoomInsight(room: Room) {
   if (!globalForSocket.io) return;
   const users = Array.from(room.values());
   for (const keyVal of room) {

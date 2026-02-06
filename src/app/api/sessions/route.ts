@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { Session, sessions } from "~/server/db/redis";
 import { cookies } from "next/headers";
 import {
@@ -7,7 +6,11 @@ import {
 } from "~/utils/authenticate";
 import { NextResponse } from "next/server";
 import { hashPassword } from "~/utils/password";
-import { isValidSessionId } from "~/lib/utils";
+import {
+  isValidSessionId,
+  isTemporarySessionId,
+  generateTemporarySessionId,
+} from "~/lib/utils";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -35,21 +38,50 @@ export async function POST(req: Request) {
   const rawPassword = data.get("password")?.toString();
   const password = rawPassword && hashPassword(rawPassword);
   const join = data.get("join")?.toString() == "true";
-  if (!isValidSessionId(sessionId))
+  const temporary = data.get("temporary")?.toString() == "true";
+
+  console.log(
+    "POST /api/sessions - sessionId:",
+    sessionId,
+    "join:",
+    join,
+    "temporary:",
+    temporary,
+  );
+
+  let actualSessionId = sessionId;
+
+  if (temporary) {
+    actualSessionId = generateTemporarySessionId();
+    console.log("Generated temp session ID:", actualSessionId);
+  }
+
+  if (!temporary && !isValidSessionId(actualSessionId))
     return NextResponse.json({ error: "invalid_session_id" }, { status: 400 });
+
+  if (!join && !temporary && isTemporarySessionId(actualSessionId))
+    return NextResponse.json(
+      { error: "cannot_create_temp_session" },
+      { status: 400 },
+    );
+
   let canJoin = false;
   if (join) {
+    console.log("Attempting to join session:", actualSessionId);
     const session = await getSessionWithSessionId(
-      sessionId ?? "",
+      actualSessionId,
       password,
       true,
       false,
     );
-    if (!session)
+    if (!session) {
+      console.log("Session not found:", actualSessionId);
       return NextResponse.json(
         { error: "invalid_session_id" },
         { status: 400 },
       );
+    }
+    console.log("Session found, joining:", actualSessionId);
     canJoin = true;
   } else {
     const sessionData: {
@@ -57,24 +89,38 @@ export async function POST(req: Request) {
       createdAt: string;
       password?: string;
       rawContentOrder: string;
+      expiresAt?: string;
+      isTemporary?: string;
     } = {
-      sessionId: sessionId,
-      password: password,
+      sessionId: actualSessionId,
       createdAt: Date.now().toString(),
       rawContentOrder: "",
     };
 
-    const newSession = await sessions
-      .hmnew(sessionId, sessionData)
-      .catch(() => {});
+    if (password) {
+      sessionData.password = password;
+    }
 
-    if (!newSession)
+    if (temporary) {
+      sessionData.expiresAt = (Date.now() + 4 * 60 * 60 * 1000).toString();
+      sessionData.isTemporary = "true";
+    }
+
+    console.log("Creating session:", actualSessionId, sessionData);
+
+    const newSession = await sessions.hmnew(actualSessionId, sessionData);
+    if (!newSession) {
+      console.log("Session creation failed - already exists:", actualSessionId);
       return NextResponse.json({ error: "session_exists" }, { status: 400 });
+    }
+
+    console.log("Session created successfully:", actualSessionId);
     canJoin = true;
   }
 
   if (canJoin) {
-    cookies().set("session", sessionId, {
+    console.log("Setting cookie for session:", actualSessionId);
+    cookies().set("session", actualSessionId, {
       expires: Date.now() + 10 * 365 * 24 * 60 * 60 * 1000,
     });
     if (password)

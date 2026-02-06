@@ -11,6 +11,10 @@ import {
   isTemporarySessionId,
   generateTemporarySessionId,
 } from "~/lib/utils";
+import {
+  MS_PER_SECOND,
+  TEMP_SESSION_DURATION_HOURS,
+} from "~/constants/session";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -90,7 +94,7 @@ export async function POST(req: Request) {
       password?: string;
       rawContentOrder: string;
       expiresAt?: string;
-      isTemporary?: string;
+      isTemporary?: boolean;
     } = {
       sessionId: actualSessionId,
       createdAt: Date.now().toString(),
@@ -102,8 +106,11 @@ export async function POST(req: Request) {
     }
 
     if (temporary) {
-      sessionData.expiresAt = (Date.now() + 4 * 60 * 60 * 1000).toString();
-      sessionData.isTemporary = "true";
+      sessionData.expiresAt = (
+        Date.now() +
+        TEMP_SESSION_DURATION_HOURS * 60 * 60 * MS_PER_SECOND
+      ).toString();
+      sessionData.isTemporary = true;
     }
 
     console.log("Creating session:", actualSessionId, sessionData);

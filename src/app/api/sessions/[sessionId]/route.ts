@@ -29,6 +29,7 @@ export async function PATCH(
 
   if (session.sessionId !== params.sessionId.toLowerCase())
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+  console.log({ tempSession: session })
 
   if (!session.isTemporarySession())
     return NextResponse.json(

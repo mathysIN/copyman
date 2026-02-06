@@ -29,7 +29,7 @@ export default async function HomePage() {
       <div
         className="absolute -z-10 h-full w-full"
         style={{
-          background: `url('${bgImageURL}'), #287d7c`,
+          background: `url('${bgImageURL}'), text-white bg-black`,
           backgroundSize: "cover",
         }}
       ></div>

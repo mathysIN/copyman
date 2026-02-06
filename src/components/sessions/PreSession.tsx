@@ -13,6 +13,7 @@ import imageSharing from "~/../public/sharing.png";
 import imageLogo from "~/../public/logo.png";
 import imageCreateSession from "~/../public/create-session.png";
 import imageJoinSession from "~/../public/join-session.png";
+import imageTemporarySession from "~/../public/temporary-session.png"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faQuestionCircle,
@@ -65,16 +66,16 @@ export function PreSession() {
     setLoading(true);
     const result:
       | (SessionType & {
-          hasPassword: boolean;
-          isValidPassword: boolean;
-          createNewSession: boolean;
-        })
+        hasPassword: boolean;
+        isValidPassword: boolean;
+        createNewSession: boolean;
+      })
       | undefined = await fetch(
-      `/api/sessions?sessionId=${sessionValue}&password=${passwordValue}&join=${joinSession}`,
-      {},
-    )
-      .then((res) => res.json())
-      .catch(() => {});
+        `/api/sessions?sessionId=${sessionValue}&password=${passwordValue}&join=${joinSession}`,
+        {},
+      )
+        .then((res) => res.json())
+        .catch(() => { });
     setLoading(false);
     if (
       !result ||
@@ -233,18 +234,17 @@ export function PreSession() {
               >
                 <div className="flex w-max flex-col justify-center">
                   <p className="min-w-32 text-2xl font-bold text-yellow-400">
-                    {"Créer"}
+                    {"Instantané"}
                   </p>
                   <span className="text-xs text-yellow-300">
-                    {"une session temporaire (4h)"}
+                    {"session temporaire (4h)"}
                   </span>
                 </div>
 
                 <div className="flex flex-1 justify-center">
                   <Image
-                    src={imageCreateSession}
+                    src={imageTemporarySession}
                     height={60}
-                    className="invert"
                     alt="logo"
                   />
                 </div>

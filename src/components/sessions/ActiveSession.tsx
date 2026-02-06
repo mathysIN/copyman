@@ -111,6 +111,7 @@ export function ActiveSession({
   const [warningModalOpen, setWarningModalOpen] = useState(false);
   const [deletedModalOpen, setDeletedModalOpen] = useState(false);
   const [extendLoading, setExtendLoading] = useState(false);
+  const warnedSessionIdRef = useRef<string | null>(null);
 
   const [showTrucs, setShowTrucs] = useState(true);
   const [showAutresTrucs, setShowAutresTrucs] = useState(true);
@@ -267,7 +268,10 @@ export function ActiveSession({
     });
 
     socket.on("sessionWarning", () => {
-      setWarningModalOpen(true);
+      if (warnedSessionIdRef.current !== session.sessionId) {
+        setWarningModalOpen(true);
+        warnedSessionIdRef.current = session.sessionId;
+      }
     });
 
     socket.on("sessionDeleted", () => {
@@ -506,7 +510,6 @@ export function ActiveSession({
         <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <FontAwesomeIcon icon={faWarning} className="text-yellow-500" />
               Session expirant bientôt
             </DialogTitle>
             <DialogDescription>
@@ -548,7 +551,6 @@ export function ActiveSession({
         <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <FontAwesomeIcon icon={faWarning} className="text-red-500" />
               {"Session supprimée"}
             </DialogTitle>
             <DialogDescription>
@@ -571,7 +573,18 @@ export function ActiveSession({
 
       <div className="flex flex-col items-center justify-center">
         <div className="flex flex-row items-baseline justify-center gap-[12px] text-xl">
-          <button className={`cursor-pointer`} onClick={() => copyAndToast(toast, session.sessionId, "L'id de la session a été copié")}>#{session.sessionId}</button>
+          <button
+            className={`cursor-pointer`}
+            onClick={() =>
+              copyAndToast(
+                toast,
+                session.sessionId,
+                "L'id de la session a été copié",
+              )
+            }
+          >
+            #{session.sessionId}
+          </button>
         </div>
       </div>
       <div className="h-4" />

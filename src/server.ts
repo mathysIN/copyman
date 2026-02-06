@@ -18,6 +18,11 @@ import {
   socketSendRoomInsight,
   socketSendToRoom,
 } from "./lib/socketInstance";
+import {
+  CLEANUP_INTERVAL_MS,
+  WARNING_THRESHOLD_MS,
+  MS_PER_SECOND,
+} from "~/constants/session";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
@@ -170,38 +175,52 @@ app.prepare().then(() => {
 
   async function cleanupExpiredSessions() {
     try {
-      const allSessionKeys = await sessions.keys("*");
-      for (const key of allSessionKeys) {
+      console.log("Starting cleanup of expired temp sessions...");
+      const tempSessionKeys = await sessions.keys("ts*");
+      console.log(`Found ${tempSessionKeys.length} temp sessions to check`);
+
+      const now = Date.now();
+
+      for (const key of tempSessionKeys) {
         const sessionId = key.split(":").pop();
         if (!sessionId) continue;
+
         const sessionData = await sessions.hgetall(sessionId);
         if (!sessionData) continue;
 
-        const isTemp = sessionData.isTemporary === "true";
         const expiresAt = sessionData.expiresAt
           ? parseInt(sessionData.expiresAt)
           : null;
-        const now = Date.now();
-        const warningThreshold = 60 * 60 * 1000;
+        const remainingSeconds = expiresAt
+          ? Math.ceil((expiresAt - now) / MS_PER_SECOND)
+          : null;
 
-        if (isTemp && expiresAt) {
-          if (now > expiresAt) {
-            console.log(`Deleting expired temporary session: ${sessionId}`);
-            socketSendToRoom(sessionId, "sessionDeleted", null);
-            await deleteSession(sessionId);
-          } else if (now >= expiresAt - warningThreshold && now < expiresAt) {
-            console.log(
-              `Sending warning for expiring temporary session: ${sessionId}`,
-            );
-            socketSendToRoom(sessionId, "sessionWarning", expiresAt);
-          }
+        console.log(
+          `Checking session ${sessionId}: expiresAt=${expiresAt}, remaining=${remainingSeconds}s`,
+        );
+
+        if (expiresAt && now > expiresAt) {
+          console.log(`Deleting expired temporary session: ${sessionId}`);
+          socketSendToRoom(sessionId, "sessionDeleted", null);
+          await deleteSession(sessionId);
+        } else if (
+          expiresAt &&
+          now >= expiresAt - WARNING_THRESHOLD_MS &&
+          now < expiresAt
+        ) {
+          console.log(
+            `Sending warning for expiring temporary session: ${sessionId}`,
+          );
+          socketSendToRoom(sessionId, "sessionWarning", expiresAt);
         }
       }
+
+      console.log("Cleanup completed");
     } catch (error) {
       console.error("Error cleaning up expired sessions:", error);
     }
   }
 
-  setInterval(cleanupExpiredSessions, 60 * 60 * 1000);
+  setInterval(cleanupExpiredSessions, CLEANUP_INTERVAL_MS);
   cleanupExpiredSessions();
 });

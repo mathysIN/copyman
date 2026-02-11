@@ -38,7 +38,13 @@ import {
   type ContentType,
   type NoteType,
   type SessionType,
+  type FolderType,
 } from "~/server/db/redis";
+import {
+  Folder,
+  CreateFolderButton,
+  MoveToFolderDialog,
+} from "~/components/Folder";
 import { Reorder } from "framer-motion";
 import { useToast } from "~/hooks/use-toast";
 import { DialogClose } from "@radix-ui/react-dialog";
@@ -413,13 +419,155 @@ export function ActiveSession({
     };
   }, []);
 
+  // Get folders and content
+  const folders: FolderType[] = sessionContent
+    .filter((c: ContentType): c is FolderType => c.type === "folder")
+    .sort((a, b) => sortAttachments(a, b, contentOrder));
+
+  const attachmentFolders = folders.filter(
+    (f) => f.targetType === "attachment",
+  );
+  const noteFolders = folders.filter((f) => f.targetType === "note");
+
+  // Get root-level content (not in folders)
   const attachmentContent: AttachmentType[] = sessionContent
-    .filter((c: ContentType): c is AttachmentType => c.type === "attachment")
+    .filter(
+      (c: ContentType): c is AttachmentType =>
+        c.type === "attachment" && !c.folderId,
+    )
     .sort((a, b) => sortAttachments(a, b, contentOrder));
 
   const noteContent: NoteType[] = sessionContent
-    .filter((c: ContentType): c is NoteType => c.type === "note")
+    .filter((c: ContentType): c is NoteType => c.type === "note" && !c.folderId)
     .sort((a, b) => sortAttachments(a, b, contentOrder));
+
+  // Get content inside folders
+  const getFolderContents = (folderId: string): ContentType[] => {
+    const folder = folders.find((f) => f.id === folderId);
+    if (!folder) return [];
+
+    return sessionContent
+      .filter(
+        (c) =>
+          (c.type === "attachment" || c.type === "note") &&
+          c.folderId === folderId,
+      )
+      .sort((a, b) => {
+        const indexA = folder.contentIds.indexOf(a.id);
+        const indexB = folder.contentIds.indexOf(b.id);
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+        if (indexA === -1 && indexB === -1)
+          return parseInt(b.createdAt) - parseInt(a.createdAt);
+        if (indexA === -1) return 1;
+        return -1;
+      });
+  };
+
+  // Folder management functions
+  function onCreateFolder(folder: FolderType): void {
+    setSessionContent((prev) => [...prev, folder]);
+    const newOrder = [folder.id, ...contentOrder];
+    setContentOrder(newOrder);
+    onUpdateContentOrder(newOrder, true);
+  }
+
+  function onUpdateFolder(folder: FolderType): void {
+    setSessionContent((prev) =>
+      prev.map((c) => (c.id === folder.id ? folder : c)),
+    );
+  }
+
+  function onDeleteFolder(folderId: string): void {
+    // Move all content out of folder first
+    setSessionContent((prev) =>
+      prev.map((c) => {
+        if (
+          (c.type === "attachment" || c.type === "note") &&
+          c.folderId === folderId
+        ) {
+          return { ...c, folderId: undefined };
+        }
+        return c;
+      }),
+    );
+
+    // Then remove the folder
+    setSessionContent((prev) => prev.filter((c) => c.id !== folderId));
+  }
+
+  function onReorderFolderContents(
+    folderId: string,
+    newContents: ContentType[],
+  ): void {
+    const folder = folders.find((f) => f.id === folderId);
+    if (!folder) return;
+
+    const newContentIds = newContents.map((c) => c.id);
+    const updatedFolder = { ...folder, contentIds: newContentIds };
+
+    setSessionContent((prev) =>
+      prev.map((c) => (c.id === folderId ? updatedFolder : c)),
+    );
+
+    // Emit socket event
+    socket.emit("updatedContent", updatedFolder);
+  }
+
+  function onMoveContentToFolder(
+    contentId: string,
+    folderId: string | null,
+  ): void {
+    setSessionContent((prev) =>
+      prev.map((c) => {
+        if (
+          c.id === contentId &&
+          (c.type === "attachment" || c.type === "note")
+        ) {
+          return { ...c, folderId };
+        }
+        return c;
+      }),
+    );
+
+    // If moving into a folder, update the folder's contentIds
+    if (folderId) {
+      const folder = folders.find((f) => f.id === folderId);
+      if (folder && !folder.contentIds.includes(contentId)) {
+        const updatedFolder = {
+          ...folder,
+          contentIds: [...folder.contentIds, contentId],
+        };
+        setSessionContent((prev) =>
+          prev.map((c) => (c.id === folderId ? updatedFolder : c)),
+        );
+        socket.emit("updatedContent", updatedFolder);
+      }
+    }
+
+    // If moving out of a folder, remove from that folder's contentIds
+    const content = sessionContent.find((c) => c.id === contentId);
+    if (
+      content &&
+      (content.type === "attachment" || content.type === "note") &&
+      content.folderId
+    ) {
+      const oldFolder = folders.find((f) => f.id === content.folderId);
+      if (oldFolder) {
+        const updatedFolder = {
+          ...oldFolder,
+          contentIds: oldFolder.contentIds.filter((id) => id !== contentId),
+        };
+        setSessionContent((prev) =>
+          prev.map((c) => (c.id === oldFolder.id ? updatedFolder : c)),
+        );
+        socket.emit("updatedContent", updatedFolder);
+      }
+    }
+  }
+
+  function onMoveContentOutOfFolder(contentId: string, folderId: string): void {
+    onMoveContentToFolder(contentId, null);
+  }
 
   const mergedUsers = new Map<string, User & { quantity: number }>();
   for (const user of roomUsers) {
@@ -1082,20 +1230,60 @@ export function ActiveSession({
                   </div>
                 ))}
             </div>
+            <div className="flex justify-end">
+              <CreateFolderButton
+                targetType="attachment"
+                onCreateFolder={(folder) => {
+                  onNewContent([folder], true);
+                }}
+                socketUserId={socketUserId}
+                sessionId={session.sessionId}
+              />
+            </div>
             <div />
             <PhotoProvider>
               <Reorder.Group
-                values={attachmentContent}
+                values={[...attachmentFolders, ...attachmentContent]}
                 className="flex flex-col gap-y-2 transition-none"
                 onReorder={onReorderContent}
               >
-                {attachmentContent.map((content) => (
-                  <ContentRenderer
-                    key={content.id}
-                    content={content}
-                    onContentDelete={onDeleteContent}
-                    onContentUpdate={onUpdateContent}
+                {attachmentFolders.map((folder) => (
+                  <Folder
+                    key={folder.id}
+                    folder={folder}
+                    contents={getFolderContents(folder.id)}
+                    onFolderUpdate={onUpdateFolder}
+                    onFolderDelete={onDeleteFolder}
+                    onContentReorder={onReorderFolderContents}
+                    onMoveContentOut={onMoveContentOutOfFolder}
+                    socketUserId={socketUserId}
+                    renderContentItem={(content) => (
+                      <ContentRenderer
+                        content={content as AttachmentType}
+                        onContentDelete={onDeleteContent}
+                        onContentUpdate={onUpdateContent}
+                        socketUserId={socketUserId}
+                      />
+                    )}
                   />
+                ))}
+                {attachmentContent.map((content) => (
+                  <div key={content.id} className="group relative">
+                    <ContentRenderer
+                      content={content}
+                      onContentDelete={onDeleteContent}
+                      onContentUpdate={onUpdateContent}
+                      socketUserId={socketUserId}
+                    />
+                    <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      <MoveToFolderDialog
+                        content={content}
+                        folders={attachmentFolders}
+                        onMove={onMoveContentToFolder}
+                        socketUserId={socketUserId}
+                      />
+                    </div>
+                  </div>
                 ))}
               </Reorder.Group>
             </PhotoProvider>
@@ -1126,27 +1314,68 @@ export function ActiveSession({
           <div
             className={`${showAutresTrucs ? "flex" : "hidden"} flex-col gap-y-2 md:flex`}
           >
-            <AddNewTask
-              onNewContent={(n) => onNewContent([n])}
-              socketUserId={socketUserId}
-              ref={newTaskComponent}
-            />
+            <div className="flex items-center justify-between">
+              <AddNewTask
+                onNewContent={(n) => onNewContent([n])}
+                socketUserId={socketUserId}
+                ref={newTaskComponent}
+              />
+              <CreateFolderButton
+                targetType="note"
+                onCreateFolder={(folder) => {
+                  onNewContent([folder], true);
+                }}
+                socketUserId={socketUserId}
+                sessionId={session.sessionId}
+              />
+            </div>
             <div />
             <Reorder.Group
-              values={noteContent}
+              values={[...noteFolders, ...noteContent]}
               className="flex flex-col gap-y-2 transition-none"
               onReorder={onReorderContent}
             >
-              {noteContent.map((note) => (
-                <Note
-                  session={session}
-                  key={note.id}
-                  allContent={sessionContent}
-                  content={note}
+              {noteFolders.map((folder) => (
+                <Folder
+                  key={folder.id}
+                  folder={folder}
+                  contents={getFolderContents(folder.id)}
+                  onFolderUpdate={onUpdateFolder}
+                  onFolderDelete={onDeleteFolder}
+                  onContentReorder={onReorderFolderContents}
+                  onMoveContentOut={onMoveContentOutOfFolder}
                   socketUserId={socketUserId}
-                  onDeleteTask={onDeleteContent}
-                  onUpdateTask={onUpdateContent}
+                  renderContentItem={(content) => (
+                    <Note
+                      session={session}
+                      allContent={sessionContent}
+                      content={content as NoteType}
+                      socketUserId={socketUserId}
+                      onDeleteTask={onDeleteContent}
+                      onUpdateTask={onUpdateContent}
+                    />
+                  )}
                 />
+              ))}
+              {noteContent.map((note) => (
+                <div key={note.id} className="group relative">
+                  <Note
+                    session={session}
+                    allContent={sessionContent}
+                    content={note}
+                    socketUserId={socketUserId}
+                    onDeleteTask={onDeleteContent}
+                    onUpdateTask={onUpdateContent}
+                  />
+                  <div className="absolute right-12 top-2 z-10 opacity-0 transition-opacity group-hover:opacity-100">
+                    <MoveToFolderDialog
+                      content={note}
+                      folders={noteFolders}
+                      onMove={onMoveContentToFolder}
+                      socketUserId={socketUserId}
+                    />
+                  </div>
+                </div>
               ))}
             </Reorder.Group>
           </div>

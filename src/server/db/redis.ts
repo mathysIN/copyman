@@ -105,7 +105,7 @@ export class Session {
     this.rawContentOrder = props.rawContentOrder;
     try {
       this.imageBackground = new URL(props.backgroundImageURL ?? "");
-    } catch { }
+    } catch {}
     this.usedSpace = props.usedSpace;
     this.expiresAt = props.expiresAt;
     this.isTemporary = props.isTemporary;
@@ -197,6 +197,37 @@ export class Session {
     return contents.hmset(
       this.withSessionKey(REDIS_CONTENT_PREFIX, id),
       attachment,
+    );
+  }
+
+  async createNewFolder(
+    folder: Omit<
+      FolderType,
+      "id" | "createdAt" | "updatedAt" | "sessionId" | "type"
+    >,
+  ) {
+    const { key, preContent } = this.generatePreContent();
+    const newFolder = {
+      ...preContent,
+      ...folder,
+      type: "folder",
+      contentIds: [],
+    } satisfies FolderType;
+    return contents
+      .hmnew(key, newFolder)
+      .then(() => newFolder)
+      .catch(() => null);
+  }
+
+  async updateFolder(
+    id: string,
+    folder: Partial<
+      ExcludeMatchingProperties<FolderType, "id" | "createdAt" | "sessionId">
+    >,
+  ) {
+    return contents.hmset(
+      this.withSessionKey(REDIS_CONTENT_PREFIX, id),
+      folder,
     );
   }
 
@@ -380,6 +411,7 @@ export type NewAttachmentType = Omit<
 export type NoteType = BaseContentType & {
   type: "note";
   content: string;
+  folderId?: string | null;
 };
 
 export type AttachmentType = BaseContentType & {
@@ -387,9 +419,17 @@ export type AttachmentType = BaseContentType & {
   attachmentURL: string;
   attachmentPath: string;
   fileKey: string;
+  folderId?: string | null;
 };
 
-export type ContentType = NoteType | AttachmentType;
+export type FolderType = BaseContentType & {
+  type: "folder";
+  name: string;
+  contentIds: string[];
+  targetType: "note" | "attachment";
+};
+
+export type ContentType = NoteType | AttachmentType | FolderType;
 
 export type ContentOrder = UUID[];
 

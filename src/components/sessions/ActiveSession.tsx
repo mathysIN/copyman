@@ -40,11 +40,7 @@ import {
   type SessionType,
   type FolderType,
 } from "~/server/db/redis";
-import {
-  Folder,
-  CreateFolderButton,
-  MoveToFolderDialog,
-} from "~/components/Folder";
+import { Folder, CreateFolderButton } from "~/components/Folder";
 import { Reorder } from "framer-motion";
 import { useToast } from "~/hooks/use-toast";
 import { DialogClose } from "@radix-ui/react-dialog";
@@ -1257,12 +1253,20 @@ export function ActiveSession({
                     onContentReorder={onReorderFolderContents}
                     onMoveContentOut={onMoveContentOutOfFolder}
                     socketUserId={socketUserId}
-                    renderContentItem={(content) => (
+                    renderContentItem={(
+                      content,
+                      folderId,
+                      onMoveContentOut,
+                    ) => (
                       <ContentRenderer
                         content={content as AttachmentType}
                         onContentDelete={onDeleteContent}
                         onContentUpdate={onUpdateContent}
                         socketUserId={socketUserId}
+                        folders={attachmentFolders}
+                        onMove={onMoveContentToFolder}
+                        folderId={folderId}
+                        onMoveContentOut={onMoveContentOut}
                       />
                     )}
                   />
@@ -1274,15 +1278,9 @@ export function ActiveSession({
                       onContentDelete={onDeleteContent}
                       onContentUpdate={onUpdateContent}
                       socketUserId={socketUserId}
+                      folders={attachmentFolders}
+                      onMove={onMoveContentToFolder}
                     />
-                    <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                      <MoveToFolderDialog
-                        content={content}
-                        folders={attachmentFolders}
-                        onMove={onMoveContentToFolder}
-                        socketUserId={socketUserId}
-                      />
-                    </div>
                   </div>
                 ))}
               </Reorder.Group>
@@ -1345,7 +1343,7 @@ export function ActiveSession({
                   onContentReorder={onReorderFolderContents}
                   onMoveContentOut={onMoveContentOutOfFolder}
                   socketUserId={socketUserId}
-                  renderContentItem={(content) => (
+                  renderContentItem={(content, folderId, onMoveContentOut) => (
                     <Note
                       session={session}
                       allContent={sessionContent}
@@ -1353,6 +1351,10 @@ export function ActiveSession({
                       socketUserId={socketUserId}
                       onDeleteTask={onDeleteContent}
                       onUpdateTask={onUpdateContent}
+                      folders={noteFolders}
+                      onMove={onMoveContentToFolder}
+                      folderId={folderId}
+                      onMoveContentOut={onMoveContentOut}
                     />
                   )}
                 />
@@ -1366,15 +1368,9 @@ export function ActiveSession({
                     socketUserId={socketUserId}
                     onDeleteTask={onDeleteContent}
                     onUpdateTask={onUpdateContent}
+                    folders={noteFolders}
+                    onMove={onMoveContentToFolder}
                   />
-                  <div className="absolute right-12 top-2 z-10 opacity-0 transition-opacity group-hover:opacity-100">
-                    <MoveToFolderDialog
-                      content={note}
-                      folders={noteFolders}
-                      onMove={onMoveContentToFolder}
-                      socketUserId={socketUserId}
-                    />
-                  </div>
                 </div>
               ))}
             </Reorder.Group>

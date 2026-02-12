@@ -45,7 +45,11 @@ interface FolderProps {
   onFolderDelete: (folderId: string) => void;
   onContentReorder: (folderId: string, newOrder: ContentType[]) => void;
   onMoveContentOut: (contentId: string, folderId: string) => void;
-  renderContentItem: (content: ContentType) => React.ReactNode;
+  renderContentItem: (
+    content: ContentType,
+    folderId?: string,
+    onMoveContentOut?: (contentId: string, folderId: string) => void,
+  ) => React.ReactNode;
   socketUserId?: string;
 }
 
@@ -217,14 +221,7 @@ export function Folder({
               >
                 {contents.map((content) => (
                   <div key={content.id} className="group relative">
-                    {renderContentItem(content)}
-                    <button
-                      onClick={() => onMoveContentOut(content.id, folder.id)}
-                      className="absolute right-2 top-2 rounded border bg-white/90 px-2 py-1 text-xs text-gray-600 opacity-0 shadow-sm transition-opacity hover:bg-white hover:text-gray-800 group-hover:opacity-100"
-                      title="Sortir du dossier"
-                    >
-                      Sortir
-                    </button>
+                    {renderContentItem(content, folder.id, onMoveContentOut)}
                   </div>
                 ))}
               </Reorder.Group>

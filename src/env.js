@@ -16,9 +16,13 @@ export const env = createEnv({
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
+    COPYMAN_ENV: z
+      .enum(["development", "production"])
+      .default("development"),
   },
   client: {},
   runtimeEnv: {
+    COPYMAN_ENV: process.env.COPYMAN_ENV,
     UPLOADTHING_TOKEN: process.env.UPLOADTHING_TOKEN,
     SALT: process.env.SALT,
     UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,

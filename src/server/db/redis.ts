@@ -73,7 +73,7 @@ export function toFullRedisKey(elements: string[]) {
 }
 
 const REDIS_KEY_MAIN_PREFIX = "copyman";
-const ENVIRONMENT = env.NODE_ENV;
+const ENVIRONMENT = env.COPYMAN_ENV;
 
 const REDIS_KEY_PREFIX = toFullRedisKey([REDIS_KEY_MAIN_PREFIX, ENVIRONMENT]);
 
@@ -105,7 +105,7 @@ export class Session {
     this.rawContentOrder = props.rawContentOrder;
     try {
       this.imageBackground = new URL(props.backgroundImageURL ?? "");
-    } catch {}
+    } catch { }
     this.usedSpace = props.usedSpace;
     this.expiresAt = props.expiresAt;
     this.isTemporary = props.isTemporary;

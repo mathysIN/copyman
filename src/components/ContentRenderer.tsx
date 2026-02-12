@@ -5,12 +5,14 @@ import {
   faTrash,
   faDownload,
   faCopy,
+  faFolder,
+  faArrowRightFromBracket,
 } from "@fortawesome/free-solid-svg-icons";
 import { PhotoProvider, PhotoView } from "react-photo-view";
 import "react-photo-view/dist/react-photo-view.css";
 
 import { use, useEffect, useRef, useState } from "react";
-import type { AttachmentType } from "~/server/db/redis";
+import type { AttachmentType, FolderType } from "~/server/db/redis";
 import {
   getCDNUrlFromFileKey,
   removeFileExtension,
@@ -41,6 +43,7 @@ import {
   DialogClose,
 } from "./ui/dialog";
 import { Button } from "./ui/button";
+import { MoveToFolderDialog } from "./Folder";
 
 const GRADIENTS = [
   "bg-gradient-to-r from-green-400 to-blue-500",
@@ -59,14 +62,22 @@ const GRADIENTS = [
 
 const ContentRenderer = ({
   content,
-  onContentDelete = () => { },
-  onContentUpdate = () => { },
+  onContentDelete = () => {},
+  onContentUpdate = () => {},
   socketUserId,
+  folders,
+  onMove,
+  folderId,
+  onMoveContentOut,
 }: {
   content: AttachmentType;
   onContentDelete: (contentId: string) => any;
   onContentUpdate: (content: AttachmentType) => any;
   socketUserId?: string;
+  folders?: FolderType[];
+  onMove?: (contentId: string, folderId: string | null) => void;
+  folderId?: string;
+  onMoveContentOut?: (contentId: string, folderId: string) => void;
 }) => {
   const { toast } = useToast();
   const [dragging, setDragging] = useState(false);
@@ -255,6 +266,23 @@ const ContentRenderer = ({
               <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
             </a>
 
+            {folders && onMove && (
+              <MoveToFolderDialog
+                content={content}
+                folders={folders}
+                onMove={onMove}
+                socketUserId={socketUserId}
+              />
+            )}
+            {folderId && onMoveContentOut && (
+              <button
+                onClick={() => onMoveContentOut(content.id, folderId)}
+                className="w-8 rounded bg-amber-100 py-1 text-amber-700 active:scale-90 active:opacity-75"
+                title="Sortir du dossier"
+              >
+                <FontAwesomeIcon icon={faArrowRightFromBracket} />
+              </button>
+            )}
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <button className="w-8 rounded bg-red-400 py-1 text-white active:scale-90 active:opacity-75">

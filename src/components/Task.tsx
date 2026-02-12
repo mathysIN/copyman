@@ -6,6 +6,8 @@ import {
   faTrash,
   faArrowUpRightFromSquare,
   faExpand,
+  faFolder,
+  faArrowRightFromBracket,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useRef, useState } from "react";
@@ -17,7 +19,12 @@ import {
   isImageURL,
   maxStringLength,
 } from "~/lib/utils";
-import type { ContentType, NoteType, SessionType } from "~/server/db/redis";
+import type {
+  ContentType,
+  NoteType,
+  SessionType,
+  FolderType,
+} from "~/server/db/redis";
 import TextareaAutosize from "react-textarea-autosize";
 import he from "he";
 import ReactMarkdown from "react-markdown";
@@ -38,6 +45,7 @@ import { copyAndToast } from "~/lib/client/toast";
 import { useToast } from "~/hooks/use-toast";
 import { Reorder, useDragControls } from "framer-motion";
 import { Dialog, DialogContent, DialogTrigger } from "./ui/dialog";
+import { MoveToFolderDialog } from "./Folder";
 
 function _renderMarkdown(markdown: string): string {
   const headerRegex = /^(#+)\s(.+)/gm;
@@ -93,8 +101,12 @@ export function Task({
   content,
   allContent,
   socketUserId,
-  onDeleteTask = () => { },
-  onUpdateTask = () => { },
+  onDeleteTask = () => {},
+  onUpdateTask = () => {},
+  folders,
+  onMove,
+  folderId,
+  onMoveContentOut,
 }: {
   session: SessionType;
   content: NoteType;
@@ -102,6 +114,10 @@ export function Task({
   socketUserId?: string;
   onDeleteTask?: (taskId: string) => any;
   onUpdateTask?: (task: NoteType) => any;
+  folders?: FolderType[];
+  onMove?: (contentId: string, folderId: string | null) => void;
+  folderId?: string;
+  onMoveContentOut?: (contentId: string, folderId: string) => void;
 }) {
   const { toast } = useToast();
   const [dragging, setDragging] = useState(false);
@@ -243,7 +259,7 @@ export function Task({
     fetch("/api/notes", {
       method: "PATCH",
       headers: {
-        "X-Socket-User-Id": socketUserId ?? ""
+        "X-Socket-User-Id": socketUserId ?? "",
       },
       body: JSON.stringify({ content: newValue, taskId: content.id }),
     }).then(() => {
@@ -344,7 +360,7 @@ export function Task({
                   const realInputNumber = _inputNumber - 1;
                   return (
                     <input
-                      onChange={() => { }}
+                      onChange={() => {}}
                       {...props}
                       disabled={false}
                       onClick={(e) => {
@@ -412,7 +428,7 @@ export function Task({
     >
       <div
         key={content.id}
-        className={`${deleting && "animate-pulse cursor-wait opacity-75"} ${dragging && "scale-105 shadow-2xl"} transition-all flex flex-col gap-2 rounded-md border-2 border-gray-300 bg-white px-2 py-2 text-black`}
+        className={`${deleting && "animate-pulse cursor-wait opacity-75"} ${dragging && "scale-105 shadow-2xl"} flex flex-col gap-2 rounded-md border-2 border-gray-300 bg-white px-2 py-2 text-black transition-all`}
       >
         <div className="relative flex flex-col gap-2">{textEditContent()}</div>
         {linksWithMeta.length > 0 && (
@@ -486,6 +502,24 @@ export function Task({
                 {textEditContent()}
               </DialogContent>
             </Dialog>
+            {folders && onMove && (
+              <MoveToFolderDialog
+                content={content}
+                folders={folders}
+                onMove={onMove}
+                socketUserId={socketUserId}
+              />
+            )}
+            {folderId && onMoveContentOut && (
+              <button
+                onClick={() => onMoveContentOut(content.id, folderId)}
+                disabled={deleting}
+                className={`${deleting && "cursor-wait"} w-8 min-w-min rounded bg-amber-100 py-1 text-amber-700 active:scale-90 active:opacity-75`}
+                title="Sortir du dossier"
+              >
+                <FontAwesomeIcon icon={faArrowRightFromBracket} />
+              </button>
+            )}
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <button
@@ -514,7 +548,7 @@ export function Task({
                       fetch("/api/notes", {
                         method: "DELETE",
                         headers: {
-                          "X-Socket-User-Id": socketUserId ?? ""
+                          "X-Socket-User-Id": socketUserId ?? "",
                         },
                         body: JSON.stringify({ taskId: content.id }),
                       })

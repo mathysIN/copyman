@@ -97,8 +97,9 @@ export function ActiveSession({
     session.backgroundImageURL ?? "",
   );
   const [bgModalLoading, setBgModalLoading] = useState(false);
-  const [contentOrder, setContentOrder] =
-    useState<ContentOrder>(sessionContentOrder);
+  const [contentOrder, setContentOrder] = useState<ContentOrder>([
+    ...new Set(sessionContentOrder),
+  ]);
   const [sessionContent, setSessionContent] =
     useState<ContentType[]>(baseSessionContent);
   const [optionsModalOpen, setOptionsModalOpen] = useState(false);
@@ -196,12 +197,13 @@ export function ActiveSession({
   }
 
   function onUpdateContentOrder(order: ContentOrder, emit = true): void {
-    if (emit) socket.emit("updatedContentOrder", order);
-    setContentOrder(order);
+    const deduplicatedOrder = [...new Set(order)];
+    if (emit) socket.emit("updatedContentOrder", deduplicatedOrder);
+    setContentOrder(deduplicatedOrder);
     void saveOfflineSession({
       sessionId: session.sessionId,
       content: sessionContent,
-      order,
+      order: deduplicatedOrder,
       updatedAt: Date.now(),
     });
   }
@@ -585,7 +587,7 @@ export function ActiveSession({
   function onReorderContent(newValues: ContentType[]): void {
     const newOrder = newValues.map((v) => v.id);
     setContentOrder(newOrder);
-    onUpdateContentOrder([...newOrder, ...contentOrder], true);
+    onUpdateContentOrder(newOrder, true);
   }
 
   function sendPasswordRequest(password: string): void {

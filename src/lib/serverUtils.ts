@@ -167,7 +167,7 @@ export async function serverDeleteFolder(
       (content.type === "note" || content.type === "attachment") &&
       (content as any).folderId === folderId
     ) {
-      await session.updateNote(content.id, { folderId: undefined });
+      await session.deleteFolderId(content.id);
       const updatedContent = await session.getContent(content.id);
       if (updatedContent) {
         socketSendUpdateContent(session, updatedContent, senderSocketId);

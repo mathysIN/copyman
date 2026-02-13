@@ -9,7 +9,6 @@ import {
   faChevronDown,
   faChevronUp,
   faTrash,
-  faGripVertical,
 } from "@fortawesome/free-solid-svg-icons";
 import type {
   FolderType,
@@ -35,6 +34,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
+  DialogDescription,
+  DialogClose,
 } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
 
@@ -65,14 +67,16 @@ export function Folder({
 }: FolderProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  const [renameOpen, setRenameOpen] = useState(false);
   const [folderName, setFolderName] = useState(folder.name);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [renaming, setRenaming] = useState(false);
   const controls = useDragControls();
 
   const handleNameChange = async (newName: string) => {
     if (!newName.trim()) return;
 
+    setRenaming(true);
     const updatedFolder = { ...folder, name: newName };
     onFolderUpdate(updatedFolder);
 
@@ -84,6 +88,7 @@ export function Folder({
       },
       body: JSON.stringify({ folderId: folder.id, name: newName }),
     });
+    setRenaming(false);
   };
 
   const handleDelete = async () => {
@@ -137,35 +142,58 @@ export function Folder({
               className="h-5 w-5 text-amber-500"
             />
 
-            {isEditing ? (
-              <Input
-                value={folderName}
-                onChange={(e) => setFolderName(e.target.value)}
-                onBlur={() => {
-                  handleNameChange(folderName);
-                  setIsEditing(false);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleNameChange(folderName);
-                    setIsEditing(false);
-                  }
-                }}
-                className="h-8 max-w-[200px] flex-1"
-                autoFocus
-              />
-            ) : (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="flex-1 truncate text-left font-medium text-gray-800 hover:text-amber-700"
-              >
-                {folder.name}
-              </button>
-            )}
-
-            <span className="rounded-full bg-white/50 px-2 py-1 text-xs text-gray-500">
-              {contents.length}
-            </span>
+            <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+              <DialogTrigger asChild>
+                <button className="flex-1 truncate text-left font-medium text-gray-800 hover:text-amber-700">
+                  {folder.name}
+                </button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Renommer le dossier</DialogTitle>
+                  <DialogDescription>
+                    Modifiez le nom du dossier puis appuyez sur OK.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <input
+                    value={folderName}
+                    onChange={(e) => setFolderName(e.target.value)}
+                    onKeyDown={async (e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        if (!folderName || folderName.trim() === "") return;
+                        await handleNameChange(folderName);
+                        setRenameOpen(false);
+                      }
+                    }}
+                    className="w-full rounded border px-3 py-2 text-sm text-black"
+                    type="text"
+                    autoFocus
+                  />
+                </div>
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button variant="outline" size="sm">
+                      Annuler
+                    </Button>
+                  </DialogClose>
+                  <Button
+                    size="sm"
+                    onClick={async () => {
+                      if (!folderName || folderName.trim() === "") return;
+                      await handleNameChange(folderName);
+                      setRenameOpen(false);
+                    }}
+                    disabled={
+                      renaming || !folderName || folderName.trim() === ""
+                    }
+                  >
+                    {renaming ? "Renommage..." : "OK"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
 
           <div className="flex items-center gap-2">
@@ -173,9 +201,10 @@ export function Folder({
               <AlertDialogTrigger asChild>
                 <button
                   disabled={isDeleting}
-                  className="flex h-8 w-8 items-center justify-center rounded bg-red-400 text-white transition-all hover:bg-red-500 active:scale-90"
+                  className={`${isDeleting && "cursor-wait"} w-8 min-w-min rounded bg-red-400 py-1 text-white transition-colors hover:bg-red-500 active:scale-90 active:opacity-75`}
+                  title="Supprimer le dossier"
                 >
-                  <FontAwesomeIcon icon={faTrash} className="h-3 w-3" />
+                  <FontAwesomeIcon icon={faTrash} />
                 </button>
               </AlertDialogTrigger>
               <AlertDialogContent>
@@ -202,10 +231,21 @@ export function Folder({
               className="flex cursor-grab touch-none flex-row items-center justify-center"
               onPointerDown={(e) => controls?.start(e)}
             >
-              <FontAwesomeIcon
-                icon={faGripVertical}
-                className="h-5 w-5 text-gray-400"
-              />
+              <div className="mt-[1px] cursor-grab">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 text-black"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <circle cx="5" cy="6" r="1.5" />
+                  <circle cx="5" cy="12" r="1.5" />
+                  <circle cx="5" cy="18" r="1.5" />
+                  <circle cx="10" cy="6" r="1.5" />
+                  <circle cx="10" cy="12" r="1.5" />
+                  <circle cx="10" cy="18" r="1.5" />
+                </svg>
+              </div>
             </div>
           </div>
         </div>
@@ -366,10 +406,10 @@ export function MoveToFolderDialog({
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <button
-          className="w-8 rounded bg-neutral-100 py-1 transition-all hover:bg-neutral-200 active:scale-90 active:opacity-75"
+          className="w-8 rounded bg-neutral-100 py-1 transition-colors hover:bg-neutral-200 active:scale-90 active:opacity-75"
           title="Déplacer vers un dossier"
         >
-          <FontAwesomeIcon icon={faFolder} className="text-amber-600" />
+          <FontAwesomeIcon icon={faFolder} />
         </button>
       </DialogTrigger>
       <DialogContent>

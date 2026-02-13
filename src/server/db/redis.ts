@@ -105,7 +105,7 @@ export class Session {
     this.rawContentOrder = props.rawContentOrder;
     try {
       this.imageBackground = new URL(props.backgroundImageURL ?? "");
-    } catch { }
+    } catch {}
     this.usedSpace = props.usedSpace;
     this.expiresAt = props.expiresAt;
     this.isTemporary = props.isTemporary;
@@ -233,6 +233,13 @@ export class Session {
 
   async deleteContent(id: string) {
     return contents.del(this.withSessionKey(REDIS_CONTENT_PREFIX, id));
+  }
+
+  async deleteFolderId(id: string) {
+    return contents.hdel(
+      this.withSessionKey(REDIS_CONTENT_PREFIX, id),
+      "folderId",
+    );
   }
 
   async getContent(id: string) {

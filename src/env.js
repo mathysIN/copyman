@@ -18,7 +18,6 @@ export const env = createEnv({
       .default("development"),
     COPYMAN_ENV: z
       .enum(["development", "production"])
-      .default("development"),
   },
   client: {},
   runtimeEnv: {

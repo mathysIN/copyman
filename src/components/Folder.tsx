@@ -65,7 +65,7 @@ export function Folder({
   renderContentItem,
   socketUserId,
 }: FolderProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
   const [folderName, setFolderName] = useState(folder.name);
@@ -272,7 +272,7 @@ export function Folder({
         {/* Empty state */}
         {isExpanded && contents.length === 0 && (
           <div className="border-t border-amber-200/50 p-4 text-center text-sm text-gray-500">
-            Glissez des éléments ici
+            Le dossier est vide...
           </div>
         )}
       </div>
@@ -435,11 +435,10 @@ export function MoveToFolderDialog({
               key={folder.id}
               onClick={() => handleMove(folder.id)}
               disabled={folder.id === currentFolderId}
-              className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-colors ${
-                folder.id === currentFolderId
-                  ? "cursor-default border-amber-300 bg-amber-50"
-                  : "hover:bg-gray-50"
-              }`}
+              className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-colors ${folder.id === currentFolderId
+                ? "cursor-default border-amber-300 bg-amber-50"
+                : "hover:bg-gray-50"
+                }`}
             >
               <FontAwesomeIcon
                 icon={faFolder}

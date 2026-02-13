@@ -1,8 +1,6 @@
 "use client";
 
 import { forwardRef, useImperativeHandle, useRef, useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPaste } from "@fortawesome/free-solid-svg-icons";
 import { type NoteType } from "~/server/db/redis";
 import { toast } from "~/hooks/use-toast";
 
@@ -72,13 +70,13 @@ const _AddNewTask = forwardRef(
 
     return (
       <div
-        className={`${loading && "animate-pulse cursor-wait opacity-75"} flex h-16 items-center gap-2 rounded-xl bg-white px-2 py-2 text-black`}
+        className={`${loading && "animate-pulse cursor-wait opacity-75"} flex h-16 items-center rounded-xl bg-white px-2 py-2 text-black`}
       >
         <textarea
           ref={textareaRef}
           disabled={loading}
-          placeholder="Nouvelle note (CTRL+V pour coller instantanément)"
-          className="h-full flex-1 resize-none"
+          placeholder="Nouvelle note"
+          className="h-full w-full resize-none"
           onKeyDown={async (e) => {
             if (e.key === "Enter") {
               const target = e.currentTarget;
@@ -88,22 +86,6 @@ const _AddNewTask = forwardRef(
             }
           }}
         />
-        <button
-          disabled={loading}
-          onClick={async () => {
-            try {
-              const text = await navigator.clipboard.readText();
-              if (text) {
-                await addTask(text);
-              }
-            } catch (err) {
-              console.error("Failed to read clipboard:", err);
-            }
-          }}
-          className="h-full rounded-lg bg-neutral-100 px-3 text-sm active:scale-90 active:opacity-75 disabled:opacity-50"
-        >
-          <FontAwesomeIcon icon={faPaste} />
-        </button>
       </div>
     );
   },

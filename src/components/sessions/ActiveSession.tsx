@@ -41,6 +41,7 @@ import {
   type FolderType,
 } from "~/server/db/redis";
 import { Folder, CreateFolderButton } from "~/components/Folder";
+import { PasteButton } from "~/components/PasteButton";
 import { Reorder } from "framer-motion";
 import { useToast } from "~/hooks/use-toast";
 import { DialogClose } from "@radix-ui/react-dialog";
@@ -84,6 +85,7 @@ export function ActiveSession({
   const [uploadProgressPourcentage, setUploadProgressPourcentage] = useState<
     UploadProgress[]
   >([]);
+  const [uploadPasteLoading, setUploadPasteLoading] = useState(false);
 
   const [hasPassword, setHasPassword] = useState(baseHasPassword);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
@@ -349,6 +351,38 @@ export function ActiveSession({
       }
     }
     uploadFiles(files);
+  }
+
+  async function pasteImagesFromClipboard() {
+    try {
+      setUploadPasteLoading(true);
+      const clipboardItems = await navigator.clipboard.read();
+      const files: File[] = [];
+
+      for (const item of clipboardItems) {
+        const imageTypes = item.types.filter((type) =>
+          type.startsWith("image/"),
+        );
+        for (const type of imageTypes) {
+          const blob = await item.getType(type);
+          files.push(
+            new File(
+              [blob],
+              `pasted-image-${Date.now()}.${type.split("/")[1]}`,
+              { type },
+            ),
+          );
+        }
+      }
+
+      if (files.length > 0) {
+        uploadFiles(files);
+      }
+    } catch (err) {
+      console.error("Failed to read clipboard:", err);
+    } finally {
+      setUploadPasteLoading(false);
+    }
   }
 
   async function uploadFiles(files: File[]): Promise<AttachmentType[] | null> {
@@ -1213,22 +1247,32 @@ export function ActiveSession({
           <div
             className={`${showTrucs ? "flex" : "hidden"} flex-col gap-y-2 md:flex`}
           >
-            <div ref={containerAnimationUploadingRef}>
-              <Upload className="h-16" onUploadingFiles={onUploadingFiles} />
-              {Array.from(uploadProgressPourcentage.values())
-                .filter((progress) => progress.progress)
-                .map((progress) => (
-                  <div className="mt-2">
-                    <div className="relative h-6 ">
-                      <Progress value={progress.progress} className="h-full" />
-                      <span className="tex absolute inset-0 flex items-center justify-center text-sm font-medium text-white mix-blend-difference">
-                        {progress.filename} - {progress.progress}%
-                      </span>
+            <div
+              ref={containerAnimationUploadingRef}
+              className="flex items-center gap-2"
+            >
+              <div className="flex-1">
+                <Upload onUploadingFiles={onUploadingFiles} />
+                {Array.from(uploadProgressPourcentage.values())
+                  .filter((progress) => progress.progress)
+                  .map((progress) => (
+                    <div className="mt-2">
+                      <div className="relative h-6 ">
+                        <Progress
+                          value={progress.progress}
+                          className="h-full"
+                        />
+                        <span className="tex absolute inset-0 flex items-center justify-center text-sm font-medium text-white mix-blend-difference">
+                          {progress.filename} - {progress.progress}%
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))}
-            </div>
-            <div className="flex justify-end">
+                  ))}
+              </div>
+              <PasteButton
+                onPaste={pasteImagesFromClipboard}
+                loading={uploadPasteLoading}
+              />
               <CreateFolderButton
                 targetType="attachment"
                 onCreateFolder={(folder) => {
@@ -1314,11 +1358,16 @@ export function ActiveSession({
           <div
             className={`${showAutresTrucs ? "flex" : "hidden"} flex-col gap-y-2 md:flex`}
           >
-            <div className="flex items-center justify-between">
-              <AddNewTask
-                onNewContent={(n) => onNewContent([n])}
-                socketUserId={socketUserId}
-                ref={newTaskComponent}
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <AddNewTask
+                  onNewContent={(n) => onNewContent([n])}
+                  socketUserId={socketUserId}
+                  ref={newTaskComponent}
+                />
+              </div>
+              <PasteButton
+                onPaste={(text) => newTaskComponent.current?.addTask(text)}
               />
               <CreateFolderButton
                 targetType="note"

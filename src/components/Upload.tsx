@@ -2,9 +2,6 @@
 
 import { faUpload } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useState } from "react";
-import { uploadFiles } from "~/lib/client/uploadFile";
-import { AttachmentType } from "~/server/db/redis";
 
 export default function Upload({
   onUploadingFiles,

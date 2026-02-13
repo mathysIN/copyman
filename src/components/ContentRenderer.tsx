@@ -62,8 +62,8 @@ const GRADIENTS = [
 
 const ContentRenderer = ({
   content,
-  onContentDelete = () => {},
-  onContentUpdate = () => {},
+  onContentDelete = () => { },
+  onContentUpdate = () => { },
   socketUserId,
   folders,
   onMove,
@@ -274,15 +274,7 @@ const ContentRenderer = ({
                 socketUserId={socketUserId}
               />
             )}
-            {folderId && onMoveContentOut && (
-              <button
-                onClick={() => onMoveContentOut(content.id, folderId)}
-                className="w-8 rounded bg-amber-100 py-1 text-amber-700 active:scale-90 active:opacity-75"
-                title="Sortir du dossier"
-              >
-                <FontAwesomeIcon icon={faArrowRightFromBracket} />
-              </button>
-            )}
+
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <button className="w-8 rounded bg-red-400 py-1 text-white active:scale-90 active:opacity-75">

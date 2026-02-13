@@ -288,9 +288,8 @@ export function CreateFolderButton({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <button className="flex items-center gap-2 rounded-md bg-amber-100 px-3 py-2 text-sm text-amber-800 transition-colors hover:bg-amber-200">
+        <button className="flex h-16 w-12 items-center justify-center rounded-xl bg-white text-gray-700 transition-colors hover:bg-neutral-50 active:scale-95 active:opacity-95">
           <FontAwesomeIcon icon={faFolder} />
-          Nouveau dossier
         </button>
       </DialogTrigger>
       <DialogContent>

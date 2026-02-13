@@ -101,8 +101,8 @@ export function Task({
   content,
   allContent,
   socketUserId,
-  onDeleteTask = () => {},
-  onUpdateTask = () => {},
+  onDeleteTask = () => { },
+  onUpdateTask = () => { },
   folders,
   onMove,
   folderId,
@@ -360,7 +360,7 @@ export function Task({
                   const realInputNumber = _inputNumber - 1;
                   return (
                     <input
-                      onChange={() => {}}
+                      onChange={() => { }}
                       {...props}
                       disabled={false}
                       onClick={(e) => {
@@ -509,16 +509,6 @@ export function Task({
                 onMove={onMove}
                 socketUserId={socketUserId}
               />
-            )}
-            {folderId && onMoveContentOut && (
-              <button
-                onClick={() => onMoveContentOut(content.id, folderId)}
-                disabled={deleting}
-                className={`${deleting && "cursor-wait"} w-8 min-w-min rounded bg-amber-100 py-1 text-amber-700 active:scale-90 active:opacity-75`}
-                title="Sortir du dossier"
-              >
-                <FontAwesomeIcon icon={faArrowRightFromBracket} />
-              </button>
             )}
             <AlertDialog>
               <AlertDialogTrigger asChild>

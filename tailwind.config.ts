@@ -40,7 +40,7 @@ const config = {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         brand: {
-          DEFAULT: "#1a1b26",
+          DEFAULT: "#287d7c",
         },
         primary: {
           DEFAULT: "hsl(var(--primary))",

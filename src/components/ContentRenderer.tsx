@@ -62,8 +62,8 @@ const GRADIENTS = [
 
 const ContentRenderer = ({
   content,
-  onContentDelete = () => { },
-  onContentUpdate = () => { },
+  onContentDelete = () => {},
+  onContentUpdate = () => {},
   socketUserId,
   folders,
   onMove,
@@ -241,7 +241,7 @@ const ContentRenderer = ({
         <div className="flex flex-row justify-between gap-4">
           <div className="flex flex-row gap-x-1 text-sm">
             <button
-              className="w-8 rounded border-neutral-200 bg-neutral-100 py-1 active:scale-90 active:opacity-75"
+              className="w-8 rounded border-neutral-200 bg-neutral-100 py-1 transition-colors hover:bg-neutral-200 active:scale-90 active:opacity-75"
               onClick={() =>
                 copyAndToast(
                   toast,
@@ -249,19 +249,22 @@ const ContentRenderer = ({
                   "Le lien du contenu a bien été copié",
                 )
               }
+              title="Copier le lien du fichier"
             >
               <FontAwesomeIcon icon={faLink} />
             </button>
             <button
-              className="flex w-8 items-center justify-center rounded bg-neutral-100 py-1 text-gray-900 active:scale-90 active:opacity-75"
+              className="flex w-8 items-center justify-center rounded bg-neutral-100 py-1 text-gray-900 transition-colors hover:bg-neutral-200 active:scale-90 active:opacity-75"
               onClick={handleDownload}
+              title="Télécharger le fichier"
             >
               <FontAwesomeIcon icon={faDownload} />
             </button>
             <a
               target="_blank"
               href={attachmentURL}
-              className="flex w-8 items-center justify-center rounded bg-neutral-100 py-1 text-gray-900 active:scale-90 active:opacity-75"
+              className="flex w-8 items-center justify-center rounded bg-neutral-100 py-1 text-gray-900 transition-colors hover:bg-neutral-200 active:scale-90 active:opacity-75"
+              title="Ouvrir dans un nouvel onglet"
             >
               <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
             </a>
@@ -277,7 +280,10 @@ const ContentRenderer = ({
 
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <button className="w-8 rounded bg-red-400 py-1 text-white active:scale-90 active:opacity-75">
+                <button
+                  className="w-8 rounded bg-red-400 py-1 text-white transition-colors hover:bg-red-500 active:scale-90 active:opacity-75"
+                  title="Supprimer le fichier"
+                >
                   <FontAwesomeIcon icon={faTrash} />
                 </button>
               </AlertDialogTrigger>

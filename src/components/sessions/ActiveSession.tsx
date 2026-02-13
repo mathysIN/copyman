@@ -771,7 +771,12 @@ export function ActiveSession({
       <div className="flex flex-row justify-center gap-2">
         <Dialog open={optionsModalOpen} onOpenChange={setOptionsModalOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline">Paramètres</Button>
+            <Button
+              variant="outline"
+              title="Ouvrir les paramètres de la session"
+            >
+              Paramètres
+            </Button>
           </DialogTrigger>
           <DialogContent className="">
             <DialogHeader>
@@ -1055,7 +1060,9 @@ export function ActiveSession({
         </Dialog>
         <Dialog open={changeSessionOpen} onOpenChange={setChangeSessionOpen}>
           <DialogTrigger asChild>
-            <Button variant={"outline"}>Changer de session</Button>
+            <Button variant={"outline"} title="Rejoindre une autre session">
+              Changer de session
+            </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[480px]">
             <DialogHeader>
@@ -1117,7 +1124,10 @@ export function ActiveSession({
               <Dialog>
                 <DialogTrigger>
                   <div className="flex flex-row items-center justify-end space-x-2">
-                    <Button variant={"outline"}>
+                    <Button
+                      variant={"outline"}
+                      title={`Voir les ${roomUsers.length} utilisateurs connectés`}
+                    >
                       <div className="flex flex-row items-center justify-center gap-1 font-semibold">
                         <p>{roomUsers.length}</p>{" "}
                         <FontAwesomeIcon icon={faUser} />
@@ -1190,7 +1200,10 @@ export function ActiveSession({
             <Dialog>
               <DialogTrigger>
                 <div className="">
-                  <Button variant={"outline_destructive"}>
+                  <Button
+                    variant={"outline_destructive"}
+                    title="Connexion en cours de rechargement"
+                  >
                     <div className="flex flex-row items-center justify-center gap-2">
                       <FontAwesomeIcon
                         icon={faWifi}

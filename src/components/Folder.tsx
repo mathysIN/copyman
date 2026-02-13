@@ -288,7 +288,10 @@ export function CreateFolderButton({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <button className="flex h-16 w-12 items-center justify-center rounded-xl bg-white text-gray-700 transition-colors hover:bg-neutral-50 active:scale-95 active:opacity-95">
+        <button
+          className="flex h-16 w-12 items-center justify-center rounded-xl bg-white text-gray-700 transition-colors hover:bg-neutral-50 active:scale-95 active:opacity-95"
+          title="Créer un nouveau dossier"
+        >
           <FontAwesomeIcon icon={faFolder} />
         </button>
       </DialogTrigger>
@@ -362,7 +365,10 @@ export function MoveToFolderDialog({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <button className="w-8 rounded bg-neutral-100 py-1 transition-all hover:bg-neutral-200 active:scale-90 active:opacity-75">
+        <button
+          className="w-8 rounded bg-neutral-100 py-1 transition-all hover:bg-neutral-200 active:scale-90 active:opacity-75"
+          title="Déplacer vers un dossier"
+        >
           <FontAwesomeIcon icon={faFolder} className="text-amber-600" />
         </button>
       </DialogTrigger>

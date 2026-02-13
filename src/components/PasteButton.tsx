@@ -31,6 +31,7 @@ export function PasteButton({ onPaste, loading = false }: PasteButtonProps) {
       disabled={loading || isPasteLoading}
       onClick={handlePaste}
       className="flex h-16 w-12 items-center justify-center rounded-xl bg-white text-gray-700 transition-colors hover:bg-neutral-50 active:scale-95 active:opacity-95 disabled:opacity-50"
+      title="Coller depuis le presse-papier"
     >
       <FontAwesomeIcon icon={faPaste} />
     </button>

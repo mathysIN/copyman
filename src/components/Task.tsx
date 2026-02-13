@@ -101,8 +101,8 @@ export function Task({
   content,
   allContent,
   socketUserId,
-  onDeleteTask = () => { },
-  onUpdateTask = () => { },
+  onDeleteTask = () => {},
+  onUpdateTask = () => {},
   folders,
   onMove,
   folderId,
@@ -360,7 +360,7 @@ export function Task({
                   const realInputNumber = _inputNumber - 1;
                   return (
                     <input
-                      onChange={() => { }}
+                      onChange={() => {}}
                       {...props}
                       disabled={false}
                       onClick={(e) => {
@@ -460,7 +460,7 @@ export function Task({
         <div className="flex flex-row justify-between">
           <div className="flex flex-row gap-x-1 text-center text-sm text-black">
             <button
-              className="w-8 rounded bg-neutral-100 py-1 active:scale-90 active:opacity-75"
+              className="w-8 rounded bg-neutral-100 py-1 transition-colors hover:bg-neutral-200 active:scale-90 active:opacity-75"
               onClick={() =>
                 copyAndToast(
                   toast,
@@ -468,11 +468,12 @@ export function Task({
                   "Le lien de la note a bien été copié",
                 )
               }
+              title="Copier le lien de la note"
             >
               <FontAwesomeIcon icon={faLink} />
             </button>
             <button
-              className="w-8 rounded bg-neutral-100 py-1 active:scale-90 active:opacity-75"
+              className="w-8 rounded bg-neutral-100 py-1 transition-colors hover:bg-neutral-200 active:scale-90 active:opacity-75"
               onClick={(e) => {
                 e.stopPropagation();
                 copyAndToast(
@@ -481,6 +482,7 @@ export function Task({
                   "Le contenu de la note a bien été copié",
                 );
               }}
+              title="Copier le contenu de la note"
             >
               <FontAwesomeIcon icon={faCopy} />
             </button>
@@ -493,7 +495,8 @@ export function Task({
               <DialogTrigger asChild>
                 <button
                   disabled={deleting}
-                  className={`${deleting && "cursor-wait"} w-8 min-w-min rounded bg-neutral-100 py-1 active:scale-90 active:opacity-75`}
+                  className={`${deleting && "cursor-wait"} w-8 min-w-min rounded bg-neutral-100 py-1 transition-colors hover:bg-neutral-200 active:scale-90 active:opacity-75`}
+                  title="Agrandir la note"
                 >
                   <FontAwesomeIcon icon={faExpand} />
                 </button>
@@ -514,7 +517,8 @@ export function Task({
               <AlertDialogTrigger asChild>
                 <button
                   disabled={deleting}
-                  className={`${deleting && "cursor-wait"} w-8 min-w-min rounded bg-red-400 py-1 text-white active:scale-90 active:opacity-75`}
+                  className={`${deleting && "cursor-wait"} w-8 min-w-min rounded bg-red-400 py-1 text-white transition-colors hover:bg-red-500 active:scale-90 active:opacity-75`}
+                  title="Supprimer la note"
                 >
                   <FontAwesomeIcon icon={faTrash} />
                 </button>

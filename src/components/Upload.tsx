@@ -23,7 +23,8 @@ export default function Upload({
   return (
     <button
       onClick={() => document.getElementById("file-upload")?.click()}
-      className={`${loading ? "animate-pulse cursor-wait opacity-75" : "cursor-pointer"} flex h-16 w-full flex-col items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-black active:scale-95 active:opacity-95`}
+      className={`${loading ? "animate-pulse cursor-wait opacity-75" : "cursor-pointer"} flex h-16 w-full flex-col items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-black transition-colors hover:bg-neutral-50 active:scale-95 active:opacity-95`}
+      title="Télécharger un fichier"
     >
       <input
         id="file-upload"

@@ -1,11 +1,11 @@
 "use client";
 
-import { io, Socket } from "socket.io-client";
+import { io, type Socket } from "socket.io-client";
 import {
-  ClientToServerEvents,
+  type ClientToServerEvents,
   ConnectionStart,
   InterServerEvents,
-  ServerToClientEvents,
+  type ServerToClientEvents,
 } from "~/server";
 
 // Ensure a single client socket instance across HMR/reloads

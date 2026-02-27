@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { serverCreateNote, serverUploadFiles } from "~/lib/serverUtils";
 import { getSessionWithCookies } from "~/utils/authenticate";
 

@@ -378,14 +378,16 @@ const ContentRenderer = ({
             >
               <FontAwesomeIcon icon={faDownload} />
             </button>
-            <a
-              target="_blank"
-              href={attachmentURL}
-              className="flex w-8 items-center justify-center rounded bg-neutral-100 py-1 text-gray-900 transition-colors hover:bg-neutral-200 active:scale-90 active:opacity-75"
-              title="Ouvrir dans un nouvel onglet"
-            >
-              <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
-            </a>
+            {!isEncrypted && (
+              <a
+                target="_blank"
+                href={attachmentURL}
+                className="flex w-8 items-center justify-center rounded bg-neutral-100 py-1 text-gray-900 transition-colors hover:bg-neutral-200 active:scale-90 active:opacity-75"
+                title="Ouvrir dans un nouvel onglet"
+              >
+                <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
+              </a>
+            )}
 
             {folders && onMove && (
               <MoveToFolderDialog

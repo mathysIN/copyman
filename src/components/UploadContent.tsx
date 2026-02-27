@@ -1,9 +1,9 @@
 "use client";
 
 import { useRef } from "react";
-import { AttachmentType } from "~/server/db/redis";
+import { type AttachmentType } from "~/server/db/redis";
 import { UploadDropzone, UploadButton } from "~/utils/uploadthing";
-import { ClientUploadedFileData } from "uploadthing/types";
+import { type ClientUploadedFileData } from "uploadthing/types";
 import { cn } from "~/lib/utils";
 import { useToast } from "~/hooks/use-toast";
 import { faUpload } from "@fortawesome/free-solid-svg-icons";

@@ -133,139 +133,151 @@ export function EncryptionSettings({
   const isEffectivelyEncrypted = encryption.isEnabled && isSessionEncrypted;
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <button
-          className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
-            isEffectivelyEncrypted
-              ? "bg-green-600/20 text-green-400 hover:bg-green-600/30"
-              : "bg-neutral-700 hover:bg-neutral-600"
-          }`}
-        >
-          <FontAwesomeIcon
-            icon={isEffectivelyEncrypted ? faLock : faUnlock}
-            className="h-4 w-4"
-          />
-          {isEffectivelyEncrypted ? "Chiffré" : "Non chiffré"}
-        </button>
-      </DialogTrigger>
-      <DialogContent className="bg-stone-800 text-white">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FontAwesomeIcon icon={faKey} />
-            Chiffrement de bout en bout
-          </DialogTitle>
-          <DialogDescription className="text-gray-300">
-            Le chiffrement de bout en bout (E2EE) protège vos données en les
-            chiffrant sur votre appareil avant l&apos;envoi. Seuls les appareils
-            avec le mot de passe de session peuvent déchiffrer le contenu.
-          </DialogDescription>
-        </DialogHeader>
+    <div className="flex items-center justify-between rounded-lg border p-4">
+      <div>
+        <p className="font-medium">Chiffrement E2EE</p>
+        <p className="text-sm text-muted-foreground">
+          {isEffectivelyEncrypted
+            ? "Chiffrement activé"
+            : "Chiffrement désactivé"}
+        </p>
+      </div>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTrigger asChild>
+          <Button
+            size="sm"
+            className={`min-w-[100px] ${
+              isEffectivelyEncrypted
+                ? "bg-green-600 hover:bg-green-700"
+                : "bg-neutral-700 hover:bg-neutral-600"
+            }`}
+          >
+            <FontAwesomeIcon
+              icon={isEffectivelyEncrypted ? faLock : faUnlock}
+              className="mr-2 h-4 w-4"
+            />
+            {isEffectivelyEncrypted ? "Activé" : "Désactivé"}
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="bg-stone-800 text-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FontAwesomeIcon icon={faKey} />
+              Chiffrement de bout en bout
+            </DialogTitle>
+            <DialogDescription className="text-gray-300">
+              Le chiffrement de bout en bout (E2EE) protège vos données en les
+              chiffrant sur votre appareil avant l&apos;envoi. Seuls les
+              appareils avec le mot de passe de session peuvent déchiffrer le
+              contenu.
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          {isEffectivelyEncrypted ? (
-            <>
-              <div className="rounded-lg bg-green-600/20 p-4 text-green-400">
-                <p className="flex items-center gap-2 font-medium">
-                  <FontAwesomeIcon icon={faLock} />
-                  Chiffrement activé
-                </p>
-                <p className="mt-2 text-sm text-green-300">
-                  Vos notes et fichiers sont chiffrés. Tous les participants
-                  avec le mot de passe de session peuvent les déchiffrer.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-sm text-gray-400">
-                  Le chiffrement utilise le mot de passe de session. Partagez ce
-                  mot de passe avec les autres participants pour qu&apos;ils
-                  puissent accéder au contenu.
-                </p>
-              </div>
-
-              <div className="border-t border-stone-600 pt-4">
-                <Button
-                  onClick={handleDisableEncryption}
-                  disabled={isDisabling}
-                  variant="destructive"
-                  className="w-full"
-                >
-                  {isDisabling
-                    ? "Désactivation..."
-                    : "Désactiver le chiffrement"}
-                </Button>
-                <p className="mt-2 text-xs text-gray-500">
-                  Attention : Le contenu chiffré existant deviendra illisible
-                  après la désactivation.
-                </p>
-              </div>
-
-              {encryption.needsPassword && (
-                <div className="rounded-lg bg-yellow-600/20 p-4 text-yellow-400">
+          <div className="space-y-4 py-4">
+            {isEffectivelyEncrypted ? (
+              <>
+                <div className="rounded-lg bg-green-600/20 p-4 text-green-400">
                   <p className="flex items-center gap-2 font-medium">
-                    <FontAwesomeIcon icon={faExclamationTriangle} />
-                    Mot de passe requis
+                    <FontAwesomeIcon icon={faLock} />
+                    Chiffrement activé
                   </p>
-                  <p className="mt-2 text-sm text-yellow-300">
-                    Cette session est chiffrée mais le mot de passe n&apos;est
-                    pas disponible sur cet appareil. Rejoignez la session avec
-                    le mot de passe pour déchiffrer le contenu.
+                  <p className="mt-2 text-sm text-green-300">
+                    Vos notes et fichiers sont chiffrés. Tous les participants
+                    avec le mot de passe de session peuvent les déchiffrer.
                   </p>
                 </div>
-              )}
-            </>
-          ) : (
-            <>
-              {!hasSessionPassword ? (
-                <div className="rounded-lg bg-yellow-600/20 p-4 text-yellow-400">
-                  <p className="flex items-center gap-2 font-medium">
-                    <FontAwesomeIcon icon={faExclamationTriangle} />
-                    Mot de passe requis
-                  </p>
-                  <p className="mt-2 text-sm text-yellow-300">
-                    Définissez un mot de passe de session dans les paramètres
-                    pour activer le chiffrement de bout en bout.
+
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-400">
+                    Le chiffrement utilise le mot de passe de session. Partagez
+                    ce mot de passe avec les autres participants pour
+                    qu&apos;ils puissent accéder au contenu.
                   </p>
                 </div>
-              ) : (
-                <>
-                  <div className="rounded-lg bg-neutral-700 p-4 text-gray-300">
-                    <p className="font-medium">Activer le chiffrement ?</p>
-                    <p className="mt-2 text-sm text-gray-400">
-                      Le chiffrement utilisera le mot de passe de session
-                      actuel. Tous les participants devront connaître ce mot de
-                      passe pour accéder au contenu.
+
+                <div className="border-t border-stone-600 pt-4">
+                  <Button
+                    onClick={handleDisableEncryption}
+                    disabled={isDisabling}
+                    variant="destructive"
+                    className="w-full"
+                  >
+                    {isDisabling
+                      ? "Désactivation..."
+                      : "Désactiver le chiffrement"}
+                  </Button>
+                  <p className="mt-2 text-xs text-gray-500">
+                    Attention : Le contenu chiffré existant deviendra illisible
+                    après la désactivation.
+                  </p>
+                </div>
+
+                {encryption.needsPassword && (
+                  <div className="rounded-lg bg-yellow-600/20 p-4 text-yellow-400">
+                    <p className="flex items-center gap-2 font-medium">
+                      <FontAwesomeIcon icon={faExclamationTriangle} />
+                      Mot de passe requis
+                    </p>
+                    <p className="mt-2 text-sm text-yellow-300">
+                      Cette session est chiffrée mais le mot de passe n&apos;est
+                      pas disponible sur cet appareil. Rejoignez la session avec
+                      le mot de passe pour déchiffrer le contenu.
                     </p>
                   </div>
+                )}
+              </>
+            ) : (
+              <>
+                {!hasSessionPassword ? (
+                  <div className="rounded-lg bg-yellow-600/20 p-4 text-yellow-400">
+                    <p className="flex items-center gap-2 font-medium">
+                      <FontAwesomeIcon icon={faExclamationTriangle} />
+                      Mot de passe requis
+                    </p>
+                    <p className="mt-2 text-sm text-yellow-300">
+                      Définissez un mot de passe de session dans les paramètres
+                      pour activer le chiffrement de bout en bout.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="rounded-lg bg-neutral-700 p-4 text-gray-300">
+                      <p className="font-medium">Activer le chiffrement ?</p>
+                      <p className="mt-2 text-sm text-gray-400">
+                        Le chiffrement utilisera le mot de passe de session
+                        actuel. Tous les participants devront connaître ce mot
+                        de passe pour accéder au contenu.
+                      </p>
+                    </div>
 
-                  <Button
-                    onClick={handleEnableEncryption}
-                    disabled={isEnabling}
-                    className="w-full bg-green-600 hover:bg-green-700"
-                  >
-                    {isEnabling ? "Activation..." : "Activer le chiffrement"}
-                  </Button>
-                </>
-              )}
+                    <Button
+                      onClick={handleEnableEncryption}
+                      disabled={isEnabling}
+                      className="w-full bg-green-600 hover:bg-green-700"
+                    >
+                      {isEnabling ? "Activation..." : "Activer le chiffrement"}
+                    </Button>
+                  </>
+                )}
 
-              <div className="rounded-lg bg-blue-600/20 p-4 text-blue-400">
-                <p className="text-sm">
-                  <strong>Note :</strong> Le mot de passe de session ne peut pas
-                  être modifié une fois le chiffrement activé sans perdre
-                  l&apos;accès au contenu existant.
-                </p>
-              </div>
-            </>
-          )}
-        </div>
+                <div className="rounded-lg bg-blue-600/20 p-4 text-blue-400">
+                  <p className="text-sm">
+                    <strong>Note :</strong> Le mot de passe de session ne peut
+                    pas être modifié une fois le chiffrement activé sans perdre
+                    l&apos;accès au contenu existant.
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setIsOpen(false)}>
-            Fermer
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsOpen(false)}>
+              Fermer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

@@ -838,12 +838,6 @@ export function ActiveSession({
       </div>
       <div className="h-4" />
       <div className="flex flex-row justify-center gap-2">
-        <EncryptionSettings
-          sessionId={session.sessionId}
-          isSessionEncrypted={session.isEncrypted ?? false}
-          hasSessionPassword={hasPassword}
-          sessionPassword={undefined}
-        />
         <Dialog open={optionsModalOpen} onOpenChange={setOptionsModalOpen}>
           <DialogTrigger asChild>
             <Button
@@ -1014,6 +1008,12 @@ export function ActiveSession({
                       </DialogContent>
                     </Dialog>
                   </div>
+                  <EncryptionSettings
+                    sessionId={session.sessionId}
+                    isSessionEncrypted={session.isEncrypted ?? false}
+                    hasSessionPassword={hasPassword}
+                    sessionPassword={undefined}
+                  />
                 </div>
 
                 <div className="h-4" />

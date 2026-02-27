@@ -45,10 +45,6 @@ import { PasteButton } from "~/components/PasteButton";
 import { Reorder } from "framer-motion";
 import { useToast } from "~/hooks/use-toast";
 import { useEncryption } from "~/hooks/use-encryption";
-import {
-  storeSessionPassword,
-  removeStoredSessionPassword,
-} from "~/lib/client/encryption";
 import { DialogClose } from "@radix-ui/react-dialog";
 import { type User } from "~/server";
 import Upload from "~/components/Upload";
@@ -121,6 +117,9 @@ export function ActiveSession({
   const [changeSessionLoading, setChangeSessionLoading] = useState(false);
   const [warningModalOpen, setWarningModalOpen] = useState(false);
   const [deletedModalOpen, setDeletedModalOpen] = useState(false);
+  const [encryptionChangedModalOpen, setEncryptionChangedModalOpen] =
+    useState(false);
+  const [newEncryptionState, setNewEncryptionState] = useState(false);
   const [extendLoading, setExtendLoading] = useState(false);
   const warnedSessionIdRef = useRef<string | null>(null);
 
@@ -297,6 +296,24 @@ export function ActiveSession({
       deleteAllCookies();
     });
 
+    socket.on("encryptionStateChanged", (isEncrypted: boolean) => {
+      setNewEncryptionState(isEncrypted);
+      setEncryptionChangedModalOpen(true);
+    });
+
+    socket.on("passwordChanged", () => {
+      toast({
+        variant: "destructive",
+        title: "Mot de passe modifié",
+        description:
+          "Le mot de passe a été modifié par un autre utilisateur. Veuillez vous reconnecter avec le nouveau mot de passe.",
+      });
+      setChangeSessionValue(session.sessionId);
+      setChangePasswordValue("");
+      setChangeSessionError("");
+      setChangeSessionOpen(true);
+    });
+
     socket.on("connect", onConnect);
     socket.on("welcome", onWelcome);
     socket.on("disconnect", onDisconnect);
@@ -311,6 +328,8 @@ export function ActiveSession({
       socket.off("roomInsight");
       socket.off("sessionWarning");
       socket.off("sessionDeleted");
+      socket.off("encryptionStateChanged");
+      socket.off("passwordChanged");
       socket.off("connect");
       socket.off("welcome");
       socket.off("disconnect");
@@ -643,23 +662,14 @@ export function ActiveSession({
       .setPassword(password)
       .then(async () => {
         setHasPassword(!!password);
-        if (password) {
-          console.log("[E2EE] Storing password from settings dialog");
-          storeSessionPassword(session.sessionId, password);
-        } else {
-          // Password removed - clear from localStorage and disable E2EE
-          console.log(
-            "[E2EE] Password removed, clearing stored password and disabling E2EE",
-          );
-          removeStoredSessionPassword(session.sessionId);
-          if (session.isEncrypted) {
-            await fetch("/api/sessions/encryption", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ isEncrypted: false }),
-            });
-          }
+        if (!password && session.isEncrypted) {
+          await fetch("/api/sessions/encryption", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ isEncrypted: false }),
+          });
         }
+        window.location.reload();
       })
       .finally(() => {
         setPasswordModalLoading(false);
@@ -776,6 +786,35 @@ export function ActiveSession({
               }}
             >
               {"Retour à l'accueil"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={encryptionChangedModalOpen}
+        onOpenChange={setEncryptionChangedModalOpen}
+      >
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {newEncryptionState
+                ? "Chiffrement activé"
+                : "Chiffrement désactivé"}
+            </DialogTitle>
+            <DialogDescription>
+              {newEncryptionState
+                ? "Le chiffrement de bout en bout a été activé pour cette session. Rejoignez la session avec le mot de passe pour déchiffrer le contenu."
+                : "Le chiffrement de bout en bout a été désactivé pour cette session."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                window.location.reload();
+              }}
+            >
+              Recharger la page
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -8,6 +8,7 @@ import {
   faExpand,
   faFolder,
   faArrowRightFromBracket,
+  faLock,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useRef, useState } from "react";
@@ -153,6 +154,13 @@ export function Task({
 
   useEffect(() => {
     const decrypt = async () => {
+      if (content.isEncrypted && !decryptNote) {
+        setIsDecrypting(false);
+        setDecryptionError(false);
+        setValue("");
+        setDecryptedValue(null);
+        return;
+      }
       if (content.isEncrypted && decryptNote) {
         console.log("[E2EE] Task: decrypting note", content.id);
         setIsDecrypting(true);
@@ -386,6 +394,19 @@ export function Task({
   let inputNumber = 0;
 
   function textEditContent() {
+    if (content.isEncrypted && !decryptNote) {
+      return (
+        <div className="flex flex-col items-center justify-center gap-2 rounded-lg bg-yellow-100 p-4 text-center text-yellow-700">
+          <FontAwesomeIcon icon={faLock} className="h-8 w-8" />
+          <p className="font-medium">Note chiffrée</p>
+          <p className="text-sm">
+            Activez le chiffrement avec le mot de passe pour déchiffrer cette
+            note.
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="flew-grow textarea relative w-full">
         <TextareaAutosize

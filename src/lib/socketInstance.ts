@@ -95,3 +95,40 @@ export function socketSendRoomInsight(room: Room) {
     globalForSocket.io.to(id).emit("roomInsight", insight);
   }
 }
+
+export function socketSendEncryptionState(
+  sessionId: string,
+  isEncrypted: boolean,
+  senderSocketId?: string,
+) {
+  if (!globalForSocket.io) return;
+  const room = rooms.get(sessionId);
+  if (!room) {
+    globalForSocket.io
+      .to(sessionId)
+      .emit("encryptionStateChanged", isEncrypted);
+    return;
+  }
+  for (const keyVal of room) {
+    const [id] = keyVal;
+    if (senderSocketId && id === senderSocketId) continue;
+    globalForSocket.io.to(id).emit("encryptionStateChanged", isEncrypted);
+  }
+}
+
+export function socketSendPasswordChanged(
+  sessionId: string,
+  senderSocketId?: string,
+) {
+  if (!globalForSocket.io) return;
+  const room = rooms.get(sessionId);
+  if (!room) {
+    globalForSocket.io.to(sessionId).emit("passwordChanged");
+    return;
+  }
+  for (const keyVal of room) {
+    const [id] = keyVal;
+    if (senderSocketId && id === senderSocketId) continue;
+    globalForSocket.io.to(id).emit("passwordChanged");
+  }
+}

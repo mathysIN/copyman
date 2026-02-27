@@ -22,8 +22,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useToast } from "~/hooks/use-toast";
 import {
   isEncryptionSupported,
-  storeSessionPassword,
-  getStoredSessionPassword,
+  getCookiePassword,
 } from "~/lib/client/encryption";
 
 export function EncryptionSettings({
@@ -54,17 +53,9 @@ export function EncryptionSettings({
 
     setIsEnabling(true);
 
-    // Get password from localStorage if not provided via props
-    const storedPassword =
-      sessionPassword || getStoredSessionPassword(sessionId);
-
-    if (storedPassword) {
-      console.log(
-        "[E2EE] Found password in storage, storing for key derivation",
-      );
-      storeSessionPassword(sessionId, storedPassword);
-    } else {
-      console.log("[E2EE] No password found in storage");
+    // Check if user has the password in cookie (meaning they joined with correct password)
+    const cookiePassword = getCookiePassword();
+    if (!cookiePassword) {
       toast({
         variant: "destructive",
         description:

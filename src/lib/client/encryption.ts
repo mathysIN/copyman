@@ -285,39 +285,14 @@ export function buildUrlWithEncryptionKey(
   return `${baseUrl}#key=${keyString}`;
 }
 
-const E2EE_PASSWORD_STORAGE_KEY = "copyman_e2ee_passwords";
-
-export function storeSessionPassword(
-  sessionId: string,
-  password: string,
-): void {
-  const passwords = getAllStoredPasswords();
-  passwords[sessionId] = password;
-  localStorage.setItem(E2EE_PASSWORD_STORAGE_KEY, JSON.stringify(passwords));
-  console.log("[E2EE] Stored password for session:", sessionId);
-}
-
-export function getStoredSessionPassword(sessionId: string): string | null {
-  const passwords = getAllStoredPasswords();
-  const pwd = passwords[sessionId] || null;
-  if (pwd) {
-    console.log("[E2EE] Retrieved stored password for session:", sessionId);
+export function getCookiePassword(): string | null {
+  if (typeof document === "undefined") return null;
+  const cookies = document.cookie.split(";");
+  for (const cookie of cookies) {
+    const [name, value] = cookie.trim().split("=");
+    if (name === "password" && value) {
+      return decodeURIComponent(value);
+    }
   }
-  return pwd;
-}
-
-export function removeStoredSessionPassword(sessionId: string): void {
-  const passwords = getAllStoredPasswords();
-  delete passwords[sessionId];
-  localStorage.setItem(E2EE_PASSWORD_STORAGE_KEY, JSON.stringify(passwords));
-  console.log("[E2EE] Removed stored password for session:", sessionId);
-}
-
-function getAllStoredPasswords(): Record<string, string> {
-  try {
-    const stored = localStorage.getItem(E2EE_PASSWORD_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : {};
-  } catch {
-    return {};
-  }
+  return null;
 }

@@ -16,7 +16,7 @@ import {
   getStoredEncryptionKey,
   removeStoredEncryptionKey,
   parseEncryptionKeyFromUrl,
-  getStoredSessionPassword,
+  getCookiePassword,
   type EncryptedData,
 } from "~/lib/client/encryption";
 import type { NoteType, AttachmentType } from "~/server/db/redis";
@@ -66,9 +66,8 @@ export function useEncryption(
         return;
       }
 
-      // Get password from props or storage
-      const effectivePassword =
-        sessionPassword || getStoredSessionPassword(sessionId);
+      // Get password from props or cookie
+      const effectivePassword = sessionPassword || getCookiePassword();
       console.log(
         "[E2EE Hook] Effective password available:",
         !!effectivePassword,

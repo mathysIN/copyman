@@ -7,6 +7,7 @@ import {
   faCopy,
   faFolder,
   faArrowRightFromBracket,
+  faLock,
 } from "@fortawesome/free-solid-svg-icons";
 import { PhotoProvider, PhotoView } from "react-photo-view";
 import "react-photo-view/dist/react-photo-view.css";
@@ -99,6 +100,7 @@ const ContentRenderer = ({
   const [decryptionError, setDecryptionError] = useState(false);
 
   const isEncrypted = content.isEncrypted && encryptionKey;
+  const needsDecryption = content.isEncrypted && !encryptionKey;
 
   useEffect(() => {
     setNewName(content.attachmentPath);
@@ -236,6 +238,19 @@ const ContentRenderer = ({
   };
 
   const renderContent = () => {
+    if (needsDecryption) {
+      return (
+        <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-yellow-100 p-4 text-center text-yellow-700">
+          <FontAwesomeIcon icon={faLock} className="h-8 w-8" />
+          <p className="font-medium">Fichier chiffré</p>
+          <p className="text-sm">
+            Activez le chiffrement avec le mot de passe pour déchiffrer ce
+            fichier.
+          </p>
+        </div>
+      );
+    }
+
     if (isEncrypted && !decryptedUrl) {
       if (decryptionError) {
         return (

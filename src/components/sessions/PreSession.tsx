@@ -6,7 +6,6 @@ import type { SessionType } from "~/server/db/redis";
 import { useSearchParams } from "next/navigation";
 import { Switch } from "~/components/ui/switch";
 import { Label } from "~/components/ui/label";
-import { storeSessionPassword } from "~/lib/client/encryption";
 import { cn } from "~/utils/helpers";
 
 import imageCreate from "~/../public/create.png";
@@ -122,12 +121,6 @@ export function PreSession() {
         setErrorMessage("Erreur lors de la création de la session");
       }
       return;
-    }
-
-    // Store password for E2EE key derivation (always store if password exists)
-    if (passwordValue) {
-      console.log("[E2EE] Storing session password for key derivation");
-      storeSessionPassword(sessionValue, passwordValue);
     }
 
     window.location.href = "/";

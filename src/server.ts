@@ -41,6 +41,8 @@ export type ServerToClientEvents = {
   roomInsight: (room: RoomInsight) => void;
   sessionWarning: (expiresAt: number) => void;
   sessionDeleted: () => void;
+  encryptionStateChanged: (isEncrypted: boolean) => void;
+  passwordChanged: () => void;
 };
 
 export type ClientToServerEvents = {

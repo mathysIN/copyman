@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionWithCookies } from "~/utils/authenticate";
 import { cookies } from "next/headers";
+import { socketSendEncryptionState } from "~/lib/socketInstance";
 
 export async function POST(req: Request) {
   const session = await getSessionWithCookies(cookies());
@@ -35,6 +36,8 @@ export async function POST(req: Request) {
     }
 
     await session.setIsEncrypted(isEncrypted);
+
+    socketSendEncryptionState(session.sessionId, isEncrypted);
 
     console.log(
       "[E2EE] Session encryption updated:",

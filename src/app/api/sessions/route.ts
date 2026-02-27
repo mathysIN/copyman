@@ -15,6 +15,7 @@ import {
   MS_PER_SECOND,
   TEMP_SESSION_DURATION_HOURS,
 } from "~/constants/session";
+import { socketSendPasswordChanged } from "~/lib/socketInstance";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -155,6 +156,8 @@ export async function PATCH(req: Request) {
   cookies().set("password", hashPassword(data["password"]), {
     expires: Date.now() + 10 * 365 * 24 * 60 * 60 * 1000,
   });
+
+  socketSendPasswordChanged(session.sessionId);
 
   return NextResponse.json({ message: "Password updated" });
 }

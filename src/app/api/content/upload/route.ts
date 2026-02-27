@@ -13,6 +13,7 @@ export async function POST(
 > {
   const formData = await req.formData();
   const files = formData.getAll("files") as File[] | undefined;
+  const encryptedMetaStr = formData.get("encryptedMeta") as string | null;
 
   const socketUserId = req.headers.get("X-Socket-User-Id") ?? undefined;
 
@@ -22,6 +23,24 @@ export async function POST(
   const session = await getSessionWithCookies(cookies());
   if (!session)
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+
+  let encryptedMeta: {
+    isEncrypted: boolean;
+    encryptedIv: string;
+    encryptedSalt: string;
+  }[] = [];
+  if (encryptedMetaStr) {
+    try {
+      encryptedMeta = JSON.parse(encryptedMetaStr);
+      console.log(
+        "[E2EE API] Upload received with encryptedMeta:",
+        encryptedMeta.length,
+        "files",
+      );
+    } catch (e) {
+      console.error("[E2EE API] Failed to parse encryptedMeta:", e);
+    }
+  }
 
   const usedSpace = session.getUsedSpaceNumber();
   const totalSize = files.reduce((sum, file) => sum + file.size, 0);
@@ -41,7 +60,12 @@ export async function POST(
       `Parsing request JSON took: ${performance.now() - startParse}ms`,
     );
 
-    const uploadPromises = await serverUploadFiles(session, files, socketUserId);
+    const uploadPromises = await serverUploadFiles(
+      session,
+      files,
+      socketUserId,
+      encryptedMeta,
+    );
 
     const startUploads = performance.now();
     const results = await Promise.all(uploadPromises);

@@ -44,9 +44,15 @@ import { Folder, CreateFolderButton } from "~/components/Folder";
 import { PasteButton } from "~/components/PasteButton";
 import { Reorder } from "framer-motion";
 import { useToast } from "~/hooks/use-toast";
+import { useEncryption } from "~/hooks/use-encryption";
+import {
+  storeSessionPassword,
+  removeStoredSessionPassword,
+} from "~/lib/client/encryption";
 import { DialogClose } from "@radix-ui/react-dialog";
 import { type User } from "~/server";
 import Upload from "~/components/Upload";
+import { EncryptionSettings } from "~/components/EncryptionSettings";
 import { uploadFiles as realUploadFile } from "~/lib/client/uploadFile";
 import { api } from "~/utils/api";
 import { Progress } from "../ui/progress";
@@ -117,6 +123,12 @@ export function ActiveSession({
   const [deletedModalOpen, setDeletedModalOpen] = useState(false);
   const [extendLoading, setExtendLoading] = useState(false);
   const warnedSessionIdRef = useRef<string | null>(null);
+
+  const encryption = useEncryption(
+    session.sessionId,
+    undefined,
+    session.isEncrypted,
+  );
 
   const [showTrucs, setShowTrucs] = useState(true);
   const [showAutresTrucs, setShowAutresTrucs] = useState(true);
@@ -426,6 +438,7 @@ export function ActiveSession({
         });
       },
       socketUserId,
+      encryption.key,
     );
 
     setUploadProgressPourcentage((prev) => {
@@ -628,8 +641,25 @@ export function ActiveSession({
     setPasswordModalLoading(true);
     api
       .setPassword(password)
-      .then(() => {
+      .then(async () => {
         setHasPassword(!!password);
+        if (password) {
+          console.log("[E2EE] Storing password from settings dialog");
+          storeSessionPassword(session.sessionId, password);
+        } else {
+          // Password removed - clear from localStorage and disable E2EE
+          console.log(
+            "[E2EE] Password removed, clearing stored password and disabling E2EE",
+          );
+          removeStoredSessionPassword(session.sessionId);
+          if (session.isEncrypted) {
+            await fetch("/api/sessions/encryption", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ isEncrypted: false }),
+            });
+          }
+        }
       })
       .finally(() => {
         setPasswordModalLoading(false);
@@ -769,6 +799,12 @@ export function ActiveSession({
       </div>
       <div className="h-4" />
       <div className="flex flex-row justify-center gap-2">
+        <EncryptionSettings
+          sessionId={session.sessionId}
+          isSessionEncrypted={session.isEncrypted ?? false}
+          hasSessionPassword={hasPassword}
+          sessionPassword={undefined}
+        />
         <Dialog open={optionsModalOpen} onOpenChange={setOptionsModalOpen}>
           <DialogTrigger asChild>
             <Button
@@ -889,6 +925,14 @@ export function ActiveSession({
                             {hasPassword && "Modifier le mot de passe existant"}
                             {!hasPassword && "Créer un nouveau mot de passe"}
                           </DialogTitle>
+                          {session.isEncrypted && hasPassword && (
+                            <div className="mt-2 rounded-lg bg-yellow-600/20 p-3 text-sm text-yellow-600 dark:text-yellow-400">
+                              <strong>Attention :</strong> Cette session utilise
+                              le chiffrement de bout en bout. Modifier le mot de
+                              passe rendra tout le contenu chiffré existant
+                              illisible.
+                            </div>
+                          )}
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
                           <div className="grid grid-cols-4 items-center gap-4">
@@ -1326,6 +1370,7 @@ export function ActiveSession({
                         onMove={onMoveContentToFolder}
                         folderId={folderId}
                         onMoveContentOut={onMoveContentOut}
+                        encryptionKey={encryption.key}
                       />
                     )}
                   />
@@ -1339,6 +1384,7 @@ export function ActiveSession({
                       socketUserId={socketUserId}
                       folders={attachmentFolders}
                       onMove={onMoveContentToFolder}
+                      encryptionKey={encryption.key}
                     />
                   </div>
                 ))}
@@ -1377,6 +1423,8 @@ export function ActiveSession({
                   onNewContent={(n) => onNewContent([n])}
                   socketUserId={socketUserId}
                   ref={newTaskComponent}
+                  encryptNote={encryption.encryptNoteContent}
+                  isEncryptionEnabled={encryption.isEnabled}
                 />
               </div>
               <PasteButton
@@ -1419,6 +1467,9 @@ export function ActiveSession({
                       onMove={onMoveContentToFolder}
                       folderId={folderId}
                       onMoveContentOut={onMoveContentOut}
+                      encryptNote={encryption.encryptNoteContent}
+                      decryptNote={encryption.decryptNoteContent}
+                      isEncryptionEnabled={encryption.isEnabled}
                     />
                   )}
                 />
@@ -1434,6 +1485,9 @@ export function ActiveSession({
                     onUpdateTask={onUpdateContent}
                     folders={noteFolders}
                     onMove={onMoveContentToFolder}
+                    encryptNote={encryption.encryptNoteContent}
+                    decryptNote={encryption.decryptNoteContent}
+                    isEncryptionEnabled={encryption.isEnabled}
                   />
                 </div>
               ))}

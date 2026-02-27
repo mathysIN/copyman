@@ -15,10 +15,24 @@ export async function POST(req: Request) {
 
   const socketUserId = req.headers.get("X-Socket-User-Id") ?? undefined;
 
-  let body: { files: { fileKey: string; fileName: string }[] };
+  let body: {
+    files: {
+      fileKey: string;
+      fileName: string;
+      isEncrypted?: boolean;
+      encryptedIv?: string;
+      encryptedSalt?: string;
+    }[];
+  };
   try {
     body = (await req.json()) as {
-      files: { fileKey: string; fileName: string }[];
+      files: {
+        fileKey: string;
+        fileName: string;
+        isEncrypted?: boolean;
+        encryptedIv?: string;
+        encryptedSalt?: string;
+      }[];
     };
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
@@ -28,7 +42,6 @@ export async function POST(req: Request) {
   if (!files.length)
     return NextResponse.json({ error: "No files provided" }, { status: 400 });
 
-  // Verify uploaded objects and compute sizes
   const verified = await Promise.all(
     files.map(async (f) => {
       const head = await r2Client.send(
@@ -44,11 +57,24 @@ export async function POST(req: Request) {
   const createdAttachments: AttachmentType[] = [];
   for (const f of verified) {
     const attachmentURL = getUrlFromFileR2FileKey(f.fileKey);
-    const content = await session.createNewAttachment({
+    const attachmentData: {
+      attachmentPath: string;
+      attachmentURL: string;
+      fileKey: string;
+      isEncrypted?: boolean;
+      encryptedIv?: string;
+      encryptedSalt?: string;
+    } = {
       attachmentPath: f.fileName,
       attachmentURL,
       fileKey: f.fileKey,
-    });
+    };
+    if (f.isEncrypted) {
+      attachmentData.isEncrypted = true;
+      attachmentData.encryptedIv = f.encryptedIv;
+      attachmentData.encryptedSalt = f.encryptedSalt;
+    }
+    const content = await session.createNewAttachment(attachmentData);
     if (content && content.type === "attachment") {
       createdAttachments.push(content);
     }

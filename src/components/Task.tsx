@@ -96,6 +96,15 @@ const replaceUncheckedWithChecked = (
     .join("\n");
 };
 
+export type EncryptNoteFunction = (content: string) => Promise<{
+  content: string;
+  isEncrypted: boolean;
+  encryptedIv: string;
+  encryptedSalt: string;
+}>;
+
+export type DecryptNoteFunction = (note: NoteType) => Promise<string>;
+
 export function Task({
   session,
   content,
@@ -107,6 +116,9 @@ export function Task({
   onMove,
   folderId,
   onMoveContentOut,
+  encryptNote,
+  isEncryptionEnabled,
+  decryptNote,
 }: {
   session: SessionType;
   content: NoteType;
@@ -118,10 +130,16 @@ export function Task({
   onMove?: (contentId: string, folderId: string | null) => void;
   folderId?: string;
   onMoveContentOut?: (contentId: string, folderId: string) => void;
+  encryptNote?: EncryptNoteFunction;
+  isEncryptionEnabled?: boolean;
+  decryptNote?: DecryptNoteFunction;
 }) {
   const { toast } = useToast();
   const [dragging, setDragging] = useState(false);
   const [value, setValue] = useState(content.content ?? "");
+  const [decryptedValue, setDecryptedValue] = useState<string | null>(null);
+  const [isDecrypting, setIsDecrypting] = useState(false);
+  const [decryptionError, setDecryptionError] = useState(false);
   const [timerId, setTimerId] = useState<NodeJS.Timeout | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [modifying, setModifying] = useState(false);
@@ -132,6 +150,34 @@ export function Task({
   const [isFocused, setIsFocused] = useState(false);
   const [pleaseDontFocusBro, setPleaseDontFocusBro] = useState(false);
   const controls = useDragControls();
+
+  useEffect(() => {
+    const decrypt = async () => {
+      if (content.isEncrypted && decryptNote) {
+        console.log("[E2EE] Task: decrypting note", content.id);
+        setIsDecrypting(true);
+        setDecryptionError(false);
+        try {
+          const decrypted = await decryptNote(content);
+          console.log(
+            "[E2EE] Task: decrypted content length:",
+            decrypted.length,
+          );
+          setDecryptedValue(decrypted);
+          setValue(decrypted);
+        } catch (e) {
+          console.error("[E2EE] Task: decryption failed:", e);
+          setDecryptionError(true);
+          setValue("[Erreur de déchiffrement]");
+        }
+        setIsDecrypting(false);
+      } else {
+        setDecryptedValue(null);
+        setValue(content.content ?? "");
+      }
+    };
+    decrypt();
+  }, [content.id, content.isEncrypted, content.content, decryptNote]);
 
   const handleFocus = () => {
     setIsFocused(true);
@@ -251,9 +297,38 @@ export function Task({
   const handleChangeEnd = async (newValue: string) => {
     setModifying(false);
 
+    let noteData: {
+      content: string;
+      taskId: string;
+      isEncrypted?: boolean;
+      encryptedIv?: string;
+      encryptedSalt?: string;
+    } = {
+      content: newValue,
+      taskId: content.id,
+    };
+
+    if (isEncryptionEnabled && encryptNote) {
+      console.log("[E2EE] Task: encrypting note content for update");
+      try {
+        const encrypted = await encryptNote(newValue);
+        noteData = {
+          content: encrypted.content,
+          taskId: content.id,
+          isEncrypted: encrypted.isEncrypted,
+          encryptedIv: encrypted.encryptedIv,
+          encryptedSalt: encrypted.encryptedSalt,
+        };
+        console.log("[E2EE] Task: content encrypted for update");
+      } catch (e) {
+        console.error("[E2EE] Task: failed to encrypt:", e);
+      }
+    }
+
     onUpdateTask({
       ...content,
-      content: newValue,
+      content: noteData.isEncrypted ? noteData.content : newValue,
+      isEncrypted: noteData.isEncrypted,
     });
 
     fetch("/api/notes", {
@@ -261,7 +336,7 @@ export function Task({
       headers: {
         "X-Socket-User-Id": socketUserId ?? "",
       },
-      body: JSON.stringify({ content: newValue, taskId: content.id }),
+      body: JSON.stringify(noteData),
     }).then(() => {
       setTimerId(null);
     });

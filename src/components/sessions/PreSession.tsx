@@ -5,6 +5,8 @@ import Image from "next/image";
 import type { SessionType } from "~/server/db/redis";
 import { useSearchParams } from "next/navigation";
 import { Switch } from "~/components/ui/switch";
+import { Label } from "~/components/ui/label";
+import { storeSessionPassword } from "~/lib/client/encryption";
 import { cn } from "~/utils/helpers";
 
 import imageCreate from "~/../public/create.png";
@@ -13,7 +15,7 @@ import imageSharing from "~/../public/sharing.png";
 import imageLogo from "~/../public/logo.png";
 import imageCreateSession from "~/../public/create-session.png";
 import imageJoinSession from "~/../public/join-session.png";
-import imageTemporarySession from "~/../public/temporary-session.png"
+import imageTemporarySession from "~/../public/temporary-session.png";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faQuestionCircle,
@@ -46,6 +48,7 @@ export function PreSession() {
   );
   const [loading, setLoading] = useState(false);
   const [tempLoading, setTempLoading] = useState(false);
+  const [enableEncryption, setEnableEncryption] = useState(false);
 
   const sumbitForm = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -66,16 +69,16 @@ export function PreSession() {
     setLoading(true);
     const result:
       | (SessionType & {
-        hasPassword: boolean;
-        isValidPassword: boolean;
-        createNewSession: boolean;
-      })
+          hasPassword: boolean;
+          isValidPassword: boolean;
+          createNewSession: boolean;
+        })
       | undefined = await fetch(
-        `/api/sessions?sessionId=${sessionValue}&password=${passwordValue}&join=${joinSession}`,
-        {},
-      )
-        .then((res) => res.json())
-        .catch(() => { });
+      `/api/sessions?sessionId=${sessionValue}&password=${passwordValue}&join=${joinSession}`,
+      {},
+    )
+      .then((res) => res.json())
+      .catch(() => {});
     setLoading(false);
     if (
       !result ||
@@ -96,6 +99,11 @@ export function PreSession() {
       }
     }
 
+    console.log(
+      "[E2EE] Creating session with encryption:",
+      enableEncryption && joinSession === "create",
+    );
+
     const postResult = await fetch("/api/sessions", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -104,6 +112,7 @@ export function PreSession() {
         password: passwordValue,
         join: `${joinSession == "join"}`,
         create: "true",
+        isEncrypted: `${enableEncryption && joinSession === "create"}`,
       }),
     }).then((res) => res.json());
     if (postResult?.error) {
@@ -114,6 +123,13 @@ export function PreSession() {
       }
       return;
     }
+
+    // Store password for E2EE key derivation (always store if password exists)
+    if (passwordValue) {
+      console.log("[E2EE] Storing session password for key derivation");
+      storeSessionPassword(sessionValue, passwordValue);
+    }
+
     window.location.href = "/";
   };
 
@@ -183,6 +199,18 @@ export function PreSession() {
                 placeholder="mot de passe"
               />
             </span>
+            {joinSession === "create" && (
+              <div className="flex items-center gap-2 text-sm">
+                <Switch
+                  checked={enableEncryption}
+                  onCheckedChange={setEnableEncryption}
+                  id="encryption-toggle"
+                />
+                <Label htmlFor="encryption-toggle" className="cursor-pointer">
+                  Chiffrement de bout en bout (E2EE)
+                </Label>
+              </div>
+            )}
             <div className="h-2" />
             <div className="flex w-full flex-col items-center justify-center">
               <button
@@ -242,11 +270,7 @@ export function PreSession() {
                 </div>
 
                 <div className="flex flex-1 justify-center">
-                  <Image
-                    src={imageTemporarySession}
-                    height={60}
-                    alt="logo"
-                  />
+                  <Image src={imageTemporarySession} height={60} alt="logo" />
                 </div>
                 {tempLoading && <Loading />}
               </button>

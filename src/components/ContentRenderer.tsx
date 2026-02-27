@@ -18,6 +18,7 @@ import {
   removeFileExtension,
   stringToHash,
 } from "~/lib/utils";
+import { decryptFile } from "~/lib/client/encryption";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -69,6 +70,7 @@ const ContentRenderer = ({
   onMove,
   folderId,
   onMoveContentOut,
+  encryptionKey,
 }: {
   content: AttachmentType;
   onContentDelete: (contentId: string) => any;
@@ -78,6 +80,7 @@ const ContentRenderer = ({
   onMove?: (contentId: string, folderId: string | null) => void;
   folderId?: string;
   onMoveContentOut?: (contentId: string, folderId: string) => void;
+  encryptionKey?: CryptoKey | null;
 }) => {
   const { toast } = useToast();
   const [dragging, setDragging] = useState(false);
@@ -92,6 +95,10 @@ const ContentRenderer = ({
   const [attachmentURL, setAttachmentURL] = useState(content.attachmentURL);
   const [newName, setNewName] = useState(content.attachmentPath);
   const [renaming, setRenaming] = useState(false);
+  const [decryptedUrl, setDecryptedUrl] = useState<string | null>(null);
+  const [decryptionError, setDecryptionError] = useState(false);
+
+  const isEncrypted = content.isEncrypted && encryptionKey;
 
   useEffect(() => {
     setNewName(content.attachmentPath);
@@ -101,6 +108,66 @@ const ContentRenderer = ({
   useEffect(() => {
     setAttachmentURL(content.attachmentURL);
   }, [content.attachmentURL]);
+
+  useEffect(() => {
+    let objectUrl: string | null = null;
+
+    const decrypt = async () => {
+      if (!isEncrypted || !encryptionKey || !content.encryptedIv) {
+        setDecryptedUrl(null);
+        setDecryptionError(false);
+        return;
+      }
+
+      console.log("[E2EE] ContentRenderer: decrypting attachment", content.id);
+      try {
+        const response = await fetch(content.attachmentURL);
+        if (!response.ok) {
+          throw new Error("Failed to fetch encrypted file");
+        }
+        const encryptedBlob = await response.blob();
+        console.log(
+          "[E2EE] ContentRenderer: fetched encrypted blob, size:",
+          encryptedBlob.size,
+        );
+
+        const decryptedBlob = await decryptFile(
+          encryptedBlob,
+          content.encryptedIv,
+          encryptionKey,
+        );
+        console.log(
+          "[E2EE] ContentRenderer: decrypted blob, size:",
+          decryptedBlob.size,
+        );
+
+        objectUrl = URL.createObjectURL(decryptedBlob);
+        setDecryptedUrl(objectUrl);
+        setDecryptionError(false);
+        console.log(
+          "[E2EE] ContentRenderer: created blob URL for decrypted content",
+        );
+      } catch (e) {
+        console.error("[E2EE] ContentRenderer: decryption failed:", e);
+        setDecryptionError(true);
+        setDecryptedUrl(null);
+      }
+    };
+
+    decrypt();
+
+    return () => {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [
+    content.attachmentURL,
+    content.encryptedIv,
+    content.id,
+    encryptionKey,
+    isEncrypted,
+  ]);
 
   const getExtension = (url: string) => {
     const urlSplited = url.split(".");
@@ -122,10 +189,18 @@ const ContentRenderer = ({
 
   const contentType = getContentType(attachmentURL);
 
+  const displayUrl = isEncrypted ? decryptedUrl : attachmentURL;
+
   const handleDownload = async () => {
     try {
-      const response = await fetch(attachmentURL);
-      const blob = await response.blob();
+      let blob: Blob;
+      if (isEncrypted && encryptionKey && content.encryptedIv && decryptedUrl) {
+        const response = await fetch(decryptedUrl);
+        blob = await response.blob();
+      } else {
+        const response = await fetch(attachmentURL);
+        blob = await response.blob();
+      }
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -161,16 +236,44 @@ const ContentRenderer = ({
   };
 
   const renderContent = () => {
+    if (isEncrypted && !decryptedUrl) {
+      if (decryptionError) {
+        return (
+          <div className="flex h-full w-full items-center justify-center bg-red-100 text-red-600">
+            <p>Erreur de déchiffrement</p>
+          </div>
+        );
+      }
+      return (
+        <div className="flex h-full w-full items-center justify-center bg-gray-100">
+          <p>Déchiffrement en cours...</p>
+        </div>
+      );
+    }
+
+    const srcUrl = displayUrl || attachmentURL;
+
     switch (contentType) {
       case "video":
         return (
           <video
-            src={attachmentURL}
+            src={srcUrl}
             controls
             className="absolute inset-0 h-full w-full object-cover"
           />
         );
       case "image":
+        if (isEncrypted && decryptedUrl) {
+          return (
+            <PhotoView src={decryptedUrl}>
+              <img
+                src={decryptedUrl}
+                alt="Content"
+                className="inset-0 h-full w-full cursor-pointer rounded-lg object-cover"
+              />
+            </PhotoView>
+          );
+        }
         const lowerQualityAttachment = new URL(attachmentURL);
         lowerQualityAttachment.searchParams.append("q", "60");
         return (
@@ -183,9 +286,9 @@ const ContentRenderer = ({
           </PhotoView>
         );
       case "audio":
-        const index =
+        const audioIndex =
           Math.abs(stringToHash(content.fileKey)) % GRADIENTS.length;
-        const randomGradient = GRADIENTS[index];
+        const randomGradient = GRADIENTS[audioIndex];
         return (
           <>
             <div
@@ -198,7 +301,7 @@ const ContentRenderer = ({
             <audio
               onPlay={() => setAudioPlaying(true)}
               onPause={() => setAudioPlaying(false)}
-              src={attachmentURL}
+              src={srcUrl}
               controls
               className={`${randomGradient} ${audioPlaying && "animate-gradient"} absolute inset-0 h-full w-full bg-opacity-25 bg-[length:200%_auto] object-cover`}
             ></audio>

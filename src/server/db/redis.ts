@@ -86,6 +86,7 @@ export type SessionType = {
   usedSpace?: string;
   expiresAt?: string;
   isTemporary?: boolean;
+  isEncrypted?: boolean;
 };
 
 export class Session {
@@ -97,6 +98,7 @@ export class Session {
   usedSpace?: string;
   expiresAt?: string;
   isTemporary?: boolean;
+  isEncrypted?: boolean;
 
   constructor(props: SessionType) {
     this.sessionId = props.sessionId;
@@ -109,6 +111,7 @@ export class Session {
     this.usedSpace = props.usedSpace;
     this.expiresAt = props.expiresAt;
     this.isTemporary = props.isTemporary;
+    this.isEncrypted = props.isEncrypted;
   }
 
   withSessionKey(...strings: string[]) {
@@ -323,6 +326,13 @@ export class Session {
     });
   }
 
+  async setIsEncrypted(isEncrypted: boolean) {
+    this.isEncrypted = isEncrypted;
+    return sessions.hmset(this.sessionId, {
+      isEncrypted: isEncrypted,
+    });
+  }
+
   getUsedSpaceNumber(): number {
     return parseInt(this.usedSpace ?? "") || 0;
   }
@@ -340,6 +350,7 @@ export class Session {
       rawContentOrder: this.rawContentOrder,
       backgroundImageURL: this.imageBackground?.href,
       usedSpace: this.usedSpace?.toString(),
+      isEncrypted: this.isEncrypted,
     };
   }
 
@@ -419,6 +430,9 @@ export type NoteType = BaseContentType & {
   type: "note";
   content: string;
   folderId?: string | null;
+  isEncrypted?: boolean;
+  encryptedIv?: string;
+  encryptedSalt?: string;
 };
 
 export type AttachmentType = BaseContentType & {
@@ -427,6 +441,9 @@ export type AttachmentType = BaseContentType & {
   attachmentPath: string;
   fileKey: string;
   folderId?: string | null;
+  isEncrypted?: boolean;
+  encryptedIv?: string;
+  encryptedSalt?: string;
 };
 
 export type FolderType = BaseContentType & {

@@ -33,6 +33,7 @@ export async function GET(req: Request) {
     password,
     hasPassword: session.hasPassword(),
     isValidPassword: await session.verifyPassword(password),
+    isEncrypted: session.isEncrypted ?? false,
   });
 }
 
@@ -43,6 +44,7 @@ export async function POST(req: Request) {
   const password = rawPassword && hashPassword(rawPassword);
   const join = data.get("join")?.toString() == "true";
   const temporary = data.get("temporary")?.toString() == "true";
+  const isEncrypted = data.get("isEncrypted")?.toString() == "true";
 
   console.log(
     "POST /api/sessions - sessionId:",
@@ -51,6 +53,8 @@ export async function POST(req: Request) {
     join,
     "temporary:",
     temporary,
+    "isEncrypted:",
+    isEncrypted,
   );
 
   let actualSessionId = sessionId;
@@ -95,10 +99,12 @@ export async function POST(req: Request) {
       rawContentOrder: string;
       expiresAt?: string;
       isTemporary?: boolean;
+      isEncrypted?: boolean;
     } = {
       sessionId: actualSessionId,
       createdAt: Date.now().toString(),
       rawContentOrder: "",
+      isEncrypted: isEncrypted,
     };
 
     if (password) {

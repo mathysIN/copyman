@@ -4,6 +4,13 @@ import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { type NoteType } from "~/server/db/redis";
 import { toast } from "~/hooks/use-toast";
 
+export type EncryptNoteFunction = (content: string) => Promise<{
+  content: string;
+  isEncrypted: boolean;
+  encryptedIv: string;
+  encryptedSalt: string;
+}>;
+
 export type AddNewTaskRef = {
   addTask: (content: string) => Promise<any>;
 };
@@ -11,11 +18,15 @@ export type AddNewTaskRef = {
 const _AddNewTask = forwardRef(
   (
     {
-      onNewContent = () => { },
+      onNewContent = () => {},
       socketUserId,
+      encryptNote,
+      isEncryptionEnabled,
     }: {
       onNewContent?: (task: NoteType) => any;
       socketUserId?: string;
+      encryptNote?: EncryptNoteFunction;
+      isEncryptionEnabled?: boolean;
     },
     ref,
   ) => {
@@ -36,13 +47,40 @@ const _AddNewTask = forwardRef(
       setLoading(true);
       const controller = new AbortController();
       setTimeout(() => controller.abort(), 8000);
+
+      let noteData: {
+        content: string;
+        isEncrypted?: boolean;
+        encryptedIv?: string;
+        encryptedSalt?: string;
+      } = { content };
+
+      if (isEncryptionEnabled && encryptNote) {
+        console.log("[E2EE] AddNewTask: encrypting note content");
+        try {
+          noteData = await encryptNote(content);
+          console.log(
+            "[E2EE] AddNewTask: content encrypted, ciphertext length:",
+            noteData.content.length,
+          );
+        } catch (e) {
+          console.error("[E2EE] AddNewTask: failed to encrypt:", e);
+          toast({
+            description: "Erreur lors du chiffrement",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+      }
+
       await fetch("/api/notes", {
         method: "POST",
         signal: controller.signal,
         headers: {
           "X-Socket-User-Id": socketUserId ?? "",
         },
-        body: JSON.stringify({ content: content } as NoteType),
+        body: JSON.stringify(noteData),
       })
         .then((res) => {
           if (res.ok) {

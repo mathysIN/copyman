@@ -18,8 +18,23 @@ export async function serverCreateNote(
   session: Session,
   content: string,
   senderSocketId?: string,
+  encryptedMeta?: {
+    isEncrypted?: boolean;
+    encryptedIv?: string;
+    encryptedSalt?: string;
+  },
 ) {
-  const newNote = { content };
+  const newNote: {
+    content: string;
+    isEncrypted?: boolean;
+    encryptedIv?: string;
+    encryptedSalt?: string;
+  } = { content };
+  if (encryptedMeta?.isEncrypted) {
+    newNote.isEncrypted = true;
+    newNote.encryptedIv = encryptedMeta.encryptedIv;
+    newNote.encryptedSalt = encryptedMeta.encryptedSalt;
+  }
   const createdNote = await session.createNewNote(newNote);
   if (createdNote) socketSendAddContent(session, [createdNote], senderSocketId);
   return createdNote;
@@ -30,10 +45,26 @@ export async function serverUpdateNote(
   content: string,
   contentId: string,
   senderSocketId?: string,
+  encryptedMeta?: {
+    isEncrypted?: boolean;
+    encryptedIv?: string;
+    encryptedSalt?: string;
+  },
 ) {
-  const response = await session.updateNote(contentId, { content: content });
+  const updateData: {
+    content: string;
+    isEncrypted?: boolean;
+    encryptedIv?: string;
+    encryptedSalt?: string;
+  } = { content };
+  if (encryptedMeta?.isEncrypted) {
+    updateData.isEncrypted = true;
+    updateData.encryptedIv = encryptedMeta.encryptedIv;
+    updateData.encryptedSalt = encryptedMeta.encryptedSalt;
+  }
+  const response = await session.updateNote(contentId, updateData);
   if (response) {
-    const updatedNote = await session.getContent(contentId); // :/
+    const updatedNote = await session.getContent(contentId);
     if (!updatedNote) return;
     socketSendUpdateContent(session, updatedNote, senderSocketId);
   }
@@ -71,9 +102,16 @@ export async function serverUploadFiles(
   session: Session,
   files: File[],
   senderSocketId?: string,
+  encryptedMeta?: {
+    isEncrypted?: boolean;
+    encryptedIv?: string;
+    encryptedSalt?: string;
+  }[],
 ) {
   const createdAttachments: AttachmentType[] = [];
-  for (const file of files) {
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    if (!file) continue;
     const startFileProcess = performance.now();
     const fileExtension = file.name.split(".").pop();
 
@@ -101,11 +139,25 @@ export async function serverUploadFiles(
     );
 
     const startDbInsert = performance.now();
-    const content = await session.createNewAttachment({
+    const attachmentData: {
+      attachmentPath: string;
+      attachmentURL: string;
+      fileKey: string;
+      isEncrypted?: boolean;
+      encryptedIv?: string;
+      encryptedSalt?: string;
+    } = {
       attachmentPath: fileName,
       attachmentURL: fileUrl,
       fileKey: fileKey,
-    });
+    };
+    const meta = encryptedMeta?.[i];
+    if (meta?.isEncrypted) {
+      attachmentData.isEncrypted = true;
+      attachmentData.encryptedIv = meta.encryptedIv;
+      attachmentData.encryptedSalt = meta.encryptedSalt;
+    }
+    const content = await session.createNewAttachment(attachmentData);
     console.log(
       `DB insert for ${fileName} took: ${performance.now() - startDbInsert}ms`,
     );

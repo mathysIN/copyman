@@ -68,16 +68,16 @@ export function PreSession() {
     setLoading(true);
     const result:
       | (SessionType & {
-          hasPassword: boolean;
-          isValidPassword: boolean;
-          createNewSession: boolean;
-        })
+        hasPassword: boolean;
+        isValidPassword: boolean;
+        createNewSession: boolean;
+      })
       | undefined = await fetch(
-      `/api/sessions?sessionId=${sessionValue}&password=${passwordValue}&join=${joinSession}`,
-      {},
-    )
-      .then((res) => res.json())
-      .catch(() => {});
+        `/api/sessions?sessionId=${sessionValue}&password=${passwordValue}&join=${joinSession}`,
+        {},
+      )
+        .then((res) => res.json())
+        .catch(() => { });
     setLoading(false);
     if (
       !result ||
@@ -110,8 +110,7 @@ export function PreSession() {
         session: sessionValue,
         password: passwordValue,
         join: `${joinSession == "join"}`,
-        create: "true",
-        isEncrypted: `${enableEncryption && joinSession === "create"}`,
+        create: "true"
       }),
     }).then((res) => res.json());
     if (postResult?.error) {
@@ -192,18 +191,6 @@ export function PreSession() {
                 placeholder="mot de passe"
               />
             </span>
-            {joinSession === "create" && (
-              <div className="flex items-center gap-2 text-sm">
-                <Switch
-                  checked={enableEncryption}
-                  onCheckedChange={setEnableEncryption}
-                  id="encryption-toggle"
-                />
-                <Label htmlFor="encryption-toggle" className="cursor-pointer">
-                  Chiffrement de bout en bout (E2EE)
-                </Label>
-              </div>
-            )}
             <div className="h-2" />
             <div className="flex w-full flex-col items-center justify-center">
               <button

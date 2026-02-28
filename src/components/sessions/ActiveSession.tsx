@@ -1158,7 +1158,7 @@ export function ActiveSession({
               <div className="space-y-2">
                 <Label htmlFor="session">Session</Label>
                 <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground">#</span>
+                  <span className="w-6 px-1 text-center text-muted-foreground">#</span>
                   <Input
                     id="session"
                     value={changeSessionValue}
@@ -1171,7 +1171,7 @@ export function ActiveSession({
               <div className="space-y-2">
                 <Label htmlFor="password">Mot de passe</Label>
                 <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground">**</span>
+                  <span className="w-6 px-1 text-center text-muted-foreground">**</span>
                   <Input
                     id="password"
                     type="password"
@@ -1509,6 +1509,7 @@ export function ActiveSession({
                       encryptNote={encryption.encryptNoteContent}
                       decryptNote={encryption.decryptNoteContent}
                       isEncryptionEnabled={encryption.isEnabled}
+                      encryptionKey={encryption.key}
                     />
                   )}
                 />
@@ -1527,6 +1528,7 @@ export function ActiveSession({
                     encryptNote={encryption.encryptNoteContent}
                     decryptNote={encryption.decryptNoteContent}
                     isEncryptionEnabled={encryption.isEnabled}
+                    encryptionKey={encryption.key}
                   />
                 </div>
               ))}

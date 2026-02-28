@@ -120,6 +120,7 @@ export function Task({
   encryptNote,
   isEncryptionEnabled,
   decryptNote,
+  encryptionKey,
 }: {
   session: SessionType;
   content: NoteType;
@@ -134,6 +135,7 @@ export function Task({
   encryptNote?: EncryptNoteFunction;
   isEncryptionEnabled?: boolean;
   decryptNote?: DecryptNoteFunction;
+  encryptionKey?: CryptoKey | null;
 }) {
   const { toast } = useToast();
   const [dragging, setDragging] = useState(false);
@@ -154,10 +156,12 @@ export function Task({
 
   useEffect(() => {
     const decrypt = async () => {
-      if (content.isEncrypted && !decryptNote) {
+      if (content.isEncrypted && !isEncryptionEnabled) {
         setIsDecrypting(false);
         setDecryptionError(false);
-        setValue("");
+        setValue(
+          "[Erreur de déchiffrement: Le chiffrement E2EE est désactivé]",
+        );
         setDecryptedValue(null);
         return;
       }
@@ -179,13 +183,19 @@ export function Task({
           setValue("[Erreur de déchiffrement]");
         }
         setIsDecrypting(false);
-      } else {
+      } else if (!content.isEncrypted) {
         setDecryptedValue(null);
         setValue(content.content ?? "");
       }
     };
     decrypt();
-  }, [content.id, content.isEncrypted, content.content, decryptNote]);
+  }, [
+    content.id,
+    content.isEncrypted,
+    content.content,
+    decryptNote,
+    isEncryptionEnabled,
+  ]);
 
   const handleFocus = () => {
     setIsFocused(true);
@@ -204,17 +214,27 @@ export function Task({
     renderMarkdown();
   }, []);
 
+  const canEdit =
+    !content.isEncrypted ||
+    (content.isEncrypted &&
+      isEncryptionEnabled &&
+      decryptNote &&
+      !decryptionError);
+
   const onMarkdownRenderClick = () => {
-    if (pleaseDontFocusBro) return;
+    if (pleaseDontFocusBro || !canEdit) return;
     setIsFocused(true);
     textareaRef?.current?.focus();
   };
 
   useEffect(() => {
+    if (content.isEncrypted && !isEncryptionEnabled) {
+      return;
+    }
     const newValue = content.content ?? "";
     setValue(newValue);
     renderLinks(newValue);
-  }, [content]);
+  }, [content, isEncryptionEnabled]);
 
   async function renderLinks(value: string) {
     const links = extractLinksFromString(value);
@@ -415,12 +435,13 @@ export function Task({
           onBlur={handleBlur}
           onChange={handleChangeEvent}
           value={value}
+          readOnly={!canEdit}
           className={`${deleting && "cursor-wait"} border-r-2 pb-2 ${!isFocused && "opacity-0"} textarea h-fit w-full flex-grow list-disc border-2`}
           maxRows={20}
         />
         {!isFocused && (
           <div
-            className="absolute inset-y-0 w-full cursor-text overflow-x-hidden break-words border-2 border-r-2 border-neutral-50 bg-neutral-100 p-1 text-black"
+            className={`absolute inset-y-0 w-full overflow-x-hidden break-words border-2 border-r-2 border-neutral-50 bg-neutral-100 p-1 text-black ${canEdit ? "cursor-text" : "cursor-not-allowed"}`}
             onClick={onMarkdownRenderClick}
           >
             <ReactMarkdown
@@ -556,7 +577,12 @@ export function Task({
         <div className="flex flex-row justify-between">
           <div className="flex flex-row gap-x-1 text-center text-sm text-black">
             <button
-              className="w-8 rounded bg-neutral-100 py-1 transition-colors hover:bg-neutral-200 active:scale-90 active:opacity-75"
+              aria-disabled={content.isEncrypted}
+              tabIndex={content.isEncrypted ? -1 : undefined}
+              className={cn(
+                content.isEncrypted && "pointer-events-none text-black/40",
+                "w-8 rounded bg-neutral-100 py-1 transition-colors hover:bg-neutral-200 active:scale-90 active:opacity-75",
+              )}
               onClick={() =>
                 copyAndToast(
                   toast,

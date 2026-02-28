@@ -15,6 +15,7 @@ import "react-photo-view/dist/react-photo-view.css";
 import { use, useEffect, useRef, useState } from "react";
 import type { AttachmentType, FolderType } from "~/server/db/redis";
 import {
+  cn,
   getCDNUrlFromFileKey,
   removeFileExtension,
   stringToHash,
@@ -64,8 +65,8 @@ const GRADIENTS = [
 
 const ContentRenderer = ({
   content,
-  onContentDelete = () => {},
-  onContentUpdate = () => {},
+  onContentDelete = () => { },
+  onContentUpdate = () => { },
   socketUserId,
   folders,
   onMove,
@@ -359,7 +360,10 @@ const ContentRenderer = ({
         <div className="flex flex-row justify-between gap-4">
           <div className="flex flex-row gap-x-1 text-sm">
             <button
-              className="w-8 rounded border-neutral-200 bg-neutral-100 py-1 transition-colors hover:bg-neutral-200 active:scale-90 active:opacity-75"
+              aria-disabled={content.isEncrypted}
+              tabIndex={content.isEncrypted ? -1 : undefined}
+              className={cn(content.isEncrypted && "pointer-events-none text-black/40", "w-8 rounded border-neutral-200 bg-neutral-100 py-1 transition-colors hover:bg-neutral-200 active:scale-90 active:opacity-75"
+              )}
               onClick={() =>
                 copyAndToast(
                   toast,
@@ -372,22 +376,22 @@ const ContentRenderer = ({
               <FontAwesomeIcon icon={faLink} />
             </button>
             <button
-              className="flex w-8 items-center justify-center rounded bg-neutral-100 py-1 text-gray-900 transition-colors hover:bg-neutral-200 active:scale-90 active:opacity-75"
+              className="flex w-8 items-center justify-center rounded bg-neutral-100 py-1 transition-colors hover:bg-neutral-200 active:scale-90 active:opacity-75"
               onClick={handleDownload}
               title="Télécharger le fichier"
             >
               <FontAwesomeIcon icon={faDownload} />
             </button>
-            {!isEncrypted && (
-              <a
-                target="_blank"
-                href={attachmentURL}
-                className="flex w-8 items-center justify-center rounded bg-neutral-100 py-1 text-gray-900 transition-colors hover:bg-neutral-200 active:scale-90 active:opacity-75"
-                title="Ouvrir dans un nouvel onglet"
-              >
-                <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
-              </a>
-            )}
+            <a
+              target="_blank"
+              href={attachmentURL}
+              aria-disabled={content.isEncrypted}
+              tabIndex={content.isEncrypted ? -1 : undefined}
+              className={cn(content.isEncrypted && "pointer-events-none text-black/40", "flex w-8 items-center justify-center rounded bg-neutral-100 py-1 transition-colors hover:bg-neutral-200 active:scale-90 active:opacity-75")}
+              title="Ouvrir dans un nouvel onglet"
+            >
+              <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
+            </a>
 
             {folders && onMove && (
               <MoveToFolderDialog

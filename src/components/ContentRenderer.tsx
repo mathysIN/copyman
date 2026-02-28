@@ -290,12 +290,10 @@ const ContentRenderer = ({
             </PhotoView>
           );
         }
-        const lowerQualityAttachment = new URL(attachmentURL);
-        lowerQualityAttachment.searchParams.append("q", "60");
         return (
           <PhotoView src={attachmentURL}>
             <img
-              src={lowerQualityAttachment.href}
+              src={attachmentURL}
               alt="Content"
               className="inset-0 h-full w-full cursor-pointer rounded-lg object-cover"
             />

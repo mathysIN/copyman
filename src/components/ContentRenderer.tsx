@@ -254,11 +254,8 @@ const ContentRenderer = ({
         return;
       }
 
-      console.log("[ContentRenderer] Loading text content for:", attachmentURL);
-
       // Add timeout to prevent infinite loading
       const timeoutId = setTimeout(() => {
-        console.error("[ContentRenderer] Timeout loading text content");
         setTextError(true);
       }, 10000); // 10 second timeout
 
@@ -274,34 +271,21 @@ const ContentRenderer = ({
           if (!response.ok) throw new Error("Failed to fetch decrypted");
           blob = await response.blob();
         } else {
-          console.log("[ContentRenderer] Fetching from:", attachmentURL);
           const response = await fetch(attachmentURL);
-          console.log(
-            "[ContentRenderer] Response status:",
-            response.status,
-            response.ok,
-          );
           if (!response.ok) throw new Error("Failed to fetch");
           blob = await response.blob();
         }
 
-        console.log("[ContentRenderer] Got blob, size:", blob.size);
-
         // Check if blob is too large (over 1MB for text files is suspicious)
         if (blob.size > 1024 * 1024) {
-          console.warn(
-            "[ContentRenderer] File too large for text preview, skipping",
-          );
           throw new Error("File too large");
         }
 
         const text = await blob.text();
-        console.log("[ContentRenderer] Got text, length:", text.length);
 
         // Check if content looks like binary (contains lots of null bytes or control characters)
         const nullBytes = (text.match(/\0/g) || []).length;
         if (nullBytes > 10) {
-          console.warn("[ContentRenderer] Binary content detected");
           throw new Error("Binary content");
         }
 
@@ -315,7 +299,6 @@ const ContentRenderer = ({
         setTextError(false);
         clearTimeout(timeoutId);
       } catch (e) {
-        console.error("[ContentRenderer] Failed to load text content:", e);
         clearTimeout(timeoutId);
         setTextError(true);
       }
@@ -433,15 +416,6 @@ const ContentRenderer = ({
   };
 
   const renderContent = () => {
-    console.log(
-      "[ContentRenderer] renderContent called, contentType:",
-      contentType,
-      "textContent:",
-      textContent?.slice(0, 50),
-      "textError:",
-      textError,
-    );
-
     if (needsDecryption) {
       return (
         <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-yellow-100 p-4 text-center text-yellow-700">
@@ -573,7 +547,7 @@ const ContentRenderer = ({
               </span>
             </div>
             <div className="flex-1 overflow-auto bg-white px-2 py-1">
-              <pre className="w-full whitespace-pre-wrap break-all bg-white text-xs text-black selection:bg-blue-200">
+              <pre className="w-full select-text whitespace-pre-wrap break-all bg-white text-xs text-black selection:bg-blue-200">
                 {textContent || "Chargement..."}
               </pre>
             </div>

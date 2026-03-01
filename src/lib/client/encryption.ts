@@ -34,6 +34,10 @@ export async function generateKey(): Promise<EncryptionKey> {
   return { key, salt };
 }
 
+/**
+ * Derive an encryption key from a password using PBKDF2.
+ * The salt should be derived from the session ID for consistent key derivation.
+ */
 export async function deriveKeyFromPassword(
   password: string,
   salt?: string,
@@ -64,16 +68,28 @@ export async function deriveKeyFromPassword(
   return { key, salt: actualSalt };
 }
 
+/**
+ * Derive a salt from the session ID for PBKDF2 key derivation.
+ * This ensures the same password + session always generates the same key.
+ * The salt is derived deterministically from the sessionId.
+ */
 export function deriveSaltFromSessionId(sessionId: string): string {
   const encoder = new TextEncoder();
   const data = encoder.encode(sessionId);
+
+  // Create a deterministic salt from the session ID
+  // This ensures the same session always uses the same salt for key derivation
   const hashArray = new Uint8Array(SALT_LENGTH);
   for (let i = 0; i < SALT_LENGTH; i++) {
-    const charCode = data[i % data.length];
-    if (charCode !== undefined) {
-      hashArray[i] = charCode ^ (i * 17) % 256;
-    }
+    // Mix multiple bytes of the session ID with position-based variation
+    const byte1 = data[i % data.length] || 0;
+    const byte2 = data[(i * 7) % data.length] || 0;
+    const byte3 = data[(i * 13) % data.length] || 0;
+
+    // XOR and mix bits to create more variation
+    hashArray[i] = (byte1 ^ byte2 ^ byte3 ^ (i * 17)) % 256;
   }
+
   return arrayBufferToBase64(hashArray);
 }
 
@@ -264,35 +280,11 @@ function getAllStoredKeys(): Record<string, string> {
   }
 }
 
+/**
+ * Generate a random encryption key for sharing (for non-password-based encryption).
+ * @deprecated Use password-based E2EE instead for better security.
+ */
 export function generateEncryptionKeyForSharing(): string {
   const rawKey = window.crypto.getRandomValues(new Uint8Array(32));
   return arrayBufferToBase64(rawKey);
-}
-
-export function parseEncryptionKeyFromUrl(): string | null {
-  if (typeof window === "undefined") return null;
-  const hash = window.location.hash;
-  if (hash.startsWith("#key=")) {
-    return hash.substring(5);
-  }
-  return null;
-}
-
-export function buildUrlWithEncryptionKey(
-  baseUrl: string,
-  keyString: string,
-): string {
-  return `${baseUrl}#key=${keyString}`;
-}
-
-export function getCookiePassword(): string | null {
-  if (typeof document === "undefined") return null;
-  const cookies = document.cookie.split(";");
-  for (const cookie of cookies) {
-    const [name, value] = cookie.trim().split("=");
-    if (name === "password" && value) {
-      return decodeURIComponent(value);
-    }
-  }
-  return null;
 }

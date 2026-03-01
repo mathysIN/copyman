@@ -20,10 +20,9 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useToast } from "~/hooks/use-toast";
-import {
-  isEncryptionSupported,
-  getCookiePassword,
-} from "~/lib/client/encryption";
+import { isEncryptionSupported } from "~/lib/client/encryption";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
 
 export function EncryptionSettings({
   sessionId,
@@ -41,31 +40,57 @@ export function EncryptionSettings({
   const [isOpen, setIsOpen] = useState(false);
   const [isEnabling, setIsEnabling] = useState(false);
   const [isDisabling, setIsDisabling] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [showPasswordInput, setShowPasswordInput] = useState(false);
 
   const handleEnableEncryption = async () => {
     if (!hasSessionPassword) {
       toast({
         variant: "destructive",
-        description: "Définissez d&apos;abord un mot de passe de session",
+        description: "Définissez d'abord un mot de passe de session",
+      });
+      return;
+    }
+
+    // Show password input if not already shown
+    if (!showPasswordInput) {
+      setShowPasswordInput(true);
+      return;
+    }
+
+    if (!passwordInput) {
+      toast({
+        variant: "destructive",
+        description: "Veuillez entrer le mot de passe de session",
       });
       return;
     }
 
     setIsEnabling(true);
 
-    // Check if user has the password in cookie (meaning they joined with correct password)
-    const cookiePassword = getCookiePassword();
-    if (!cookiePassword) {
-      toast({
-        variant: "destructive",
-        description:
-          "Mot de passe non trouvé. Rejoignez la session avec le mot de passe.",
-      });
-      setIsEnabling(false);
-      return;
-    }
-
     try {
+      // First verify the password with the server
+      const verifyResponse = await fetch(
+        `/api/sessions/verify-password?sessionId=${sessionId}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password: passwordInput }),
+        },
+      );
+
+      const verifyResult = await verifyResponse.json();
+
+      if (!verifyResult.valid) {
+        toast({
+          variant: "destructive",
+          description: "Mot de passe incorrect",
+        });
+        setIsEnabling(false);
+        return;
+      }
+
+      // Enable encryption on the server
       const response = await fetch("/api/sessions/encryption", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -73,6 +98,8 @@ export function EncryptionSettings({
       });
 
       if (response.ok) {
+        // Enable encryption locally with the verified password
+        await encryption.enableEncryption(passwordInput);
         toast({
           description: "Chiffrement activé avec succès",
         });
@@ -80,14 +107,14 @@ export function EncryptionSettings({
       } else {
         toast({
           variant: "destructive",
-          description: "Erreur lors de l&apos;activation du chiffrement",
+          description: "Erreur lors de l'activation du chiffrement",
         });
       }
     } catch (e) {
       console.error("Failed to enable encryption:", e);
       toast({
         variant: "destructive",
-        description: "Erreur lors de l&apos;activation du chiffrement",
+        description: "Erreur lors de l'activation du chiffrement",
       });
     }
 
@@ -249,6 +276,31 @@ export function EncryptionSettings({
                         de passe pour accéder au contenu.
                       </p>
                     </div>
+
+                    {showPasswordInput && (
+                      <div className="space-y-2">
+                        <Label htmlFor="e2ee-password" className="text-white">
+                          Mot de passe de session
+                        </Label>
+                        <Input
+                          id="e2ee-password"
+                          type="password"
+                          value={passwordInput}
+                          onChange={(e) => setPasswordInput(e.target.value)}
+                          placeholder="Entrez le mot de passe"
+                          className="border-stone-600 bg-stone-700 text-white"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              handleEnableEncryption();
+                            }
+                          }}
+                        />
+                        <p className="text-xs text-gray-500">
+                          Le mot de passe est vérifié mais n&apos;est jamais
+                          stocké sur le serveur.
+                        </p>
+                      </div>
+                    )}
 
                     <Button
                       onClick={handleEnableEncryption}

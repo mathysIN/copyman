@@ -66,62 +66,77 @@ export function PreSession() {
     }
 
     setLoading(true);
-    const result:
-      | (SessionType & {
-        hasPassword: boolean;
-        isValidPassword: boolean;
-        createNewSession: boolean;
-      })
-      | undefined = await fetch(
-        `/api/sessions?sessionId=${sessionValue}&password=${passwordValue}&join=${joinSession}`,
-        {},
-      )
-        .then((res) => res.json())
-        .catch(() => { });
-    setLoading(false);
-    if (
-      !result ||
-      (!result.createNewSession && (!result.sessionId || !result.createdAt))
-    ) {
-      setErrorMessage("Session inexistante");
+
+    // First, check if session exists and validate password
+    const checkResult: {
+      valid: boolean;
+      hasPassword: boolean;
+      isEncrypted: boolean;
+      createNewSession: boolean;
+    } = await fetch(
+      `/api/sessions?sessionId=${sessionValue}&password=${passwordValue}&join=${joinSession}`,
+    )
+      .then((res) => res.json())
+      .catch(() => ({ valid: false, createNewSession: false }));
+
+    if (!checkResult || (!checkResult.createNewSession && !checkResult.valid)) {
+      setLoading(false);
+      if (checkResult?.hasPassword && !checkResult.valid) {
+        setErrorMessage("Mot de passe incorrect");
+      } else {
+        setErrorMessage("Session inexistante");
+      }
       return;
     }
 
-    if (!result.createNewSession) {
-      if (!joinSession) {
-        setErrorMessage("Ce nom de session est déjà utilisé");
-        return;
-      }
-      if (result.hasPassword && !result.isValidPassword) {
-        setErrorMessage("Mot de passe incorrect");
-        return;
-      }
+    if (!checkResult.createNewSession && !joinSession) {
+      setLoading(false);
+      setErrorMessage("Ce nom de session est déjà utilisé");
+      return;
     }
 
     console.log(
-      "[E2EE] Creating session with encryption:",
+      "[E2EE] Creating/joining session with encryption:",
       enableEncryption && joinSession === "create",
     );
 
+    // Join/create session with password in POST body (not query params)
     const postResult = await fetch("/api/sessions", {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         session: sessionValue,
         password: passwordValue,
-        join: `${joinSession == "join"}`,
-        create: "true"
+        join: joinSession === "join",
+        create: "true",
+        isEncrypted: enableEncryption && joinSession === "create",
       }),
     }).then((res) => res.json());
+
     if (postResult?.error) {
+      setLoading(false);
       if (postResult.error === "session_exists") {
         setErrorMessage("Ce nom de session est déjà utilisé");
+      } else if (postResult.error === "invalid_password") {
+        setErrorMessage("Mot de passe incorrect");
       } else {
         setErrorMessage("Erreur lors de la création de la session");
       }
       return;
     }
 
+    // Store raw password temporarily for E2EE auto-enable
+    // This is stored in sessionStorage (not localStorage) for security
+    // and only used to auto-enable encryption on join
+    if (passwordValue && checkResult.isEncrypted) {
+      console.log("[PreSession] Storing password for E2EE auto-enable");
+      sessionStorage.setItem(
+        `e2ee_password_${sessionValue.toLowerCase()}`,
+        passwordValue,
+      );
+    }
+
+    setLoading(false);
     window.location.href = "/";
   };
 
@@ -133,8 +148,8 @@ export function PreSession() {
 
     const postResult = await fetch("/api/sessions", {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         temporary: "true",
       }),
     }).then((res) => res.json());
@@ -148,6 +163,7 @@ export function PreSession() {
     setTempLoading(false);
     window.location.href = "/";
   };
+
   return (
     <>
       <form
@@ -191,6 +207,18 @@ export function PreSession() {
                 placeholder="mot de passe"
               />
             </span>
+            {joinSession === "create" && (
+              <div className="flex items-center gap-2 text-sm">
+                <Switch
+                  checked={enableEncryption}
+                  onCheckedChange={setEnableEncryption}
+                  id="encryption-toggle"
+                />
+                <Label htmlFor="encryption-toggle" className="cursor-pointer">
+                  Chiffrement de bout en bout (E2EE)
+                </Label>
+              </div>
+            )}
             <div className="h-2" />
             <div className="flex w-full flex-col items-center justify-center">
               <button

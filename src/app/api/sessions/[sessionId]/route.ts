@@ -8,7 +8,7 @@ export async function DELETE(
   { params }: { params: { sessionId: string } },
 ) {
   const session = await getSessionWithCookies(cookies());
-  if (!session || !session.verifyPasswordFromCookie(cookies()))
+  if (!session || !(await session.verifyPasswordFromCookie(cookies())))
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   if (session.sessionId !== params.sessionId.toLowerCase())
@@ -24,12 +24,12 @@ export async function PATCH(
   { params }: { params: { sessionId: string } },
 ) {
   const session = await getSessionWithCookies(cookies());
-  if (!session || !session.verifyPasswordFromCookie(cookies()))
+  if (!session || !(await session.verifyPasswordFromCookie(cookies())))
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   if (session.sessionId !== params.sessionId.toLowerCase())
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
-  console.log({ tempSession: session })
+  console.log({ tempSession: session });
 
   if (!session.isTemporarySession())
     return NextResponse.json(

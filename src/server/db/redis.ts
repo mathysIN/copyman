@@ -4,7 +4,12 @@ import { type RequestCookies } from "next/dist/compiled/@edge-runtime/cookies";
 import { type ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 import { env } from "~/env";
 import { getCDNUrlFromFileKey } from "~/lib/utils";
-import { hashPassword, validatePassword } from "~/utils/password";
+import {
+  hashPassword,
+  validatePassword,
+  generateSessionToken,
+  hashSessionToken,
+} from "~/utils/password";
 import { type ExcludeMatchingProperties } from "~/utils/types";
 
 const globalForDb = globalThis as unknown as {
@@ -103,7 +108,8 @@ export class Session {
   constructor(props: SessionType) {
     this.sessionId = props.sessionId;
     this.password = props.password;
-    this.createdAt = props.createdAt;
+    // Ensure createdAt is always a string (Redis might return it as number)
+    this.createdAt = String(props.createdAt);
     this.rawContentOrder = props.rawContentOrder;
     try {
       this.imageBackground = new URL(props.backgroundImageURL ?? "");
@@ -289,21 +295,29 @@ export class Session {
     });
   }
 
+  /**
+   * Set or update the session password.
+   * The password is hashed with a per-session salt derived from createdAt.
+   */
   async setPassword(password?: string) {
     if (!password) return sessions.hdel(this.sessionId, "password");
 
     return sessions.hmset(this.sessionId, {
-      password: hashPassword(password),
+      password: hashPassword(password, this.createdAt),
     });
   }
 
+  /**
+   * Verify a password against the stored hash.
+   * Uses the session's createdAt timestamp to derive the salt.
+   */
   async verifyPassword(password?: string) {
     if (!this.password) {
       if (!password) return true;
       else return false;
     } else {
       if (!password) return false;
-      return validatePassword(password, this.password);
+      return validatePassword(password, this.password, this.createdAt);
     }
   }
 
@@ -311,10 +325,27 @@ export class Session {
     return !!this.password;
   }
 
+  /**
+   * Verify session authentication from cookies.
+   * First checks for session token, falls back to password cookie (deprecated).
+   */
   async verifyPasswordFromCookie(
     cookie: RequestCookies | ReadonlyRequestCookies,
   ) {
-    return this.verifyPassword(cookie.get("password")?.value);
+    // First try session token authentication
+    const sessionToken = cookie.get("session_token")?.value;
+    if (sessionToken) {
+      const isValid = await verifySessionToken(this.sessionId, sessionToken);
+      if (isValid) return true;
+    }
+
+    // Fall back to password verification (for backwards compatibility)
+    const password = cookie.get("password")?.value;
+    if (password) {
+      return this.verifyPassword(password);
+    }
+
+    return false;
   }
 
   async setBackgroundImageURL(backgroundImageURL?: string) {
@@ -468,4 +499,88 @@ export const contents = new RedisWithPrefix<ContentType>(
 
 export function withSessionKey(session: SessionType, ...elements: string[]) {
   return toFullRedisKey([REDIS_SESSION_PREFIX, session.sessionId, ...elements]);
+}
+
+// Session token constants
+const SESSION_TOKEN_PREFIX = "session_token";
+const DEFAULT_TOKEN_EXPIRY_SECONDS = 7 * 24 * 60 * 60; // 7 days
+
+/**
+ * Set a session token for authentication.
+ * The raw token is returned to be set as a cookie; the hashed token is stored in Redis.
+ * @param sessionId - The session ID
+ * @param expirySeconds - Token expiry in seconds (undefined = no expiry = infinite)
+ * @returns The raw session token to be set as a cookie
+ */
+export async function setSessionToken(
+  sessionId: string,
+  expirySeconds?: number,
+): Promise<string> {
+  const rawToken = generateSessionToken();
+  const hashedToken = hashSessionToken(rawToken);
+  const key = `${SESSION_TOKEN_PREFIX}:${sessionId}:${hashedToken}`;
+
+  const fullKey = toFullRedisKey([REDIS_KEY_PREFIX, key]);
+
+  if (expirySeconds !== undefined && expirySeconds > 0) {
+    await redis.set(fullKey, "1", { ex: expirySeconds });
+  } else {
+    // No expiry = infinite (for persistent sessions)
+    await redis.set(fullKey, "1");
+  }
+
+  return rawToken;
+}
+
+/**
+ * Verify a session token.
+ * The provided raw token is hashed and checked against stored hashed tokens.
+ * @param sessionId - The session ID
+ * @param rawToken - The raw token from the cookie
+ * @returns True if the token is valid, false otherwise
+ */
+export async function verifySessionToken(
+  sessionId: string,
+  rawToken: string,
+): Promise<boolean> {
+  const hashedToken = hashSessionToken(rawToken);
+  const key = `${SESSION_TOKEN_PREFIX}:${sessionId}:${hashedToken}`;
+  const fullKey = toFullRedisKey([REDIS_KEY_PREFIX, key]);
+
+  const exists = await redis.exists(fullKey);
+  return exists === 1;
+}
+
+/**
+ * Clear (revoke) a session token.
+ * @param sessionId - The session ID
+ * @param rawToken - The raw token to revoke (optional - if not provided, all tokens for the session are cleared)
+ */
+export async function clearSessionToken(
+  sessionId: string,
+  rawToken?: string,
+): Promise<void> {
+  if (rawToken) {
+    // Clear specific token
+    const hashedToken = hashSessionToken(rawToken);
+    const key = `${SESSION_TOKEN_PREFIX}:${sessionId}:${hashedToken}`;
+    const fullKey = toFullRedisKey([REDIS_KEY_PREFIX, key]);
+    await redis.del(fullKey);
+  } else {
+    // Clear all tokens for this session
+    const pattern = toFullRedisKey([
+      REDIS_KEY_PREFIX,
+      SESSION_TOKEN_PREFIX,
+      sessionId,
+      "*",
+    ]);
+    const keys = await redis.keys(pattern);
+    if (keys.length > 0) {
+      const pipeline = redis.pipeline();
+      for (const key of keys) {
+        pipeline.del(key);
+      }
+      await pipeline.exec();
+    }
+  }
 }

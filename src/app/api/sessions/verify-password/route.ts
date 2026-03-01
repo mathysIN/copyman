@@ -28,7 +28,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "password_required" }, { status: 400 });
   }
 
-  const session = await getSessionWithSessionId(sessionId, undefined, true);
+  // For this endpoint, we need to get the session without verifying the password
+  // because we're going to verify the provided password against the stored hash
+  const session = await getSessionWithSessionId(sessionId, undefined);
 
   if (!session) {
     return NextResponse.json({ valid: false }, { status: 404 });

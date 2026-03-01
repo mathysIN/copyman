@@ -1,4 +1,5 @@
 import { getSessionWithSessionId } from "~/utils/authenticate";
+import { cookies } from "next/headers";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
@@ -13,8 +14,35 @@ export default async function Page({
   const { session: sessionId, contentid } = params;
   if (!sessionId || !contentid) return <div className="w-4/5 pb-10">Nop</div>;
 
-  const session = await getSessionWithSessionId(sessionId, undefined, true);
-  if (!session) return <div className="w-4/5 pb-10">Nop</div>;
+  // Try to authenticate using session token from cookies
+  const sessionToken = cookies().get("session_token")?.value;
+  const password = cookies().get("password")?.value;
+
+  // DO NOT bypass password - require authentication
+  // First try session token auth (doesn't need password)
+  let session = null;
+  if (sessionToken) {
+    session = await getSessionWithSessionId(sessionId, undefined);
+    if (session) {
+      const { verifySessionToken } = await import("~/server/db/redis");
+      const isValid = await verifySessionToken(session.sessionId, sessionToken);
+      if (!isValid) {
+        session = null;
+      }
+    }
+  }
+
+  // If no valid session token, try password
+  if (!session) {
+    session = await getSessionWithSessionId(sessionId, password);
+  }
+
+  if (!session)
+    return (
+      <div className="w-4/5 pb-10">
+        Session not found or authentication required
+      </div>
+    );
 
   const content = await session.getContent(contentid);
   if (!content || content.type !== "note")

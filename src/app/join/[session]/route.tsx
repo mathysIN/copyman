@@ -13,12 +13,7 @@ export async function GET(request: Request, context: { params: Params }) {
   const createIfNull = !!context.params.create;
   let session;
   if (sessionId)
-    session = await getSessionWithSessionId(
-      sessionId,
-      undefined,
-      true,
-      createIfNull,
-    );
+    session = await getSessionWithSessionId(sessionId, undefined, createIfNull);
   if (session)
     cookies().set("session", sessionId, {
       expires: Date.now() + 10 * 365 * 24 * 60 * 60 * 1000,

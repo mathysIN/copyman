@@ -16,6 +16,7 @@ import {
   validatePassword,
   generateSessionToken,
 } from "~/utils/password";
+import { env } from "~/env";
 import {
   isValidSessionId,
   isTemporarySessionId,
@@ -38,9 +39,11 @@ export async function GET(req: Request) {
   const rawPassword = url.searchParams.get("password");
   const join = url.searchParams.get("join") == "true";
 
-  const session = sessionId
-    ? await getSessionWithSessionId(sessionId, undefined, true)
+  // Get session data without enforcing password (for checking existence and metadata)
+  const sessionData = sessionId
+    ? await sessions.hgetall(sessionId.toLowerCase())
     : null;
+  const session = sessionData ? new Session(sessionData) : null;
 
   if (!session) {
     return NextResponse.json({ createNewSession: true }, { status: 200 });
@@ -65,6 +68,15 @@ export async function GET(req: Request) {
   });
 }
 
+type SessionRequestBody = {
+  session?: string;
+  password?: string;
+  join?: boolean | string;
+  create?: boolean | string;
+  temporary?: boolean | string;
+  isEncrypted?: boolean | string;
+};
+
 /**
  * POST /api/sessions
  * Create or join a session.
@@ -74,7 +86,7 @@ export async function GET(req: Request) {
  */
 export async function POST(req: Request) {
   // Parse JSON body instead of form data for security
-  let body: Record<string, string>;
+  let body: SessionRequestBody;
   const contentType = req.headers.get("content-type") || "";
 
   if (contentType.includes("application/json")) {
@@ -84,15 +96,16 @@ export async function POST(req: Request) {
     const formData = await req.formData();
     body = {};
     formData.forEach((formValue, key) => {
-      body[key] = String(formValue);
+      (body as Record<string, string>)[key] = String(formValue);
     });
   }
 
   const sessionId = body.session?.toLowerCase() ?? "";
   const rawPassword = body.password;
-  const join = body.join === "true";
-  const temporary = body.temporary === "true";
-  const isEncrypted = body.isEncrypted === "true";
+  // Handle both boolean and string values from client
+  const join = body.join === true || body.join === "true";
+  const temporary = body.temporary === true || body.temporary === "true";
+  const isEncrypted = body.isEncrypted === true || body.isEncrypted === "true";
 
   console.log(
     "POST /api/sessions - sessionId:",
@@ -128,15 +141,16 @@ export async function POST(req: Request) {
 
   if (join) {
     console.log("Attempting to join session:", actualSessionId);
-    session = await getSessionWithSessionId(actualSessionId, undefined, true);
-
-    if (!session) {
+    // Get session data without enforcing password check (we'll verify separately)
+    const sessionData = await sessions.hgetall(actualSessionId.toLowerCase());
+    if (!sessionData) {
       console.log("Session not found:", actualSessionId);
       return NextResponse.json(
         { error: "invalid_session_id" },
         { status: 400 },
       );
     }
+    session = new Session(sessionData);
 
     // Verify password using per-session salt
     if (session.hasPassword()) {
@@ -202,7 +216,7 @@ export async function POST(req: Request) {
     canJoin = true;
 
     // Load the created session
-    session = await getSessionWithSessionId(actualSessionId, undefined, true);
+    session = await getSessionWithSessionId(actualSessionId, undefined);
   }
 
   if (canJoin && session) {
@@ -212,7 +226,7 @@ export async function POST(req: Request) {
     cookies().set("session", actualSessionId, {
       expires: Date.now() + 10 * 365 * 24 * 60 * 60 * 1000,
       httpOnly: false,
-      secure: true,
+      secure: env.COPYMAN_ENV === "production",
       sameSite: "strict",
     });
 
@@ -220,7 +234,7 @@ export async function POST(req: Request) {
     const sessionToken = await setSessionToken(session.sessionId);
     cookies().set("session_token", sessionToken, {
       httpOnly: true,
-      secure: true,
+      secure: env.COPYMAN_ENV === "production",
       sameSite: "strict",
       // No expiry = session cookie (expires when browser closes)
     });
@@ -259,7 +273,7 @@ export async function PATCH(req: Request) {
   const newToken = await setSessionToken(session.sessionId);
   cookies().set("session_token", newToken, {
     httpOnly: true,
-    secure: true,
+    secure: env.COPYMAN_ENV === "production",
     sameSite: "strict",
   });
 

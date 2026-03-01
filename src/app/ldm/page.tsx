@@ -408,7 +408,11 @@ export default async function LDMPage() {
                       <div className="note-content">
                         {item.isEncrypted
                           ? "[This note is encrypted and cannot be displayed in LDM mode]"
-                          : item.content}
+                          : item.content
+                              .replace(/&/g, "&amp;")
+                              .replace(/</g, "&lt;")
+                              .replace(/>/g, "&gt;")
+                              .replace(/"/g, "&quot;")}
                       </div>
                     ) : item.type === "attachment" ? (
                       <div className="file-info">
@@ -454,7 +458,7 @@ export default async function LDMPage() {
                   encType="multipart/form-data"
                 >
                   <div className="form-row">
-                    <input type="file" name="files" required />
+                    <input type="file" name="files" multiple required />
                   </div>
                   <button type="submit" className="btn-submit">
                     Upload File

@@ -1,4 +1,4 @@
-import { getSessionWithSessionId } from "~/utils/authenticate";
+import { Session, sessions } from "~/server/db/redis";
 import { NextResponse } from "next/server";
 
 /**
@@ -28,13 +28,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "password_required" }, { status: 400 });
   }
 
-  // For this endpoint, we need to get the session without verifying the password
-  // because we're going to verify the provided password against the stored hash
-  const session = await getSessionWithSessionId(sessionId, undefined);
-
-  if (!session) {
+  // Get session data directly without enforcing password check
+  const sessionData = await sessions.hgetall(sessionId.toLowerCase());
+  if (!sessionData) {
     return NextResponse.json({ valid: false }, { status: 404 });
   }
+
+  const session = new Session(sessionData);
 
   // Session without password - any password is invalid for E2EE
   if (!session.hasPassword()) {

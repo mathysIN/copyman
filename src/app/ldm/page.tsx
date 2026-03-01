@@ -120,7 +120,7 @@ export default async function LDMPage() {
       <head>
         <title>Copyman LDM - #{session.sessionId}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta httpEquiv="refresh" content="30" />
+
         <style>{`
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { 
@@ -253,7 +253,7 @@ export default async function LDMPage() {
           .download-link:hover {
             background: rgba(255,255,255,0.1);
           }
-          .encrypted-badge {
+           .encrypted-badge {
             background: #ef4444;
             color: #fff;
             padding: 2px 6px;
@@ -270,6 +270,90 @@ export default async function LDMPage() {
             color: rgba(255,255,255,0.5);
             text-align: center;
             border-radius: 0 0 8px 8px;
+          }
+          .form-section {
+            background: #1f1c1b;
+            border-top: 2px dashed rgba(255,255,255,0.3);
+            padding: 15px;
+          }
+          .form-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: #fff;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            padding-bottom: 8px;
+          }
+          .form-row {
+            margin-bottom: 12px;
+          }
+          .form-row label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.8);
+          }
+          textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 10px;
+            border: 2px solid #2563eb;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 13px;
+            background: #fff;
+            color: #000;
+            resize: vertical;
+          }
+          input[type="file"] {
+            width: 100%;
+            padding: 8px;
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 6px;
+            color: #fff;
+          }
+          .btn-submit {
+            background: #287d7c;
+            color: #fff;
+            border: 2px solid rgba(255,255,255,0.5);
+            padding: 10px 20px;
+            font-size: 13px;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 6px;
+          }
+          .btn-submit:hover {
+            background: rgba(255,255,255,0.1);
+          }
+          .btn-delete {
+            background: #ef4444;
+            color: #fff;
+            border: 2px solid rgba(255,255,255,0.3);
+            padding: 3px 8px;
+            font-size: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 3px;
+            text-decoration: none;
+            display: inline-block;
+            margin-left: 10px;
+          }
+          .btn-delete:hover {
+            background: #dc2626;
+          }
+          .forms-container {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+          }
+          .form-box {
+            flex: 1;
+            min-width: 280px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 6px;
+            padding: 15px;
           }
           table { width: 100%; border-collapse: collapse; }
           td { vertical-align: top; }
@@ -312,6 +396,12 @@ export default async function LDMPage() {
                     {"isEncrypted" in item && item.isEncrypted && (
                       <span className="encrypted-badge">ENCRYPTED</span>
                     )}
+                    <a
+                      href={`/api/ldm/delete?contentId=${item.id}`}
+                      className="btn-delete"
+                    >
+                      Delete
+                    </a>
                   </div>
                   <div className="item-body">
                     {item.type === "note" ? (
@@ -338,9 +428,43 @@ export default async function LDMPage() {
             )}
           </div>
 
-          <div className="footer">
-            Copyman LDM | Low Detail Mode | Auto-refresh every 30 seconds
+          <div className="form-section">
+            <div className="forms-container">
+              <div className="form-box">
+                <div className="form-title">Add Note</div>
+                <form action="/api/ldm/notes" method="POST">
+                  <div className="form-row">
+                    <textarea
+                      name="content"
+                      placeholder="Type your note here..."
+                      required
+                    ></textarea>
+                  </div>
+                  <button type="submit" className="btn-submit">
+                    Add Note
+                  </button>
+                </form>
+              </div>
+
+              <div className="form-box">
+                <div className="form-title">Upload File</div>
+                <form
+                  action="/api/ldm/upload"
+                  method="POST"
+                  encType="multipart/form-data"
+                >
+                  <div className="form-row">
+                    <input type="file" name="files" required />
+                  </div>
+                  <button type="submit" className="btn-submit">
+                    Upload File
+                  </button>
+                </form>
+              </div>
+            </div>
           </div>
+
+          <div className="footer">Copyman LDM | Low Detail Mode</div>
         </div>
       </body>
     </html>

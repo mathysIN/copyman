@@ -1,4 +1,5 @@
 import { getSessionWithSessionId } from "~/utils/authenticate";
+import { sessions, verifySessionToken, Session } from "~/server/db/redis";
 import { cookies } from "next/headers";
 import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
@@ -22,9 +23,10 @@ export default async function Page({
   // First try session token auth (doesn't need password)
   let session = null;
   if (sessionToken) {
-    session = await getSessionWithSessionId(sessionId, undefined);
-    if (session) {
-      const { verifySessionToken } = await import("~/server/db/redis");
+    // Get session data directly without password enforcement
+    const sessionData = await sessions.hgetall(sessionId.toLowerCase());
+    if (sessionData) {
+      session = new Session(sessionData);
       const isValid = await verifySessionToken(session.sessionId, sessionToken);
       if (!isValid) {
         session = null;

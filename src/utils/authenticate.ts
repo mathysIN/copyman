@@ -123,8 +123,10 @@ export async function verifySessionAuthentication(
 
   if (!sessionId || !sessionToken) return null;
 
-  const session = await getSessionWithSessionId(sessionId, undefined);
-  if (!session) return null;
+  // Get session data directly without password enforcement
+  const sessionData = await sessions.hgetall(sessionId.toLowerCase());
+  if (!sessionData) return null;
+  const session = new Session(sessionData);
 
   const isValid = await verifySessionToken(session.sessionId, sessionToken);
   return isValid ? session : null;

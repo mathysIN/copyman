@@ -42,6 +42,20 @@ export async function GET(req: Request) {
   });
 }
 
+function isFormSubmission(req: Request): boolean {
+  const acceptHeader = req.headers.get("accept") || "";
+  return !acceptHeader.includes("application/json");
+}
+
+function redirectResponse(req: Request, error?: string): Response {
+  const referer = req.headers.get("referer");
+  const host = req.headers.get("host") || "localhost";
+  const protocol = host.includes("localhost") ? "http" : "https";
+  const baseUrl = referer ? new URL(referer).origin : `${protocol}://${host}`;
+  const redirectUrl = error ? `${baseUrl}/?error=${encodeURIComponent(error)}` : `${baseUrl}/`;
+  return NextResponse.redirect(redirectUrl);
+}
+
 export async function POST(req: Request) {
   const data = await req.formData();
   const sessionId = data.get("session")?.toString()?.toLowerCase() ?? "";
@@ -69,14 +83,21 @@ export async function POST(req: Request) {
     console.log("Generated temp session ID:", actualSessionId);
   }
 
-  if (!temporary && !isValidSessionId(actualSessionId))
-    return NextResponse.json({ error: "invalid_session_id" }, { status: 400 });
+  if (!temporary && !isValidSessionId(actualSessionId)) {
+    const error = "invalid_session_id";
+    if (isFormSubmission(req)) {
+      return redirectResponse(req, error);
+    }
+    return NextResponse.json({ error }, { status: 400 });
+  }
 
-  if (!join && !temporary && isTemporarySessionId(actualSessionId))
-    return NextResponse.json(
-      { error: "cannot_create_temp_session" },
-      { status: 400 },
-    );
+  if (!join && !temporary && isTemporarySessionId(actualSessionId)) {
+    const error = "cannot_create_temp_session";
+    if (isFormSubmission(req)) {
+      return redirectResponse(req, error);
+    }
+    return NextResponse.json({ error }, { status: 400 });
+  }
 
   let canJoin = false;
   if (join) {
@@ -89,10 +110,11 @@ export async function POST(req: Request) {
     );
     if (!session) {
       console.log("Session not found:", actualSessionId);
-      return NextResponse.json(
-        { error: "invalid_session_id" },
-        { status: 400 },
-      );
+      const error = "invalid_session_id";
+      if (isFormSubmission(req)) {
+        return redirectResponse(req, error);
+      }
+      return NextResponse.json({ error }, { status: 400 });
     }
     console.log("Session found, joining:", actualSessionId);
     canJoin = true;
@@ -129,7 +151,11 @@ export async function POST(req: Request) {
     const newSession = await sessions.hmnew(actualSessionId, sessionData);
     if (!newSession) {
       console.log("Session creation failed - already exists:", actualSessionId);
-      return NextResponse.json({ error: "session_exists" }, { status: 400 });
+      const error = "session_exists";
+      if (isFormSubmission(req)) {
+        return redirectResponse(req, error);
+      }
+      return NextResponse.json({ error }, { status: 400 });
     }
 
     console.log("Session created successfully:", actualSessionId);
@@ -145,16 +171,9 @@ export async function POST(req: Request) {
   // Check if this was a form submission from LDM (not AJAX/fetch from React)
   // LDM forms don't send Accept header or send text/html
   // React fetch should send Accept: application/json
-  const acceptHeader = req.headers.get("accept") || "";
-  const wantsJSON = acceptHeader.includes("application/json");
-
-  if (!wantsJSON) {
+  if (isFormSubmission(req)) {
     // This is a form submission from LDM - redirect back
-    const referer = req.headers.get("referer");
-    const host = req.headers.get("host") || "localhost";
-    const protocol = host.includes("localhost") ? "http" : "https";
-    const baseUrl = referer ? new URL(referer).origin : `${protocol}://${host}`;
-    return NextResponse.redirect(`${baseUrl}/`);
+    return redirectResponse(req);
   }
 
   return NextResponse.json({ success: true });

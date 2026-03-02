@@ -38,9 +38,9 @@ export default async function LDMPage() {
               color: #000;
             }
             .btn {
-              background: #287d7c;
+              background: rgba(255,255,255,0.05);
               color: #fff;
-              border: 2px solid rgba(255,255,255,0.5);
+              border: 2px dashed rgba(255,255,255,0.5);
               padding: 12px 24px;
               font-size: 14px;
               cursor: pointer;
@@ -50,9 +50,17 @@ export default async function LDMPage() {
               margin-bottom: 10px;
             }
             .btn:hover { background: rgba(255,255,255,0.1); }
-            .btn-create { background: #2563eb; }
-            .btn-temp { background: #fbbf24; color: #000; border-color: rgba(0,0,0,0.3); }
-            .btn-temp:hover { background: #f59e0b; }
+            .btn-create { 
+              background: rgba(255,255,255,0.05);
+              border-color: rgba(255,255,255,0.5);
+            }
+            .btn-create:hover { background: rgba(255,255,255,0.1); }
+            .btn-temp { 
+              background: rgba(250, 204, 21, 0.1); 
+              color: #facc15; 
+              border-color: rgba(250, 204, 21, 0.5); 
+            }
+            .btn-temp:hover { background: rgba(250, 204, 21, 0.2); }
             .section-title {
               font-size: 13px;
               color: rgba(255,255,255,0.7);
@@ -61,12 +69,12 @@ export default async function LDMPage() {
               border-bottom: 1px solid rgba(255,255,255,0.2);
             }
             .note { 
-              background: rgba(251, 191, 36, 0.1); 
-              border: 2px dashed #fbbf24; 
+              background: rgba(250, 204, 21, 0.1); 
+              border: 2px dashed rgba(250, 204, 21, 0.5); 
               padding: 12px; 
               font-size: 11px; 
               margin-top: 20px;
-              color: #fbbf24;
+              color: #facc15;
               border-radius: 6px;
             }
             .divider {
@@ -266,7 +274,7 @@ export default async function LDMPage() {
             border-radius: 3px;
           }
           .item-type.note { background: #2563eb; }
-          .item-type.file { background: #fbbf24; color: #000; }
+          .item-type.file { background: #facc15; color: #000; }
           .item-body {
             padding: 12px;
             color: #fff;
@@ -299,12 +307,12 @@ export default async function LDMPage() {
             display: inline-block;
             margin-top: 8px;
             padding: 8px 16px;
-            background: #287d7c;
+            background: rgba(255,255,255,0.05);
             color: #fff;
             text-decoration: none;
             font-size: 11px;
             font-weight: bold;
-            border: 2px solid rgba(255,255,255,0.5);
+            border: 2px dashed rgba(255,255,255,0.5);
             border-radius: 4px;
           }
           .download-link:hover {
@@ -371,9 +379,9 @@ export default async function LDMPage() {
             color: #fff;
           }
           .btn-submit {
-            background: #287d7c;
+            background: rgba(255,255,255,0.05);
             color: #fff;
-            border: 2px solid rgba(255,255,255,0.5);
+            border: 2px dashed rgba(255,255,255,0.5);
             padding: 10px 20px;
             font-size: 13px;
             cursor: pointer;

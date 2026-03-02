@@ -16,6 +16,10 @@ import {
   TEMP_SESSION_DURATION_HOURS,
 } from "~/constants/session";
 import { socketSendPasswordChanged } from "~/lib/socketInstance";
+import { setSessionCookie, setPasswordCookie } from "~/lib/cookies";
+
+// Force dynamic rendering - this route uses request.url at runtime
+export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -134,14 +138,23 @@ export async function POST(req: Request) {
 
   if (canJoin) {
     console.log("Setting cookie for session:", actualSessionId);
-    cookies().set("session", actualSessionId, {
-      expires: Date.now() + 10 * 365 * 24 * 60 * 60 * 1000,
-    });
-    if (password)
-      cookies().set("password", password, {
-        expires: Date.now() + 10 * 365 * 24 * 60 * 60 * 1000,
-      });
+    setSessionCookie(cookies(), actualSessionId);
+    if (password) setPasswordCookie(cookies(), password);
   }
+
+  // Check if this was a form submission (not an AJAX request)
+  const acceptHeader = req.headers.get("accept");
+  const isFormSubmit = !acceptHeader?.includes("application/json");
+
+  if (isFormSubmit) {
+    // Redirect back to referrer or root
+    const referer = req.headers.get("referer");
+    const host = req.headers.get("host") || "localhost";
+    const protocol = host.includes("localhost") ? "http" : "https";
+    const baseUrl = referer ? new URL(referer).origin : `${protocol}://${host}`;
+    return NextResponse.redirect(`${baseUrl}/`);
+  }
+
   return NextResponse.json({ success: true });
 }
 
@@ -153,9 +166,7 @@ export async function PATCH(req: Request) {
   const data = await req.json();
   const request = await session.setPassword(data["password"]);
   if (!request) return NextResponse.json({ message: "Error" }, { status: 500 });
-  cookies().set("password", hashPassword(data["password"]), {
-    expires: Date.now() + 10 * 365 * 24 * 60 * 60 * 1000,
-  });
+  setPasswordCookie(cookies(), hashPassword(data["password"]));
 
   socketSendPasswordChanged(session.sessionId);
 

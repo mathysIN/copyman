@@ -6,26 +6,33 @@ import r2Client from "~/server/r2";
 import { env } from "~/env";
 import { DeleteObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 
+// Force dynamic rendering - this route uses request.url at runtime
+export const dynamic = "force-dynamic";
+
+function getBaseUrl(req: Request): string {
+  const host = req.headers.get("host") || "localhost";
+  const protocol = host.includes("localhost") ? "http" : "https";
+  return `${protocol}://${host}`;
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const contentId = searchParams.get("contentId");
 
     if (!contentId) {
-      return NextResponse.redirect(
-        new URL("/ldm?error=no_content_id", req.url),
-      );
+      return NextResponse.redirect(`${getBaseUrl(req)}/?error=no_content_id`);
     }
 
     const session = await getSessionWithCookies(cookies());
     if (!session) {
-      return NextResponse.redirect(new URL("/ldm?error=unauthorized", req.url));
+      return NextResponse.redirect(`${getBaseUrl(req)}/?error=unauthorized`);
     }
 
     const content = await session.getContent(contentId);
     if (!content) {
       return NextResponse.redirect(
-        new URL("/ldm?error=content_not_found", req.url),
+        `${getBaseUrl(req)}/?error=content_not_found`,
       );
     }
 
@@ -41,9 +48,9 @@ export async function GET(req: Request) {
 
     await serverDeleteContent(session, contentId, undefined);
 
-    return NextResponse.redirect(new URL("/ldm", req.url));
+    return NextResponse.redirect(getBaseUrl(req));
   } catch (error) {
     console.error("LDM Delete error:", error);
-    return NextResponse.redirect(new URL("/ldm?error=delete_failed", req.url));
+    return NextResponse.redirect(`${getBaseUrl(req)}/?error=delete_failed`);
   }
 }

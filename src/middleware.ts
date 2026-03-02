@@ -26,26 +26,65 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 export async function middleware(request: NextRequest) {
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  const ip = forwardedFor?.split(",")[0]?.trim() || request.ip || "127.0.0.1";
+  const host = request.headers.get("host") || "";
+  const url = request.nextUrl.clone();
 
-  const { success, limit, remaining, reset } = await ratelimit.limit(ip);
+  // Check if this is the ldm subdomain
+  const isLDMSubdomain = host.startsWith("ldm.");
 
-  console.log(success, limit, remaining, reset);
-  const response = success
-    ? NextResponse.next()
-    : new NextResponse("Too Many Requests", { status: 429 });
+  // If accessing /ldm on main domain, redirect to root
+  if (!isLDMSubdomain && url.pathname === "/ldm") {
+    url.pathname = "/";
+    return NextResponse.redirect(url);
+  }
 
-  response.headers.set("X-RateLimit-Limit", limit.toString());
-  response.headers.set(
-    "X-RateLimit-Remaining",
-    Math.max(0, remaining).toString(),
-  );
-  response.headers.set("X-RateLimit-Reset", reset.toString());
+  // If accessing ldm subdomain, rewrite to /ldm
+  if (isLDMSubdomain) {
+    // Rewrite root path to /ldm
+    if (url.pathname === "/") {
+      url.pathname = "/ldm";
+      return NextResponse.rewrite(url);
+    }
 
-  return response;
+    // Rewrite other paths to /ldm/* or keep API routes as is
+    if (
+      !url.pathname.startsWith("/ldm") &&
+      !url.pathname.startsWith("/api") &&
+      !url.pathname.startsWith("/_next")
+    ) {
+      url.pathname = `/ldm${url.pathname}`;
+      return NextResponse.rewrite(url);
+    }
+  }
+
+  // Rate limiting for API routes
+  if (
+    url.pathname.startsWith("/api/") ||
+    url.pathname.startsWith("/content/")
+  ) {
+    const forwardedFor = request.headers.get("x-forwarded-for");
+    const ip = forwardedFor?.split(",")[0]?.trim() || request.ip || "127.0.0.1";
+
+    const { success, limit, remaining, reset } = await ratelimit.limit(ip);
+
+    console.log(success, limit, remaining, reset);
+    const response = success
+      ? NextResponse.next()
+      : new NextResponse("Too Many Requests", { status: 429 });
+
+    response.headers.set("X-RateLimit-Limit", limit.toString());
+    response.headers.set(
+      "X-RateLimit-Remaining",
+      Math.max(0, remaining).toString(),
+    );
+    response.headers.set("X-RateLimit-Reset", reset.toString());
+
+    return response;
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/api/:path*", "/content/:path*"],
+  matcher: ["/api/:path*", "/content/:path*", "/:path*"],
 };

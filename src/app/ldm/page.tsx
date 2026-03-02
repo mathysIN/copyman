@@ -47,8 +47,19 @@ export default async function LDMPage() {
               font-weight: bold;
               border-radius: 6px;
               width: 100%;
+              margin-bottom: 10px;
             }
             .btn:hover { background: rgba(255,255,255,0.1); }
+            .btn-create { background: #2563eb; }
+            .btn-temp { background: #fbbf24; color: #000; border-color: rgba(0,0,0,0.3); }
+            .btn-temp:hover { background: #f59e0b; }
+            .section-title {
+              font-size: 13px;
+              color: rgba(255,255,255,0.7);
+              margin: 20px 0 10px 0;
+              padding-bottom: 5px;
+              border-bottom: 1px solid rgba(255,255,255,0.2);
+            }
             .note { 
               background: rgba(251, 191, 36, 0.1); 
               border: 2px dashed #fbbf24; 
@@ -57,6 +68,12 @@ export default async function LDMPage() {
               margin-top: 20px;
               color: #fbbf24;
               border-radius: 6px;
+            }
+            .divider {
+              text-align: center;
+              margin: 15px 0;
+              color: rgba(255,255,255,0.4);
+              font-size: 12px;
             }
           `}</style>
         </head>
@@ -75,7 +92,7 @@ export default async function LDMPage() {
                   <input
                     type="text"
                     name="session"
-                    placeholder="Enter session name..."
+                    placeholder="Enter session name to join..."
                     autoFocus
                   />
                 </div>
@@ -91,6 +108,46 @@ export default async function LDMPage() {
 
                 <button type="submit" className="btn">
                   Join Session
+                </button>
+              </form>
+
+              <div className="divider">— or —</div>
+
+              <div className="section-title">Create New Session</div>
+
+              <form action="/api/sessions" method="POST">
+                <div className="form-group">
+                  <label>Session Name:</label>
+                  <input
+                    type="text"
+                    name="session"
+                    placeholder="Enter session name..."
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Password (optional):</label>
+                  <input
+                    type="password"
+                    name="password"
+                    placeholder="Leave empty for no password"
+                  />
+                </div>
+
+                <button type="submit" className="btn btn-create">
+                  Create Session
+                </button>
+              </form>
+
+              <form
+                action="/api/sessions"
+                method="POST"
+                style={{ marginTop: "10px" }}
+              >
+                <input type="hidden" name="temporary" value="true" />
+                <input type="hidden" name="password" value="" />
+                <button type="submit" className="btn btn-temp">
+                  Create Temporary Session (24h)
                 </button>
               </form>
 
@@ -377,7 +434,7 @@ export default async function LDMPage() {
 
           <div className="toolbar">
             <a href="/api/ldm/leave">Leave Session</a>
-            <a href="/ldm">Refresh</a>
+            <a href="/">Refresh</a>
           </div>
 
           <div className="content-area">

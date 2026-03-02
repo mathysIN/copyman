@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getSessionWithSessionId } from "~/utils/authenticate";
+import { setSessionCookie } from "~/lib/cookies";
 
 type Params = {
   session: string;
@@ -19,10 +20,7 @@ export async function GET(request: Request, context: { params: Params }) {
       true,
       createIfNull,
     );
-  if (session)
-    cookies().set("session", sessionId, {
-      expires: Date.now() + 10 * 365 * 24 * 60 * 60 * 1000,
-    });
+  if (session) setSessionCookie(cookies(), sessionId);
 
   return redirect(`/`);
 }

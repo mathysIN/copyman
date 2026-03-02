@@ -69,8 +69,8 @@ const GRADIENTS = [
 
 const ContentRenderer = ({
   content,
-  onContentDelete = () => {},
-  onContentUpdate = () => {},
+  onContentDelete = () => { },
+  onContentUpdate = () => { },
   socketUserId,
   folders,
   onMove,
@@ -294,7 +294,7 @@ const ContentRenderer = ({
           const rows = lines.map((line) => line.split(",").slice(0, 4));
           setCsvPreview(rows);
         } else {
-          setTextContent(text.slice(0, 300));
+          setTextContent(text.split("\n").slice(0, 6).join("\n"));
         }
         setTextError(false);
         clearTimeout(timeoutId);

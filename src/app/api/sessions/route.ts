@@ -142,12 +142,14 @@ export async function POST(req: Request) {
     if (password) setPasswordCookie(cookies(), password);
   }
 
-  // Check if this was a form submission (not an AJAX request)
-  const acceptHeader = req.headers.get("accept");
-  const isFormSubmit = !acceptHeader?.includes("application/json");
+  // Check if this was a form submission from LDM (not AJAX/fetch from React)
+  // LDM forms don't send Accept header or send text/html
+  // React fetch should send Accept: application/json
+  const acceptHeader = req.headers.get("accept") || "";
+  const wantsJSON = acceptHeader.includes("application/json");
 
-  if (isFormSubmit) {
-    // Redirect back to referrer or root
+  if (!wantsJSON) {
+    // This is a form submission from LDM - redirect back
     const referer = req.headers.get("referer");
     const host = req.headers.get("host") || "localhost";
     const protocol = host.includes("localhost") ? "http" : "https";

@@ -428,8 +428,6 @@ export function PreSession() {
         </DialogContent>
       </Dialog>
       <div className="h-20" />
-      <InstallButton />
-      <div className="h-20" />
     </>
   );
 }

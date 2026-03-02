@@ -20,7 +20,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useToast } from "~/hooks/use-toast";
-import { isEncryptionSupported } from "~/lib/client/encryption";
+import { isEncryptionSupported, deriveAuthKey } from "~/lib/client/encryption";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 
@@ -29,11 +29,13 @@ export function EncryptionSettings({
   isSessionEncrypted,
   hasSessionPassword,
   sessionPassword,
+  createdAt,
 }: {
   sessionId: string;
   isSessionEncrypted: boolean;
   hasSessionPassword: boolean;
   sessionPassword?: string;
+  createdAt?: string;
 }) {
   const { toast } = useToast();
   const encryption = useEncryption(sessionId, undefined, isSessionEncrypted);
@@ -68,14 +70,26 @@ export function EncryptionSettings({
 
     setIsEnabling(true);
 
+    if (!createdAt) {
+      toast({
+        variant: "destructive",
+        description: "Informations de session manquantes",
+      });
+      setIsEnabling(false);
+      return;
+    }
+
     try {
-      // First verify the password with the server
+      // Derive authKey from password (raw password never sent to server)
+      const authKey = await deriveAuthKey(passwordInput, createdAt);
+
+      // Verify the authKey with the server
       const verifyResponse = await fetch(
         `/api/sessions/verify-password?sessionId=${sessionId}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ password: passwordInput }),
+          body: JSON.stringify({ authKey }),
         },
       );
 
@@ -98,8 +112,8 @@ export function EncryptionSettings({
       });
 
       if (response.ok) {
-        // Enable encryption locally with the verified password
-        await encryption.enableEncryption(passwordInput);
+        // Enable encryption locally with the verified password and createdAt
+        await encryption.enableEncryption(passwordInput, createdAt);
         toast({
           description: "Chiffrement activé avec succès",
         });

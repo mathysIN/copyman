@@ -6,6 +6,8 @@ import {
   generateKey,
   deriveKeyFromPassword,
   deriveSaltFromSessionId,
+  deriveAuthKey,
+  deriveEncKey,
   encryptString,
   decryptString,
   encryptFile,
@@ -30,43 +32,48 @@ export type EncryptionState = {
 };
 
 /**
- * Verify a password with the server before enabling E2EE.
- * This ensures the user has the correct password before deriving the encryption key.
+ * Verify an auth key with the server before enabling E2EE.
+ * Client derives authKey from password + session creation timestamp.
+ * Server verifies authKey against stored hash without seeing raw password.
  */
-async function verifyPasswordWithServer(
+async function verifyAuthKeyWithServer(
   sessionId: string,
   password: string,
+  createdAt: string,
 ): Promise<boolean> {
   try {
+    // Derive authKey from password + session creation timestamp
+    const authKey = await deriveAuthKey(password, createdAt);
+
     const response = await fetch(
       `/api/sessions/verify-password?sessionId=${sessionId}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ authKey }),
       },
     );
     const result = await response.json();
     return result.valid === true;
   } catch (e) {
-    console.error("[E2EE] Failed to verify password with server:", e);
+    console.error("[E2EE] Failed to verify auth key with server:", e);
     return false;
   }
 }
 
 /**
- * Get the password stored in sessionStorage for E2EE auto-enable.
+ * Get the encryption key stored in sessionStorage for E2EE auto-enable.
  * This is set during the join flow and cleared after use.
  */
-function getStoredJoinPassword(sessionId: string): string | null {
+function getStoredJoinKey(sessionId: string): string | null {
   if (typeof sessionStorage === "undefined") return null;
-  const key = `e2ee_password_${sessionId.toLowerCase()}`;
-  const password = sessionStorage.getItem(key);
+  const key = `e2ee_key_${sessionId.toLowerCase()}`;
+  const encryptionKey = sessionStorage.getItem(key);
   // Clear immediately after retrieval for security
-  if (password) {
+  if (encryptionKey) {
     sessionStorage.removeItem(key);
   }
-  return password;
+  return encryptionKey;
 }
 
 export function useEncryption(
@@ -103,71 +110,41 @@ export function useEncryption(
         return;
       }
 
-      // If session is encrypted, check for stored password from join flow
+      // If session is encrypted, check for stored encryption key from join flow
       if (isSessionEncrypted) {
         console.log(
-          "[E2EE Hook] Session is encrypted, checking for stored password",
+          "[E2EE Hook] Session is encrypted, checking for stored key",
         );
 
-        // Check sessionStorage for password from join flow
-        const joinPassword = getStoredJoinPassword(sessionId);
+        // Check sessionStorage for encryption key from join flow
+        const joinKey = getStoredJoinKey(sessionId);
 
-        if (joinPassword) {
-          console.log(
-            "[E2EE Hook] Found stored password from join flow, deriving key",
-          );
+        if (joinKey) {
+          console.log("[E2EE Hook] Found stored encryption key from join flow");
           try {
-            // Verify password with server first
-            const isValid = await verifyPasswordWithServer(
-              sessionId,
-              joinPassword,
-            );
-            if (!isValid) {
-              console.error("[E2EE Hook] Stored password is invalid");
-              setState((prev) => ({
-                ...prev,
-                isSupported: true,
-                isLoading: false,
-                error: "Invalid stored password",
-                isSessionEncrypted: true,
-                needsPassword: true,
-              }));
-              return;
-            }
-
-            // Derive key from password
-            const salt = deriveSaltFromSessionId(sessionId);
-            console.log(
-              "[E2EE Hook] Derived salt from sessionId:",
-              salt.substring(0, 10) + "...",
-            );
-            const encryptionKey = await deriveKeyFromPassword(
-              joinPassword,
-              salt,
-            );
-            console.log("[E2EE Hook] Key derived from password successfully");
+            const key = await importKey(joinKey);
+            console.log("[E2EE Hook] Key imported successfully");
 
             // Store the key for persistence
-            const exportedKey = await exportKey(encryptionKey.key);
-            storeEncryptionKey(sessionId, exportedKey);
+            storeEncryptionKey(sessionId, joinKey);
 
             setState({
               isSupported: true,
               isEnabled: true,
               isLoading: false,
               error: null,
-              key: encryptionKey.key,
+              key,
               isSessionEncrypted: true,
               needsPassword: false,
             });
             return;
           } catch (e) {
-            console.error("[E2EE Hook] Failed to derive key from password:", e);
+            console.error("[E2EE Hook] Failed to import stored key:", e);
             setState((prev) => ({
               ...prev,
               isSupported: true,
               isLoading: false,
-              error: "Failed to derive encryption key",
+              error: "Failed to import encryption key",
               isSessionEncrypted: true,
               needsPassword: true,
             }));
@@ -199,10 +176,8 @@ export function useEncryption(
           }
         }
 
-        // No password or key available
-        console.log(
-          "[E2EE Hook] Session is encrypted but no password/key available",
-        );
+        // No key available - need password to derive it
+        console.log("[E2EE Hook] Session is encrypted but no key available");
         setState((prev) => ({
           ...prev,
           isSupported: true,
@@ -250,7 +225,7 @@ export function useEncryption(
   }, [sessionId, isSessionEncrypted]);
 
   const enableEncryption = useCallback(
-    async (password?: string) => {
+    async (password?: string, createdAt?: string) => {
       console.log(
         "[E2EE Hook] enableEncryption called, password provided:",
         !!password,
@@ -258,18 +233,22 @@ export function useEncryption(
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
       try {
-        let encryptionKey: { key: CryptoKey; salt: string };
+        let encryptionKey: CryptoKey;
 
-        if (password) {
+        if (password && createdAt) {
           console.log(
-            "[E2EE Hook] Deriving key from password with session salt",
+            "[E2EE Hook] Deriving key from password with session createdAt",
           );
 
-          // Verify password with server first (for E2EE sessions)
+          // Verify auth key with server first (for E2EE sessions)
           if (state.isSessionEncrypted) {
-            const isValid = await verifyPasswordWithServer(sessionId, password);
+            const isValid = await verifyAuthKeyWithServer(
+              sessionId,
+              password,
+              createdAt,
+            );
             if (!isValid) {
-              console.error("[E2EE Hook] Password verification failed");
+              console.error("[E2EE Hook] Auth key verification failed");
               setState((prev) => ({
                 ...prev,
                 isLoading: false,
@@ -278,17 +257,26 @@ export function useEncryption(
               }));
               return null;
             }
-            console.log("[E2EE Hook] Password verified with server");
+            console.log("[E2EE Hook] Auth key verified with server");
           }
 
-          const salt = deriveSaltFromSessionId(sessionId);
-          encryptionKey = await deriveKeyFromPassword(password, salt);
+          encryptionKey = await deriveEncKey(password, createdAt);
+        } else if (password) {
+          console.error("[E2EE Hook] Password provided but no createdAt");
+          setState((prev) => ({
+            ...prev,
+            isLoading: false,
+            error: "Session information required",
+            needsPassword: true,
+          }));
+          return null;
         } else {
           console.log("[E2EE Hook] Generating random key");
-          encryptionKey = await generateKey();
+          const keyResult = await generateKey();
+          encryptionKey = keyResult.key;
         }
 
-        const exportedKey = await exportKey(encryptionKey.key);
+        const exportedKey = await exportKey(encryptionKey);
         storeEncryptionKey(sessionId, exportedKey);
         console.log(
           "[E2EE Hook] Key stored, key preview:",
@@ -300,7 +288,7 @@ export function useEncryption(
           isEnabled: true,
           isLoading: false,
           error: null,
-          key: encryptionKey.key,
+          key: encryptionKey,
           isSessionEncrypted: password ? true : state.isSessionEncrypted,
           needsPassword: false,
         });

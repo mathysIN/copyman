@@ -9,6 +9,7 @@ import {
   validatePassword,
   generateSessionToken,
   hashSessionToken,
+  hashAuthKey,
 } from "~/utils/password";
 import { type ExcludeMatchingProperties } from "~/utils/types";
 
@@ -297,13 +298,13 @@ export class Session {
 
   /**
    * Set or update the session password.
-   * The password is hashed with a per-session salt derived from createdAt.
+   * The authKey (already derived client-side) is hashed with SHA-256 for storage.
    */
-  async setPassword(password?: string) {
-    if (!password) return sessions.hdel(this.sessionId, "password");
+  async setPassword(authKey?: string) {
+    if (!authKey) return sessions.hdel(this.sessionId, "password");
 
     return sessions.hmset(this.sessionId, {
-      password: hashPassword(password, this.createdAt),
+      password: hashAuthKey(authKey),
     });
   }
 

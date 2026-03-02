@@ -6,6 +6,125 @@ const SALT_LENGTH = 16;
 const IV_LENGTH = 12;
 const PBKDF2_ITERATIONS = 100000;
 
+// Constants for key derivation from password
+const AUTH_CONTEXT = "copyman-auth-v1";
+const ENC_CONTEXT = "copyman-enc-v1";
+const PASSWORD_PBKDF2_ITERATIONS = 100000;
+
+/**
+ * Build a unique salt by combining a context string with session creation timestamp.
+ * This ensures keys are unique per session even with the same password.
+ * @param context - "auth" or "enc" context string
+ * @param createdAt - Session creation timestamp (from session.createdAt)
+ * @returns Salt string for PBKDF2
+ */
+function buildSalt(context: string, createdAt: string): string {
+  // Combine context with session creation timestamp for uniqueness
+  return `${context}:${createdAt}`;
+}
+
+/**
+ * Derive authentication key from password using PBKDF2.
+ * This key is sent to the server for authentication (never the raw password).
+ * @param password - The user's raw password
+ * @param createdAt - Session creation timestamp (session.createdAt)
+ * @returns Hex string of the derived auth key (256-bit)
+ */
+export async function deriveAuthKey(
+  password: string,
+  createdAt: string,
+): Promise<string> {
+  const encoder = new TextEncoder();
+  const salt = buildSalt(AUTH_CONTEXT, createdAt);
+  const keyMaterial = await window.crypto.subtle.importKey(
+    "raw",
+    encoder.encode(password),
+    "PBKDF2",
+    false,
+    ["deriveBits"],
+  );
+
+  const derivedBits = await window.crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt: encoder.encode(salt),
+      iterations: PASSWORD_PBKDF2_ITERATIONS,
+      hash: "SHA-256",
+    },
+    keyMaterial,
+    256,
+  );
+
+  return arrayBufferToHex(derivedBits);
+}
+
+/**
+ * Derive encryption key from password using PBKDF2.
+ * This key is used for E2EE and NEVER sent to the server.
+ * @param password - The user's raw password
+ * @param createdAt - Session creation timestamp (session.createdAt)
+ * @returns CryptoKey for AES-GCM encryption/decryption
+ */
+export async function deriveEncKey(
+  password: string,
+  createdAt: string,
+): Promise<CryptoKey> {
+  const encoder = new TextEncoder();
+  const salt = buildSalt(ENC_CONTEXT, createdAt);
+  const keyMaterial = await window.crypto.subtle.importKey(
+    "raw",
+    encoder.encode(password),
+    "PBKDF2",
+    false,
+    ["deriveKey"],
+  );
+
+  return window.crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt: encoder.encode(salt),
+      iterations: PASSWORD_PBKDF2_ITERATIONS,
+      hash: "SHA-256",
+    },
+    keyMaterial,
+    { name: ALGORITHM, length: KEY_LENGTH },
+    true,
+    ["encrypt", "decrypt"],
+  );
+}
+
+/**
+ * Derive both auth and encryption keys from a single password.
+ * This is the main function to use when user enters their password.
+ * @param password - The user's raw password
+ * @param createdAt - Session creation timestamp (session.createdAt)
+ * @returns Object containing authKey (string) and encKey (CryptoKey)
+ */
+export async function deriveKeysFromPassword(
+  password: string,
+  createdAt: string,
+): Promise<{
+  authKey: string;
+  encKey: CryptoKey;
+}> {
+  const [authKey, encKey] = await Promise.all([
+    deriveAuthKey(password, createdAt),
+    deriveEncKey(password, createdAt),
+  ]);
+
+  return { authKey, encKey };
+}
+
+/**
+ * Helper function to convert ArrayBuffer to hex string.
+ */
+function arrayBufferToHex(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 export type EncryptedData = {
   ciphertext: string;
   iv: string;

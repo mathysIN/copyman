@@ -45,6 +45,7 @@ import { PasteButton } from "~/components/PasteButton";
 import { Reorder } from "framer-motion";
 import { useToast } from "~/hooks/use-toast";
 import { useEncryption } from "~/hooks/use-encryption";
+import { deriveAuthKey } from "~/lib/client/encryption";
 import { DialogClose } from "@radix-ui/react-dialog";
 import { type User } from "~/server";
 import Upload from "~/components/Upload";
@@ -93,6 +94,10 @@ export function ActiveSession({
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [passwordModalLoading, setPasswordModalLoading] = useState(false);
   const [passwordModalContent, setPasswordModalContent] = useState("");
+  const [currentPasswordModalContent, setCurrentPasswordModalContent] =
+    useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [confirmE2EEDisable, setConfirmE2EEDisable] = useState("");
   const [socketUserId, setSocketUserId] = useState<string | undefined>(
     undefined,
   );
@@ -643,7 +648,19 @@ export function ActiveSession({
   }
 
   function onClickSetPassword(): void {
-    sendPasswordRequest(passwordModalContent);
+    // If password already exists, require current password
+    if (hasPassword && !currentPasswordModalContent) {
+      setPasswordError("Veuillez entrer le mot de passe actuel");
+      return;
+    }
+    if (!passwordModalContent) {
+      setPasswordError("Veuillez entrer un nouveau mot de passe");
+      return;
+    }
+    sendPasswordRequest(
+      passwordModalContent,
+      hasPassword ? currentPasswordModalContent : undefined,
+    );
   }
 
   function onClickRemovePassword(): void {
@@ -656,24 +673,57 @@ export function ActiveSession({
     onUpdateContentOrder(newOrder, true);
   }
 
-  function sendPasswordRequest(password: string): void {
+  async function sendPasswordRequest(
+    newPassword: string,
+    currentPassword?: string,
+  ): Promise<void> {
     setPasswordModalLoading(true);
+    setPasswordError("");
+
+    // Derive authKeys from passwords + session createdAt
+    const newAuthKey = newPassword
+      ? await deriveAuthKey(newPassword, session.createdAt)
+      : "";
+    const currentAuthKey = currentPassword
+      ? await deriveAuthKey(currentPassword, session.createdAt)
+      : undefined;
+
     api
-      .setPassword(password)
-      .then(async () => {
-        setHasPassword(!!password);
-        if (!password && session.isEncrypted) {
-          await fetch("/api/sessions/encryption", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ isEncrypted: false }),
-          });
+      .setPassword(newAuthKey, currentAuthKey)
+      .then(async (res) => {
+        if (!res.ok) {
+          const data = await res.json();
+          if (data.message === "invalid_current_password") {
+            setPasswordError("Mot de passe actuel incorrect");
+          } else if (data.message === "current_password_required") {
+            setPasswordError("Mot de passe actuel requis");
+          } else {
+            setPasswordError("Erreur lors de la modification");
+          }
+          return;
         }
+
+        setHasPassword(!!newPassword);
+
+        // If password changed and E2EE was enabled, clear the encryption key
+        // The server already disabled E2EE, but client needs to clear old key
+        if (session.isEncrypted) {
+          console.log(
+            "[PASSWORD CHANGE] Clearing encryption key due to password change",
+          );
+          const { removeStoredEncryptionKey } = await import(
+            "~/lib/client/encryption"
+          );
+          removeStoredEncryptionKey(session.sessionId);
+        }
+
         window.location.reload();
+      })
+      .catch(() => {
+        setPasswordError("Erreur réseau");
       })
       .finally(() => {
         setPasswordModalLoading(false);
-        setPasswordModalOpen(false);
       });
   }
 
@@ -945,7 +995,15 @@ export function ActiveSession({
                     </div>
                     <Dialog
                       open={passwordModalOpen}
-                      onOpenChange={(state) => setPasswordModalOpen(state)}
+                      onOpenChange={(state) => {
+                        setPasswordModalOpen(state);
+                        if (!state) {
+                          // Reset form when closing
+                          setPasswordModalContent("");
+                          setCurrentPasswordModalContent("");
+                          setPasswordError("");
+                        }
+                      }}
                     >
                       <DialogTrigger asChild>
                         <Button size="sm" className="min-w-[100px]">
@@ -958,30 +1016,69 @@ export function ActiveSession({
                             {hasPassword && "Modifier le mot de passe existant"}
                             {!hasPassword && "Créer un nouveau mot de passe"}
                           </DialogTitle>
-                          {session.isEncrypted && hasPassword && (
-                            <div className="mt-2 rounded-lg bg-yellow-600/20 p-3 text-sm text-yellow-600 dark:text-yellow-400">
-                              <strong>Attention :</strong> Cette session utilise
-                              le chiffrement de bout en bout. Modifier le mot de
-                              passe rendra tout le contenu chiffré existant
-                              illisible.
+                          {session.isEncrypted && (
+                            <div className="mt-2 rounded-lg border border-red-300 bg-red-600/20 p-3 text-sm text-red-600 dark:text-red-400">
+                              <strong>ATTENTION :</strong> Cette session
+                              utilise le chiffrement E2EE. Changer le mot de
+                              passe{" "}
+                              <strong>
+                                désactivera automatiquement le chiffrement
+                              </strong>{" "}
+                              et rendra tout le contenu chiffré existant{" "}
+                              <strong>illisible définitivement</strong>.
                             </div>
                           )}
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
+                          {hasPassword && (
+                            <div className="grid grid-cols-4 items-center gap-4">
+                              <Label
+                                htmlFor="current-password"
+                                className="text-right"
+                              >
+                                Mot de passe actuel
+                              </Label>
+                              <Input
+                                id="current-password"
+                                onChange={(e) =>
+                                  setCurrentPasswordModalContent(e.target.value)
+                                }
+                                value={currentPasswordModalContent}
+                                type="password"
+                                placeholder="Entrez le mot de passe actuel"
+                                className="col-span-3"
+                              />
+                            </div>
+                          )}
                           <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="name" className="text-right">
-                              Mot de passe
+                            <Label
+                              htmlFor="new-password"
+                              className="text-right"
+                            >
+                              {hasPassword
+                                ? "Nouveau mot de passe"
+                                : "Mot de passe"}
                             </Label>
                             <Input
+                              id="new-password"
                               onChange={(e) =>
                                 setPasswordModalContent(e.target.value)
                               }
                               value={passwordModalContent}
                               type="password"
-                              placeholder="*****"
+                              placeholder={
+                                hasPassword
+                                  ? "Entrez le nouveau mot de passe"
+                                  : "*****"
+                              }
                               className="col-span-3"
                             />
                           </div>
+                          {passwordError && (
+                            <div className="text-center text-sm text-red-500">
+                              {passwordError}
+                            </div>
+                          )}
                         </div>
                         <DialogFooter>
                           <Button
@@ -1013,6 +1110,7 @@ export function ActiveSession({
                     isSessionEncrypted={session.isEncrypted ?? false}
                     hasSessionPassword={hasPassword}
                     sessionPassword={undefined}
+                    createdAt={session.createdAt}
                   />
                 </div>
 
@@ -1158,7 +1256,9 @@ export function ActiveSession({
               <div className="space-y-2">
                 <Label htmlFor="session">Session</Label>
                 <div className="flex items-center gap-2">
-                  <span className="w-6 px-1 text-center text-muted-foreground">#</span>
+                  <span className="w-6 px-1 text-center text-muted-foreground">
+                    #
+                  </span>
                   <Input
                     id="session"
                     value={changeSessionValue}
@@ -1171,7 +1271,9 @@ export function ActiveSession({
               <div className="space-y-2">
                 <Label htmlFor="password">Mot de passe</Label>
                 <div className="flex items-center gap-2">
-                  <span className="w-6 px-1 text-center text-muted-foreground">**</span>
+                  <span className="w-6 px-1 text-center text-muted-foreground">
+                    **
+                  </span>
                   <Input
                     id="password"
                     type="password"

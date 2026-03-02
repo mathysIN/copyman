@@ -12,8 +12,8 @@ import {
 } from "~/utils/authenticate";
 import { NextResponse } from "next/server";
 import {
-  hashPassword,
-  validatePassword,
+  hashAuthKey,
+  verifyAuthKey,
   generateSessionToken,
 } from "~/utils/password";
 import { env } from "~/env";
@@ -36,7 +36,7 @@ import { socketSendPasswordChanged } from "~/lib/socketInstance";
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const sessionId = url.searchParams.get("sessionId");
-  const rawPassword = url.searchParams.get("password");
+  const authKey = url.searchParams.get("authKey");
   const join = url.searchParams.get("join") == "true";
 
   // Get session data without enforcing password (for checking existence and metadata)
@@ -49,9 +49,9 @@ export async function GET(req: Request) {
     return NextResponse.json({ createNewSession: true }, { status: 200 });
   }
 
-  // Verify password if provided
-  const isValidPassword = rawPassword
-    ? await session.verifyPassword(rawPassword)
+  // Verify auth key if provided
+  const isValidAuth = authKey
+    ? verifyAuthKey(authKey, session.password!)
     : !session.hasPassword();
 
   // Check session token for authentication status
@@ -61,20 +61,22 @@ export async function GET(req: Request) {
     : false;
 
   return NextResponse.json({
-    valid: isValidPassword || isAuthenticated,
+    valid: isValidAuth || isAuthenticated,
     hasPassword: session.hasPassword(),
     isEncrypted: session.isEncrypted ?? false,
     createNewSession: false,
+    createdAt: session.createdAt,
   });
 }
 
 type SessionRequestBody = {
   session?: string;
-  password?: string;
+  authKey?: string;
   join?: boolean | string;
   create?: boolean | string;
   temporary?: boolean | string;
   isEncrypted?: boolean | string;
+  createdAt?: string;
 };
 
 /**
@@ -101,7 +103,7 @@ export async function POST(req: Request) {
   }
 
   const sessionId = body.session?.toLowerCase() ?? "";
-  const rawPassword = body.password;
+  const authKey = body.authKey;
   // Handle both boolean and string values from client
   const join = body.join === true || body.join === "true";
   const temporary = body.temporary === true || body.temporary === "true";
@@ -152,18 +154,18 @@ export async function POST(req: Request) {
     }
     session = new Session(sessionData);
 
-    // Verify password using per-session salt
+    // Verify auth key using SHA-256 comparison
     if (session.hasPassword()) {
-      if (!rawPassword) {
+      if (!authKey) {
         return NextResponse.json(
-          { error: "password_required" },
+          { error: "auth_key_required" },
           { status: 401 },
         );
       }
-      const isValid = await session.verifyPassword(rawPassword);
+      const isValid = verifyAuthKey(authKey, session.password!);
       if (!isValid) {
         return NextResponse.json(
-          { error: "invalid_password" },
+          { error: "invalid_auth_key" },
           { status: 401 },
         );
       }
@@ -173,6 +175,10 @@ export async function POST(req: Request) {
     canJoin = true;
   } else {
     // Creating new session
+    // Use client-provided createdAt if available (for key derivation consistency)
+    // Otherwise use server's timestamp
+    const clientCreatedAt = body.createdAt;
+    const serverCreatedAt = Date.now().toString();
     const sessionData: {
       sessionId: string;
       password?: string;
@@ -183,14 +189,23 @@ export async function POST(req: Request) {
       isEncrypted?: boolean;
     } = {
       sessionId: actualSessionId,
-      createdAt: Date.now().toString(),
+      createdAt: clientCreatedAt || serverCreatedAt,
       rawContentOrder: "",
       isEncrypted: isEncrypted,
     };
 
-    // Hash password with per-session salt
-    if (rawPassword) {
-      sessionData.password = hashPassword(rawPassword, sessionData.createdAt);
+    // Store auth key hash (client already derived it from password using PBKDF2)
+    if (authKey) {
+      sessionData.password = hashAuthKey(authKey);
+      console.log("[CREATE] Storing auth key:", {
+        sessionId: actualSessionId,
+        authKeyPreview: authKey.substring(0, 16) + "...",
+        storedHashLength: sessionData.password.length,
+        storedHashPreview: sessionData.password.substring(0, 16) + "...",
+        timestamp: sessionData.createdAt,
+      });
+    } else {
+      console.log("[CREATE] No authKey provided for session:", actualSessionId);
     }
 
     if (temporary) {
@@ -249,6 +264,7 @@ export async function POST(req: Request) {
 /**
  * PATCH /api/sessions
  * Update session password.
+ * Requires current authKey for verification, then sets new authKey.
  */
 export async function PATCH(req: Request) {
   const session = await getSessionWithCookies(cookies());
@@ -257,16 +273,51 @@ export async function PATCH(req: Request) {
   }
 
   const data = await req.json();
-  const newPassword = data["password"];
+  const currentAuthKey = data["currentAuthKey"];
+  const newAuthKey = data["newAuthKey"];
 
-  // Set new password (hashed with per-session salt automatically)
-  const request = await session.setPassword(newPassword);
+  // If session already has a password, verify current password first
+  if (session.hasPassword()) {
+    if (!currentAuthKey) {
+      return NextResponse.json(
+        { message: "current_password_required" },
+        { status: 400 },
+      );
+    }
+
+    // Verify current auth key
+    const isValid = verifyAuthKey(currentAuthKey, session.password!);
+    if (!isValid) {
+      return NextResponse.json(
+        { message: "invalid_current_password" },
+        { status: 401 },
+      );
+    }
+  }
+
+  if (!newAuthKey) {
+    return NextResponse.json(
+      { message: "new_password_required" },
+      { status: 400 },
+    );
+  }
+
+  // Store new auth key hash (already derived client-side)
+  const request = await session.setPassword(newAuthKey);
   if (!request) {
     return NextResponse.json({ message: "Error" }, { status: 500 });
   }
 
-  // DO NOT set password cookie - we use session tokens
-  // If password changed, clear all existing session tokens for security
+  // If E2EE was enabled, disable it since the encryption key is now invalid
+  // The key was derived from the old password and cannot be recovered
+  if (session.isEncrypted) {
+    await session.setIsEncrypted(false);
+    console.log(
+      `[PASSWORD CHANGE] Disabled E2EE for session ${session.sessionId} due to password change`,
+    );
+  }
+
+  // Clear all existing session tokens for security
   await clearSessionToken(session.sessionId);
 
   // Generate new session token

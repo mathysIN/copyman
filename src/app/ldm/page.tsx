@@ -137,7 +137,7 @@ export default async function LDMPage() {
                 <input type="hidden" name="temporary" value="true" />
                 <input type="hidden" name="password" value="" />
                 <button type="submit" className="btn btn-temp">
-                  Create Temporary Session (24h)
+                  Create Temporary Session (4h)
                 </button>
               </form>
 
@@ -457,10 +457,10 @@ export default async function LDMPage() {
                         {item.isEncrypted
                           ? "[This note is encrypted and cannot be displayed in LDM mode]"
                           : item.content
-                              .replace(/&/g, "&amp;")
-                              .replace(/</g, "&lt;")
-                              .replace(/>/g, "&gt;")
-                              .replace(/"/g, "&quot;")}
+                            .replace(/&/g, "&amp;")
+                            .replace(/</g, "&lt;")
+                            .replace(/>/g, "&gt;")
+                            .replace(/"/g, "&quot;")}
                       </div>
                     ) : item.type === "attachment" ? (
                       <div className="file-info">

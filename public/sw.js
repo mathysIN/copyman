@@ -119,6 +119,16 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Skip file downloads (PDFs, text files, etc.) - let browser handle them directly
+  if (
+    request.url.includes("/api/content") ||
+    request.url.match(
+      /\.(pdf|txt|md|json|csv|zip|html?|js|ts|css|png|jpg|jpeg|gif|mp3|mp4|webm|wav)$/i,
+    )
+  ) {
+    return; // Don't intercept file requests
+  }
+
   // Handle other requests with cache-first strategy
   event.respondWith(
     (async () => {

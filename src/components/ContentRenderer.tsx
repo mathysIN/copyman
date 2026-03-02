@@ -8,6 +8,10 @@ import {
   faFolder,
   faArrowRightFromBracket,
   faLock,
+  faFilePdf,
+  faFileCode,
+  faTable,
+  faFileZipper,
 } from "@fortawesome/free-solid-svg-icons";
 import { PhotoProvider, PhotoView } from "react-photo-view";
 import "react-photo-view/dist/react-photo-view.css";
@@ -99,6 +103,9 @@ const ContentRenderer = ({
   const [renaming, setRenaming] = useState(false);
   const [decryptedUrl, setDecryptedUrl] = useState<string | null>(null);
   const [decryptionError, setDecryptionError] = useState(false);
+  const [textContent, setTextContent] = useState<string | null>(null);
+  const [csvPreview, setCsvPreview] = useState<string[][] | null>(null);
+  const [textError, setTextError] = useState(false);
 
   const isEncrypted = content.isEncrypted && encryptionKey;
   const needsDecryption = content.isEncrypted && !encryptionKey;
@@ -178,19 +185,134 @@ const ContentRenderer = ({
   };
 
   const getContentType = (url: string) => {
-    const stringExtension = getExtension(url);
-    let extension: "video" | "image" | "audio" | null = null;
-    if (["mp4", "ogg", "webm"].includes(stringExtension)) {
-      extension = "video";
-    } else if (["png", "jpg", "jpeg", "gif", "svg"].includes(stringExtension)) {
-      extension = "image";
-    } else if (["mp3", "wav"].includes(stringExtension)) {
-      extension = "audio";
-    }
-    return extension;
+    const stringExtension = getExtension(url).toLowerCase();
+    if (["mp4", "ogg", "webm"].includes(stringExtension)) return "video";
+    if (["png", "jpg", "jpeg", "gif", "svg", "webp"].includes(stringExtension))
+      return "image";
+    if (["mp3", "wav", "m4a", "aac"].includes(stringExtension)) return "audio";
+    if (stringExtension === "pdf") return "pdf";
+    if (
+      [
+        "txt",
+        "md",
+        "json",
+        "js",
+        "ts",
+        "tsx",
+        "jsx",
+        "css",
+        "html",
+        "py",
+        "rb",
+        "go",
+        "rs",
+        "java",
+        "c",
+        "cpp",
+        "h",
+        "cs",
+        "php",
+        "sql",
+        "yaml",
+        "yml",
+        "xml",
+        "sh",
+        "bash",
+        "zsh",
+      ].includes(stringExtension)
+    )
+      return "text";
+    if (stringExtension === "csv") return "csv";
+    if (["zip", "rar", "7z", "tar", "gz", "bz2"].includes(stringExtension))
+      return "archive";
+    // Office documents - don't try to preview as text
+    if (
+      [
+        "docx",
+        "doc",
+        "xlsx",
+        "xls",
+        "pptx",
+        "ppt",
+        "odt",
+        "ods",
+        "odp",
+      ].includes(stringExtension)
+    )
+      return null;
+    return null;
   };
 
   const contentType = getContentType(attachmentURL);
+
+  useEffect(() => {
+    const loadTextContent = async () => {
+      if (contentType !== "text" && contentType !== "csv") {
+        setTextContent(null);
+        setCsvPreview(null);
+        setTextError(false);
+        return;
+      }
+
+      // Add timeout to prevent infinite loading
+      const timeoutId = setTimeout(() => {
+        setTextError(true);
+      }, 10000); // 10 second timeout
+
+      try {
+        let blob: Blob;
+        if (
+          isEncrypted &&
+          encryptionKey &&
+          content.encryptedIv &&
+          decryptedUrl
+        ) {
+          const response = await fetch(decryptedUrl);
+          if (!response.ok) throw new Error("Failed to fetch decrypted");
+          blob = await response.blob();
+        } else {
+          const response = await fetch(attachmentURL);
+          if (!response.ok) throw new Error("Failed to fetch");
+          blob = await response.blob();
+        }
+
+        // Check if blob is too large (over 1MB for text files is suspicious)
+        if (blob.size > 1024 * 1024) {
+          throw new Error("File too large");
+        }
+
+        const text = await blob.text();
+
+        // Check if content looks like binary (contains lots of null bytes or control characters)
+        const nullBytes = (text.match(/\0/g) || []).length;
+        if (nullBytes > 10) {
+          throw new Error("Binary content");
+        }
+
+        if (contentType === "csv") {
+          const lines = text.split("\n").slice(0, 6);
+          const rows = lines.map((line) => line.split(",").slice(0, 4));
+          setCsvPreview(rows);
+        } else {
+          setTextContent(text.split("\n").slice(0, 6).join("\n"));
+        }
+        setTextError(false);
+        clearTimeout(timeoutId);
+      } catch (e) {
+        clearTimeout(timeoutId);
+        setTextError(true);
+      }
+    };
+
+    loadTextContent();
+  }, [
+    contentType,
+    attachmentURL,
+    isEncrypted,
+    encryptionKey,
+    decryptedUrl,
+    content.encryptedIv,
+  ]);
 
   const displayUrl = isEncrypted ? decryptedUrl : attachmentURL;
 
@@ -236,6 +358,61 @@ const ContentRenderer = ({
       setAttachmentURL(getCDNUrlFromFileKey(newValue, content.fileKey));
       onContentUpdate(newObject);
     });
+  };
+
+  const [pdfObjectUrl, setPdfObjectUrl] = useState<string | null>(null);
+  const [htmlContent, setHtmlContent] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadDocumentContent = async () => {
+      if (contentType !== "pdf" && !isHtmlFile(attachmentPath)) {
+        setPdfObjectUrl(null);
+        setHtmlContent(null);
+        return;
+      }
+
+      try {
+        let blob: Blob;
+        if (
+          isEncrypted &&
+          encryptionKey &&
+          content.encryptedIv &&
+          decryptedUrl
+        ) {
+          const response = await fetch(decryptedUrl);
+          blob = await response.blob();
+        } else {
+          const response = await fetch(attachmentURL);
+          blob = await response.blob();
+        }
+
+        if (contentType === "pdf") {
+          const url = URL.createObjectURL(blob);
+          setPdfObjectUrl(url);
+          return () => URL.revokeObjectURL(url);
+        } else if (isHtmlFile(attachmentPath)) {
+          const text = await blob.text();
+          setHtmlContent(text.slice(0, 500));
+        }
+      } catch (e) {
+        console.error("Failed to load document content:", e);
+      }
+    };
+
+    loadDocumentContent();
+  }, [
+    contentType,
+    attachmentURL,
+    attachmentPath,
+    isEncrypted,
+    encryptionKey,
+    decryptedUrl,
+    content.encryptedIv,
+  ]);
+
+  const isHtmlFile = (path: string) => {
+    const ext = getExtension(path).toLowerCase();
+    return ext === "html" || ext === "htm";
   };
 
   const renderContent = () => {
@@ -321,8 +498,118 @@ const ContentRenderer = ({
             ></audio>
           </>
         );
+      case "pdf":
+        return (
+          <div className="flex h-full w-full flex-col border border-red-200/60 bg-white">
+            <div className="flex items-center justify-center gap-2 border-b border-red-100 bg-red-50/50 p-1.5">
+              <FontAwesomeIcon
+                icon={faFilePdf}
+                className="h-5 w-5 text-red-500"
+              />
+              <span className="max-w-[150px] truncate text-xs font-medium text-gray-700">
+                {attachmentPath}
+              </span>
+            </div>
+            {pdfObjectUrl ? (
+              <iframe
+                src={pdfObjectUrl}
+                className="min-h-0 w-full flex-1 bg-white"
+                title="PDF Preview"
+              />
+            ) : (
+              <div className="flex flex-1 items-center justify-center bg-white">
+                <p className="text-xs text-slate-500">Chargement du PDF...</p>
+              </div>
+            )}
+          </div>
+        );
+      case "text":
+        if (textError) {
+          return (
+            <div className="flex h-full w-full flex-col items-center justify-center border-2 border-gray-300 bg-gray-50 p-2">
+              <FontAwesomeIcon
+                icon={faFileCode}
+                className="h-6 w-6 text-gray-400"
+              />
+              <p className="mt-1 text-xs text-black">Aperçu non disponible</p>
+            </div>
+          );
+        }
+        return (
+          <div className="flex h-full w-full flex-col border-2 border-gray-300 bg-white">
+            <div className="flex items-center justify-center gap-2 border-b border-gray-200 bg-gray-50 p-1.5">
+              <FontAwesomeIcon
+                icon={faFileCode}
+                className="h-5 w-5 text-blue-500"
+              />
+              <span className="max-w-[150px] truncate text-xs font-medium text-gray-700">
+                {attachmentPath}
+              </span>
+            </div>
+            <div className="flex-1 overflow-auto bg-white px-2 py-1">
+              <pre className="w-full select-text whitespace-pre-wrap break-all bg-white text-xs text-black selection:bg-blue-200">
+                {textContent || "Chargement..."}
+              </pre>
+            </div>
+          </div>
+        );
+      case "csv":
+        if (textError) {
+          return (
+            <div className="flex h-full w-full flex-col items-center justify-center border-2 border-emerald-300 bg-emerald-50 p-2">
+              <FontAwesomeIcon
+                icon={faTable}
+                className="h-6 w-6 text-emerald-400"
+              />
+              <p className="mt-1 text-xs text-black">Aperçu non disponible</p>
+            </div>
+          );
+        }
+        return (
+          <div className="flex h-full w-full flex-col border-2 border-emerald-300 bg-white">
+            <div className="flex items-center justify-center gap-2 border-b border-emerald-200 bg-emerald-50 p-1.5">
+              <FontAwesomeIcon
+                icon={faTable}
+                className="h-5 w-5 text-emerald-600"
+              />
+              <span className="max-w-[150px] truncate text-xs font-medium text-gray-700">
+                {attachmentPath}
+              </span>
+            </div>
+            <div className="flex-1 overflow-auto bg-white px-2 py-1">
+              {csvPreview ? (
+                <table className="w-full text-xs">
+                  <tbody>
+                    {csvPreview.map((row, i) => (
+                      <tr
+                        key={i}
+                        className={
+                          i === 0
+                            ? "bg-emerald-50 font-semibold"
+                            : "hover:bg-gray-50"
+                        }
+                      >
+                        {row.map((cell, j) => (
+                          <td
+                            key={j}
+                            className="max-w-[80px] truncate border border-gray-200 px-1 py-0.5 text-black selection:bg-emerald-200"
+                          >
+                            {cell}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="w-full text-xs text-black">Chargement...</p>
+              )}
+            </div>
+          </div>
+        );
+      case "archive":
       default:
-        return <p>{attachmentPath}</p>;
+        return null;
     }
   };
 
@@ -340,27 +627,33 @@ const ContentRenderer = ({
       <div
         className={`${deleting && "animate-pulse cursor-wait opacity-75"} ${dragging && "scale-105 shadow-2xl"} space-y h-fit rounded-md border-2 border-gray-300 bg-white p-2 text-gray-900 transition-all`}
       >
-        {contentType && (
-          <>
-            <div
-              className="relative flex h-0 w-full max-w-full justify-center"
-              style={{ paddingTop: "56.25%" }}
-            >
-              {contentType && (
-                <div className="absolute inset-0 overflow-hidden rounded-lg">
-                  {renderContent()}
+        {(() => {
+          const rendered = renderContent();
+          const isTextOrCsv = contentType === "text" || contentType === "csv";
+          return rendered ? (
+            <>
+              <div
+                className={`relative flex w-full max-w-full justify-center ${isTextOrCsv ? "min-h-[80px]" : "h-0"}`}
+                style={isTextOrCsv ? {} : { paddingTop: "40%" }}
+              >
+                <div
+                  className={`${isTextOrCsv ? "relative w-full" : "absolute inset-0"} overflow-hidden rounded-lg`}
+                >
+                  {rendered}
                 </div>
-              )}
-            </div>
-            <div className="h-2" />
-          </>
-        )}
+              </div>
+              <div className="h-2" />
+            </>
+          ) : null;
+        })()}
         <div className="flex flex-row justify-between gap-4">
           <div className="flex flex-row gap-x-1 text-sm">
             <button
               aria-disabled={content.isEncrypted}
               tabIndex={content.isEncrypted ? -1 : undefined}
-              className={cn(content.isEncrypted && "pointer-events-none text-black/40", "w-8 rounded border-neutral-200 bg-neutral-100 py-1 transition-colors hover:bg-neutral-200 active:scale-90 active:opacity-75"
+              className={cn(
+                content.isEncrypted && "pointer-events-none text-black/40",
+                "w-8 rounded border-neutral-200 bg-neutral-100 py-1 transition-colors hover:bg-neutral-200 active:scale-90 active:opacity-75",
               )}
               onClick={() =>
                 copyAndToast(
@@ -385,7 +678,10 @@ const ContentRenderer = ({
               href={attachmentURL}
               aria-disabled={content.isEncrypted}
               tabIndex={content.isEncrypted ? -1 : undefined}
-              className={cn(content.isEncrypted && "pointer-events-none text-black/40", "flex w-8 items-center justify-center rounded bg-neutral-100 py-1 transition-colors hover:bg-neutral-200 active:scale-90 active:opacity-75")}
+              className={cn(
+                content.isEncrypted && "pointer-events-none text-black/40",
+                "flex w-8 items-center justify-center rounded bg-neutral-100 py-1 transition-colors hover:bg-neutral-200 active:scale-90 active:opacity-75",
+              )}
               title="Ouvrir dans un nouvel onglet"
             >
               <FontAwesomeIcon icon={faArrowUpRightFromSquare} />

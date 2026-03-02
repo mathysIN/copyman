@@ -710,7 +710,10 @@ export function ActiveSession({
     deleteAllCookies();
     const postResult = await fetch("/api/sessions", {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "application/json",
+      },
       body: new URLSearchParams({
         session: changeSessionValue,
         password: changePasswordValue,
@@ -1158,7 +1161,9 @@ export function ActiveSession({
               <div className="space-y-2">
                 <Label htmlFor="session">Session</Label>
                 <div className="flex items-center gap-2">
-                  <span className="w-6 px-1 text-center text-muted-foreground">#</span>
+                  <span className="w-6 px-1 text-center text-muted-foreground">
+                    #
+                  </span>
                   <Input
                     id="session"
                     value={changeSessionValue}
@@ -1171,7 +1176,9 @@ export function ActiveSession({
               <div className="space-y-2">
                 <Label htmlFor="password">Mot de passe</Label>
                 <div className="flex items-center gap-2">
-                  <span className="w-6 px-1 text-center text-muted-foreground">**</span>
+                  <span className="w-6 px-1 text-center text-muted-foreground">
+                    **
+                  </span>
                   <Input
                     id="password"
                     type="password"

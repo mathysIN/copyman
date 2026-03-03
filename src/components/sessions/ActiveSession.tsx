@@ -45,7 +45,7 @@ import { PasteButton } from "~/components/PasteButton";
 import { Reorder } from "framer-motion";
 import { useToast } from "~/hooks/use-toast";
 import { useEncryption } from "~/hooks/use-encryption";
-import { deriveAuthKey } from "~/lib/client/encryption";
+import { deriveAuthKey, deriveEncKey } from "~/lib/client/encryption";
 import { DialogClose } from "@radix-ui/react-dialog";
 import { type User } from "~/server";
 import Upload from "~/components/Upload";
@@ -115,6 +115,10 @@ export function ActiveSession({
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteConfirmValue, setDeleteConfirmValue] = useState("");
+  const [deletePasswordValue, setDeletePasswordValue] = useState("");
+  const [deletePasswordError, setDeletePasswordError] = useState("");
+  const [deletePasswordLoading, setDeletePasswordLoading] = useState(false);
+  const [showDeletePasswordInput, setShowDeletePasswordInput] = useState(false);
   const [changeSessionOpen, setChangeSessionOpen] = useState(false);
   const [changeSessionValue, setChangeSessionValue] = useState("");
   const [changePasswordValue, setChangePasswordValue] = useState("");
@@ -736,42 +740,178 @@ export function ActiveSession({
     }
 
     setChangeSessionLoading(true);
-    const result = await fetch(
-      `/api/sessions?sessionId=${changeSessionValue}&password=${changePasswordValue}&join=true`,
-      {},
-    )
-      .then((res) => res.json())
-      .catch(() => undefined);
-    setChangeSessionLoading(false);
 
-    if (
-      !result ||
-      (!result.createNewSession && (!result.sessionId || !result.createdAt))
-    ) {
+    // First, check if session exists and get session info (including createdAt)
+    const checkResult: {
+      valid: boolean;
+      hasPassword: boolean;
+      isEncrypted: boolean;
+      createNewSession: boolean;
+      createdAt?: string;
+    } = await fetch(`/api/sessions?sessionId=${changeSessionValue}`)
+      .then((res) => res.json())
+      .catch(() => ({ valid: false, createNewSession: false }));
+
+    if (!checkResult || checkResult.createNewSession) {
+      setChangeSessionLoading(false);
       setChangeSessionError("Session inexistante");
       return;
     }
 
-    if (result.hasPassword && !result.isValidPassword) {
-      setChangeSessionError("Mot de passe incorrect");
-      return;
+    // Derive authKey and encKey from password
+    let authKey: string | undefined;
+    let encKey: CryptoKey | undefined;
+
+    if (changePasswordValue && checkResult.createdAt) {
+      authKey = await deriveAuthKey(changePasswordValue, checkResult.createdAt);
+      encKey = await deriveEncKey(changePasswordValue, checkResult.createdAt);
+    }
+
+    // Verify auth key if session has password
+    if (checkResult.hasPassword) {
+      if (!authKey) {
+        setChangeSessionLoading(false);
+        setChangeSessionError("Mot de passe requis");
+        return;
+      }
+
+      const verifyResult = await fetch(
+        `/api/sessions/verify-password?sessionId=${changeSessionValue}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ authKey }),
+        },
+      ).then((res) => res.json());
+
+      if (!verifyResult.valid) {
+        setChangeSessionLoading(false);
+        setChangeSessionError("Mot de passe incorrect");
+        return;
+      }
     }
 
     deleteAllCookies();
+
+    // Store encryption key for E2EE if session is encrypted
+    if (encKey && checkResult.isEncrypted) {
+      const { exportKey } = await import("~/lib/client/encryption");
+      const exportedKey = await exportKey(encKey);
+      sessionStorage.setItem(
+        `e2ee_key_${changeSessionValue.toLowerCase()}`,
+        exportedKey,
+      );
+    }
+
     const postResult = await fetch("/api/sessions", {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         session: changeSessionValue,
-        password: changePasswordValue,
-        join: "true",
+        authKey,
+        join: true,
       }),
     }).then((res) => res.json());
+
+    setChangeSessionLoading(false);
+
     if (postResult?.error) {
-      setChangeSessionError("Session inexistante");
+      if (
+        postResult.error === "invalid_auth_key" ||
+        postResult.error === "auth_key_required"
+      ) {
+        setChangeSessionError("Mot de passe incorrect");
+      } else {
+        setChangeSessionError("Session inexistante");
+      }
       return;
     }
+
     window.location.href = "/";
+  }
+
+  async function handleDeleteSession() {
+    setDeletePasswordError("");
+
+    // If session has password and password input not shown yet, show it
+    if (hasPassword && !showDeletePasswordInput) {
+      setShowDeletePasswordInput(true);
+      return;
+    }
+
+    // If session has password, verify it first
+    if (hasPassword) {
+      if (!deletePasswordValue) {
+        setDeletePasswordError("Veuillez entrer le mot de passe");
+        return;
+      }
+
+      setDeletePasswordLoading(true);
+
+      try {
+        // Derive authKey from password
+        const authKey = await deriveAuthKey(
+          deletePasswordValue,
+          session.createdAt,
+        );
+
+        // Verify the authKey with the server
+        const verifyResponse = await fetch(
+          `/api/sessions/verify-password?sessionId=${session.sessionId}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ authKey }),
+          },
+        );
+
+        const verifyResult = await verifyResponse.json();
+
+        if (!verifyResult.valid) {
+          setDeletePasswordError("Mot de passe incorrect");
+          setDeletePasswordLoading(false);
+          return;
+        }
+      } catch (e) {
+        console.error("Failed to verify password:", e);
+        setDeletePasswordError(
+          "Erreur lors de la vérification du mot de passe",
+        );
+        setDeletePasswordLoading(false);
+        return;
+      }
+    }
+
+    // Proceed with deletion - include authKey if session has password
+    try {
+      let authKey: string | undefined;
+      if (hasPassword && deletePasswordValue) {
+        authKey = await deriveAuthKey(deletePasswordValue, session.createdAt);
+      }
+
+      const response = await fetch(`/api/sessions/${session.sessionId}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ authKey }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        if (data.error === "invalid_auth_key") {
+          setDeletePasswordError("Mot de passe incorrect");
+          setDeletePasswordLoading(false);
+          return;
+        }
+        throw new Error("Delete failed");
+      }
+
+      deleteAllCookies();
+      window.location.href = "/";
+    } catch (e) {
+      console.error("Failed to delete session:", e);
+      setDeletePasswordError("Erreur lors de la suppression");
+      setDeletePasswordLoading(false);
+    }
   }
 
   return (
@@ -1173,7 +1313,12 @@ export function ActiveSession({
                         open={deleteConfirmOpen}
                         onOpenChange={(open) => {
                           setDeleteConfirmOpen(open);
-                          if (!open) setDeleteConfirmValue("");
+                          if (!open) {
+                            setDeleteConfirmValue("");
+                            setDeletePasswordValue("");
+                            setDeletePasswordError("");
+                            setShowDeletePasswordInput(false);
+                          }
                         }}
                       >
                         <DialogTrigger asChild>
@@ -1193,19 +1338,53 @@ export function ActiveSession({
                               <b>Cette action est irréversible.</b>
                             </DialogDescription>
                           </DialogHeader>
-                          <div className="space-y-2">
-                            <Label htmlFor="delete-confirm">
-                              Tapez <span className="font-bold">SUPPRIMER</span>{" "}
-                              pour confirmer
-                            </Label>
-                            <Input
-                              id="delete-confirm"
-                              value={deleteConfirmValue}
-                              onChange={(e) =>
-                                setDeleteConfirmValue(e.target.value)
-                              }
-                              placeholder="SUPPRIMER"
-                            />
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="delete-confirm">
+                                Tapez{" "}
+                                <span className="font-bold">SUPPRIMER</span>{" "}
+                                pour confirmer
+                              </Label>
+                              <Input
+                                id="delete-confirm"
+                                value={deleteConfirmValue}
+                                onChange={(e) =>
+                                  setDeleteConfirmValue(e.target.value)
+                                }
+                                placeholder="SUPPRIMER"
+                              />
+                            </div>
+
+                            {hasPassword && showDeletePasswordInput && (
+                              <div className="space-y-2">
+                                <Label htmlFor="delete-password">
+                                  Mot de passe de session
+                                </Label>
+                                <Input
+                                  id="delete-password"
+                                  type="password"
+                                  value={deletePasswordValue}
+                                  onChange={(e) =>
+                                    setDeletePasswordValue(e.target.value)
+                                  }
+                                  placeholder="Entrez le mot de passe"
+                                  onKeyDown={(e) => {
+                                    if (
+                                      e.key === "Enter" &&
+                                      deleteConfirmValue === "SUPPRIMER" &&
+                                      deletePasswordValue
+                                    ) {
+                                      handleDeleteSession();
+                                    }
+                                  }}
+                                />
+                                {deletePasswordError && (
+                                  <p className="text-sm text-red-500">
+                                    {deletePasswordError}
+                                  </p>
+                                )}
+                              </div>
+                            )}
                           </div>
                           <DialogFooter>
                             <DialogClose asChild>
@@ -1213,18 +1392,18 @@ export function ActiveSession({
                             </DialogClose>
                             <Button
                               variant="destructive"
-                              disabled={deleteConfirmValue !== "SUPPRIMER"}
-                              onClick={async () => {
-                                await fetch(
-                                  `/api/sessions/${session.sessionId}`,
-                                  {
-                                    method: "DELETE",
-                                  },
-                                );
-                                deleteAllCookies();
-                                window.location.href = "/";
-                              }}
+                              disabled={
+                                deleteConfirmValue !== "SUPPRIMER" ||
+                                deletePasswordLoading ||
+                                (hasPassword &&
+                                  showDeletePasswordInput &&
+                                  !deletePasswordValue)
+                              }
+                              onClick={handleDeleteSession}
                             >
+                              {deletePasswordLoading && (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              )}
                               Supprimer
                             </Button>
                           </DialogFooter>

@@ -1,7 +1,8 @@
-import { deleteSession, sessions } from "~/server/db/redis";
+import { deleteSession } from "~/server/db/redis";
 import { cookies } from "next/headers";
 import { getSessionWithCookies } from "~/utils/authenticate";
 import { NextResponse } from "next/server";
+import { verifyAuthKey } from "~/utils/password";
 
 export async function DELETE(
   req: Request,
@@ -13,6 +14,28 @@ export async function DELETE(
 
   if (session.sessionId !== params.sessionId.toLowerCase())
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+
+  // If session has password, require authKey verification
+  if (session.hasPassword()) {
+    const body = await req.json().catch(() => ({}));
+    const { authKey } = body;
+
+    if (!authKey) {
+      return NextResponse.json(
+        { message: "Password required", error: "auth_key_required" },
+        { status: 403 },
+      );
+    }
+
+    // Verify the authKey against stored password hash
+    const isValidAuth = verifyAuthKey(authKey, session.password!);
+    if (!isValidAuth) {
+      return NextResponse.json(
+        { message: "Invalid password", error: "invalid_auth_key" },
+        { status: 403 },
+      );
+    }
+  }
 
   await deleteSession(session.sessionId);
 

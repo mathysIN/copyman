@@ -1,6 +1,6 @@
 export class api {
   /**
-   * Set or change session password using authKeys (derived from passwords client-side).
+   * Set or change session password using authKey (derived from password client-side).
    * @param newAuthKey - The new derived authentication key
    * @param currentAuthKey - The current derived authentication key (required if password already set)
    */

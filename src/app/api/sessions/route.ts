@@ -162,6 +162,7 @@ export async function POST(req: Request) {
           { status: 401 },
         );
       }
+
       const isValid = verifyAuthKey(authKey, session.password!);
       if (!isValid) {
         return NextResponse.json(
@@ -276,7 +277,7 @@ export async function PATCH(req: Request) {
   const currentAuthKey = data["currentAuthKey"];
   const newAuthKey = data["newAuthKey"];
 
-  // If session already has a password, verify current password first
+  // If session already has a password, verify current authKey first
   if (session.hasPassword()) {
     if (!currentAuthKey) {
       return NextResponse.json(
@@ -285,7 +286,6 @@ export async function PATCH(req: Request) {
       );
     }
 
-    // Verify current auth key
     const isValid = verifyAuthKey(currentAuthKey, session.password!);
     if (!isValid) {
       return NextResponse.json(
@@ -303,8 +303,8 @@ export async function PATCH(req: Request) {
   }
 
   // Store new auth key hash (already derived client-side)
-  const request = await session.setPassword(newAuthKey);
-  if (!request) {
+  const passwordUpdateResult = await session.setPassword(newAuthKey);
+  if (!passwordUpdateResult) {
     return NextResponse.json({ message: "Error" }, { status: 500 });
   }
 

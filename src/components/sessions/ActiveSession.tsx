@@ -1017,15 +1017,13 @@ export function ActiveSession({
                             {!hasPassword && "Créer un nouveau mot de passe"}
                           </DialogTitle>
                           {session.isEncrypted && (
-                            <div className="mt-2 rounded-lg border border-red-300 bg-red-600/20 p-3 text-sm text-red-600 dark:text-red-400">
-                              <strong>ATTENTION :</strong> Cette session
-                              utilise le chiffrement E2EE. Changer le mot de
-                              passe{" "}
-                              <strong>
-                                désactivera automatiquement le chiffrement
-                              </strong>{" "}
-                              et rendra tout le contenu chiffré existant{" "}
-                              <strong>illisible définitivement</strong>.
+                            <div className="mt-2 rounded-lg border border-yellow-300 bg-yellow-600/20 p-3 text-sm text-yellow-700 dark:text-yellow-400">
+                              <strong>Information :</strong> Cette session
+                              utilise le chiffrement E2EE. Si vous changez le
+                              mot de passe, le chiffrement sera temporairement
+                              désactivé. Vous pourrez le réactiver avec le même
+                              mot de passe pour retrouver l&apos;accès à votre
+                              contenu chiffré.
                             </div>
                           )}
                         </DialogHeader>

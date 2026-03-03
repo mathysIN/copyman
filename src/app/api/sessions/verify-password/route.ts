@@ -1,5 +1,5 @@
 import { Session, sessions } from "~/server/db/redis";
-import { verifyAuthKey, hashAuthKey } from "~/utils/password";
+import { verifyAuthKey } from "~/utils/password";
 import { NextResponse } from "next/server";
 
 /**
@@ -8,6 +8,9 @@ import { NextResponse } from "next/server";
  * Client derives authKey from password + session creation timestamp.
  * Server verifies authKey against stored hash without seeing the raw password.
  * Returns { valid: boolean } only - never returns the hash or encryption keys.
+ *
+ * NOTE: Legacy password format (128-char SHA512) is NOT supported.
+ * Sessions with old passwords must be reset by the user.
  */
 export async function POST(req: Request) {
   const url = new URL(req.url);
@@ -44,17 +47,8 @@ export async function POST(req: Request) {
   }
 
   // Verify auth key using SHA-256 comparison
-  const computedHash = hashAuthKey(authKey);
-  console.log("[VERIFY] Comparing keys:", {
-    sessionId: sessionId.toLowerCase(),
-    authKeyPreview: authKey.substring(0, 16) + "...",
-    computedHashPreview: computedHash.substring(0, 16) + "...",
-    storedHashPreview: session.password!.substring(0, 16) + "...",
-    timestamp: session.createdAt,
-  });
-
+  // Only new format (64-char) is supported
   const isValid = verifyAuthKey(authKey, session.password!);
-  console.log("[VERIFY] Result:", isValid);
 
   // IMPORTANT: Never return the hash or any derived keys
   // This endpoint only returns whether the auth key is valid

@@ -5,8 +5,6 @@ import { type ReadonlyRequestCookies } from "next/dist/server/web/spec-extension
 import { env } from "~/env";
 import { getCDNUrlFromFileKey } from "~/lib/utils";
 import {
-  hashPassword,
-  validatePassword,
   generateSessionToken,
   hashSessionToken,
   hashAuthKey,
@@ -310,20 +308,27 @@ export class Session {
 
   /**
    * Verify a password against the stored hash.
-   * Uses the session's createdAt timestamp to derive the salt.
+   * NOTE: Only supports new format (64-char authKey hash).
+   * Legacy format (128-char) is NOT supported.
    */
   async verifyPassword(password?: string) {
     if (!this.password) {
-      if (!password) return true;
-      else return false;
-    } else {
-      if (!password) return false;
-      return validatePassword(password, this.password, this.createdAt);
+      return !password;
     }
+
+    // Legacy format not supported
+    if (this.password.length !== 64) {
+      return false;
+    }
+
+    // For new format, password should be authKey
+    // We don't validate here - authKey validation happens in the API routes
+    return false;
   }
 
   hasPassword() {
-    return !!this.password;
+    // Check that password exists and is not empty/whitespace
+    return !!this.password && this.password.trim().length > 0;
   }
 
   /**

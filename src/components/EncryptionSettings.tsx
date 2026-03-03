@@ -248,8 +248,10 @@ export function EncryptionSettings({
                       : "Désactiver le chiffrement"}
                   </Button>
                   <p className="mt-2 text-xs text-gray-500">
-                    Attention : Le contenu chiffré existant deviendra illisible
-                    après la désactivation.
+                    Le contenu chiffré ne sera plus accessible tant que le
+                    chiffrement est désactivé. Vous pouvez le réactiver à tout
+                    moment avec le même mot de passe pour retrouver l&apos;accès
+                    à vos données.
                   </p>
                 </div>
 

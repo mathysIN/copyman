@@ -34,62 +34,31 @@ export function hashAuthKey(authKey: string): string {
 
 /**
  * Verify an authentication key against a stored hash.
+ * Only supports new format (64-char SHA256).
+ * Legacy sessions (128-char SHA512) are NOT supported.
  * @param authKey - The derived authentication key from client
- * @param storedHash - The stored hash from database
+ * @param storedHash - The stored hash from database (must be 64 chars)
  * @returns True if the auth key matches
  */
 export function verifyAuthKey(authKey: string, storedHash: string): boolean {
+  if (storedHash.length !== 64) {
+    // Legacy format not supported
+    return false;
+  }
   const computedHash = hashAuthKey(authKey);
-  // Constant-time comparison
-  if (computedHash.length !== storedHash.length) {
-    return false;
-  }
-  let result = 0;
-  for (let i = 0; i < computedHash.length; i++) {
-    result |= computedHash.charCodeAt(i) ^ storedHash.charCodeAt(i);
-  }
-  return result === 0;
-}
-
-// LEGACY FUNCTIONS - Used by Session class for password change/verify
-// These will be removed in a future cleanup
-
-/**
- * @deprecated Only used internally by Session class. Use authKey system instead.
- */
-export function hashPassword(password: string, createdAt: string): string {
-  const salt = createdAt;
-  let hash = createHash("sha512");
-  hash.update(password);
-  hash.update(salt);
-  let result = hash.digest();
-
-  for (let i = 0; i < 100000; i++) {
-    hash = createHash("sha512");
-    hash.update(result);
-    hash.update(salt);
-    hash.update(Buffer.from([i & 0xff, (i >> 8) & 0xff]));
-    result = hash.digest();
-  }
-
-  return result.toString("hex");
+  return constantTimeCompare(computedHash, storedHash);
 }
 
 /**
- * @deprecated Only used internally by Session class. Use authKey system instead.
+ * Constant-time string comparison to prevent timing attacks.
  */
-export function validatePassword(
-  password: string,
-  hashedPassword: string,
-  createdAt: string,
-): boolean {
-  const computedHash = hashPassword(password, createdAt);
-  if (computedHash.length !== hashedPassword.length) {
+function constantTimeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) {
     return false;
   }
   let result = 0;
-  for (let i = 0; i < computedHash.length; i++) {
-    result |= computedHash.charCodeAt(i) ^ hashedPassword.charCodeAt(i);
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
   }
   return result === 0;
 }

@@ -94,7 +94,7 @@ export function PreSession() {
       return;
     }
 
-    // Derive authKey from password + session creation timestamp
+    // Derive authKey and encKey from password
     let authKey: string | undefined;
     let encKey: CryptoKey | undefined;
 
@@ -127,8 +127,8 @@ export function PreSession() {
       }
     }
 
-    // Verify auth key if session has password
-    if (checkResult.hasPassword && joinSession === "join") {
+    // Verify auth key if session has password AND user entered a password
+    if (checkResult.hasPassword && joinSession === "join" && passwordValue) {
       const verifyResult = await fetch(
         `/api/sessions/verify-password?sessionId=${sessionValue}`,
         {
@@ -150,8 +150,7 @@ export function PreSession() {
       enableEncryption && joinSession === "create",
     );
 
-    // Join/create session with authKey in POST body (never raw password)
-    // For creation, send the timestamp used for key derivation so server uses same value
+    // Join/create session with authKey in POST body
     const postResult = await fetch("/api/sessions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

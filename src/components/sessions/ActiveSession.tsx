@@ -805,7 +805,10 @@ export function ActiveSession({
 
     const postResult = await fetch("/api/sessions", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
       body: JSON.stringify({
         session: changeSessionValue,
         authKey,

@@ -332,26 +332,16 @@ export class Session {
   }
 
   /**
-   * Verify session authentication from cookies.
-   * First checks for session token, falls back to password cookie (deprecated).
+   * Verify session authentication from cookies using session token.
+   * Password cookies are no longer supported.
    */
   async verifyPasswordFromCookie(
     cookie: RequestCookies | ReadonlyRequestCookies,
   ) {
-    // First try session token authentication
     const sessionToken = cookie.get("session_token")?.value;
-    if (sessionToken) {
-      const isValid = await verifySessionToken(this.sessionId, sessionToken);
-      if (isValid) return true;
-    }
+    if (!sessionToken) return false;
 
-    // Fall back to password verification (for backwards compatibility)
-    const password = cookie.get("password")?.value;
-    if (password) {
-      return this.verifyPassword(password);
-    }
-
-    return false;
+    return verifySessionToken(this.sessionId, sessionToken);
   }
 
   async setBackgroundImageURL(backgroundImageURL?: string) {

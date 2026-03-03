@@ -105,15 +105,6 @@ export default async function LDMPage() {
                   />
                 </div>
 
-                <div className="form-group">
-                  <label>Password (optional):</label>
-                  <input
-                    type="password"
-                    name="password"
-                    placeholder="Leave empty if no password"
-                  />
-                </div>
-
                 <button type="submit" className="btn">
                   Join Session
                 </button>
@@ -130,15 +121,6 @@ export default async function LDMPage() {
                     type="text"
                     name="session"
                     placeholder="Enter session name..."
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Password (optional):</label>
-                  <input
-                    type="password"
-                    name="password"
-                    placeholder="Leave empty for no password"
                   />
                 </div>
 
@@ -161,8 +143,9 @@ export default async function LDMPage() {
 
               <div className="note">
                 <strong>Note:</strong> LDM is a lightweight version for older
-                devices. It does not support real-time updates. Refresh the page
-                to see new content.
+                devices. It does not support real-time updates or
+                password-protected sessions. Refresh the page to see new
+                content.
               </div>
             </div>
           </div>

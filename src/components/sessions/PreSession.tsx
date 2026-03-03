@@ -153,7 +153,10 @@ export function PreSession() {
     // Join/create session with authKey in POST body
     const postResult = await fetch("/api/sessions", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
       body: JSON.stringify({
         session: sessionValue,
         authKey,
@@ -206,7 +209,10 @@ export function PreSession() {
 
     const postResult = await fetch("/api/sessions", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
       body: JSON.stringify({
         temporary: "true",
       }),

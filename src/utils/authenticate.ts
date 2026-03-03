@@ -7,7 +7,7 @@ const BANNED_SESSIONS = ["admin", "favicon.ico", "socket.io"];
 
 /**
  * Get session using cookies.
- * Requires valid session token or password for password-protected sessions.
+ * Requires valid session token for password-protected sessions.
  */
 export async function getSessionWithCookies(
   cookies: RequestCookies | ReadonlyRequestCookies,
@@ -15,71 +15,59 @@ export async function getSessionWithCookies(
   const sessionId = cookies.get("session")?.value;
   if (!sessionId) return null;
 
-  // First try session token authentication (preferred method)
   const sessionToken = cookies.get("session_token")?.value;
-  if (sessionToken) {
-    // Get session without password check - we'll verify via session token
-    const sessionResponse = await sessions.hgetall(sessionId.toLowerCase());
-    if (sessionResponse) {
-      const session = new Session(sessionResponse);
-      const isValid = await verifySessionToken(session.sessionId, sessionToken);
-      if (isValid) {
-        return session;
-      }
-    }
-  }
+  if (!sessionToken) return null;
 
-  // Fall back to password verification (deprecated but supported for backwards compatibility)
-  const password = cookies.get("password")?.value;
-  return getSession(sessionId, password);
+  const sessionResponse = await sessions.hgetall(sessionId.toLowerCase());
+  if (!sessionResponse) return null;
+
+  const session = new Session(sessionResponse);
+  const isValid = await verifySessionToken(session.sessionId, sessionToken);
+  if (!isValid) return null;
+
+  return session;
 }
 
 /**
  * Get session from cookie string (for WebSocket connections).
+ * Requires valid session token.
  */
 export async function getSessionWithCookieString(cookies: string) {
   const _cookies = cookie.parse(cookies);
   const sessionId = _cookies["session"];
   if (!sessionId) return null;
 
-  // Try session token first
   const sessionToken = _cookies["session_token"];
-  if (sessionToken) {
-    // Get session without password check - we'll verify via session token
-    const sessionResponse = await sessions.hgetall(sessionId.toLowerCase());
-    if (sessionResponse) {
-      const session = new Session(sessionResponse);
-      const isValid = await verifySessionToken(session.sessionId, sessionToken);
-      if (isValid) {
-        return session;
-      }
-    }
-  }
+  if (!sessionToken) return null;
 
-  // Fall back to password
-  const password = _cookies["password"];
-  return getSession(sessionId, password);
+  const sessionResponse = await sessions.hgetall(sessionId.toLowerCase());
+  if (!sessionResponse) return null;
+
+  const session = new Session(sessionResponse);
+  const isValid = await verifySessionToken(session.sessionId, sessionToken);
+  if (!isValid) return null;
+
+  return session;
 }
 
 /**
  * Get session by session ID.
- * Password must be provided for password-protected sessions.
+ * Does NOT verify authentication - use getSessionWithCookies for authenticated access.
  */
 export async function getSessionWithSessionId(
   sessionId: string,
-  password?: string,
+  _password?: string, // Deprecated parameter, kept for API compatibility
   createIfNull = false,
 ): Promise<Session | null> {
-  return getSession(sessionId, password, createIfNull);
+  return getSession(sessionId, createIfNull);
 }
 
 /**
  * Core function to get a session.
- * ALWAYS verifies password if the session has one set.
+ * Does NOT perform authentication - authentication is handled via session tokens.
  */
 async function getSession(
   sessionId: string,
-  password?: string,
   createIfNull = false,
 ): Promise<Session | null> {
   const sessionIdLower = sessionId.toLowerCase();
@@ -98,17 +86,7 @@ async function getSession(
     response = await sessions.hgetall(sessionIdLower);
   }
   if (!response) return null;
-  const session = new Session(response);
-
-  // ALWAYS verify password if session has one
-  if (session.hasPassword()) {
-    const passwordValid = await session.verifyPassword(password);
-    if (!passwordValid) {
-      return null;
-    }
-  }
-
-  return session;
+  return new Session(response);
 }
 
 /**

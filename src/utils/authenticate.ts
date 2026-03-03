@@ -1,58 +1,88 @@
 import type { RequestCookies } from "next/dist/compiled/@edge-runtime/cookies";
 import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
-import { Session, sessions } from "~/server/db/redis";
+import { Session, sessions, verifySessionToken } from "~/server/db/redis";
 import cookie from "cookie";
-import { string } from "zod";
-import { env } from "~/env";
 
 const BANNED_SESSIONS = ["admin", "favicon.ico", "socket.io"];
 
-export async function getSessionWithRecord(
-  record: Record<string, string>,
-  ignorePassword = false,
-): Promise<Session | null> {
-  const sessionId = record["session"];
-  if (!sessionId) return null;
-  const password = record["password"];
-  return getSession(sessionId, password, ignorePassword);
-}
-
+/**
+ * Get session using cookies.
+ * Requires valid session token or password for password-protected sessions.
+ */
 export async function getSessionWithCookies(
   cookies: RequestCookies | ReadonlyRequestCookies,
-  ignorePassword = false,
 ): Promise<Session | null> {
   const sessionId = cookies.get("session")?.value;
   if (!sessionId) return null;
-  return getSession(sessionId, cookies.get("password")?.value, ignorePassword);
+
+  // First try session token authentication (preferred method)
+  const sessionToken = cookies.get("session_token")?.value;
+  if (sessionToken) {
+    // Get session without password check - we'll verify via session token
+    const sessionResponse = await sessions.hgetall(sessionId.toLowerCase());
+    if (sessionResponse) {
+      const session = new Session(sessionResponse);
+      const isValid = await verifySessionToken(session.sessionId, sessionToken);
+      if (isValid) {
+        return session;
+      }
+    }
+  }
+
+  // Fall back to password verification (deprecated but supported for backwards compatibility)
+  const password = cookies.get("password")?.value;
+  return getSession(sessionId, password);
 }
 
-export async function getSessionWithCookieString(
-  cookies: string,
-  ignorePassword = false,
-) {
+/**
+ * Get session from cookie string (for WebSocket connections).
+ */
+export async function getSessionWithCookieString(cookies: string) {
   const _cookies = cookie.parse(cookies);
   const sessionId = _cookies["session"];
   if (!sessionId) return null;
-  return getSession(sessionId, _cookies["password"], ignorePassword);
+
+  // Try session token first
+  const sessionToken = _cookies["session_token"];
+  if (sessionToken) {
+    // Get session without password check - we'll verify via session token
+    const sessionResponse = await sessions.hgetall(sessionId.toLowerCase());
+    if (sessionResponse) {
+      const session = new Session(sessionResponse);
+      const isValid = await verifySessionToken(session.sessionId, sessionToken);
+      if (isValid) {
+        return session;
+      }
+    }
+  }
+
+  // Fall back to password
+  const password = _cookies["password"];
+  return getSession(sessionId, password);
 }
 
+/**
+ * Get session by session ID.
+ * Password must be provided for password-protected sessions.
+ */
 export async function getSessionWithSessionId(
   sessionId: string,
   password?: string,
-  ignorePassword = false,
   createIfNull = false,
 ): Promise<Session | null> {
-  return getSession(sessionId, password, ignorePassword, createIfNull);
+  return getSession(sessionId, password, createIfNull);
 }
 
+/**
+ * Core function to get a session.
+ * ALWAYS verifies password if the session has one set.
+ */
 async function getSession(
   sessionId: string,
   password?: string,
-  ignorePassword = false,
   createIfNull = false,
 ): Promise<Session | null> {
   const sessionIdLower = sessionId.toLowerCase();
-  console.log("getting session " + sessionIdLower);
   if (BANNED_SESSIONS.includes(sessionIdLower)) return null;
 
   let response = await sessions.hgetall(sessionIdLower);
@@ -68,13 +98,36 @@ async function getSession(
     response = await sessions.hgetall(sessionIdLower);
   }
   if (!response) return null;
-  console.log(response);
   const session = new Session(response);
-  if (
-    !ignorePassword &&
-    session.hasPassword() &&
-    !(await session.verifyPassword(password))
-  )
-    return null;
+
+  // ALWAYS verify password if session has one
+  if (session.hasPassword()) {
+    const passwordValid = await session.verifyPassword(password);
+    if (!passwordValid) {
+      return null;
+    }
+  }
+
   return session;
+}
+
+/**
+ * Verify session authentication using session token.
+ * This is the preferred authentication method.
+ */
+export async function verifySessionAuthentication(
+  cookies: RequestCookies | ReadonlyRequestCookies,
+): Promise<Session | null> {
+  const sessionId = cookies.get("session")?.value;
+  const sessionToken = cookies.get("session_token")?.value;
+
+  if (!sessionId || !sessionToken) return null;
+
+  // Get session data directly without password enforcement
+  const sessionData = await sessions.hgetall(sessionId.toLowerCase());
+  if (!sessionData) return null;
+  const session = new Session(sessionData);
+
+  const isValid = await verifySessionToken(session.sessionId, sessionToken);
+  return isValid ? session : null;
 }

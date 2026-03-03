@@ -6,6 +6,125 @@ const SALT_LENGTH = 16;
 const IV_LENGTH = 12;
 const PBKDF2_ITERATIONS = 100000;
 
+// Constants for key derivation from password
+const AUTH_CONTEXT = "copyman-auth-v1";
+const ENC_CONTEXT = "copyman-enc-v1";
+const PASSWORD_PBKDF2_ITERATIONS = 100000;
+
+/**
+ * Build a unique salt by combining a context string with session creation timestamp.
+ * This ensures keys are unique per session even with the same password.
+ * @param context - "auth" or "enc" context string
+ * @param createdAt - Session creation timestamp (from session.createdAt)
+ * @returns Salt string for PBKDF2
+ */
+function buildSalt(context: string, createdAt: string): string {
+  // Combine context with session creation timestamp for uniqueness
+  return `${context}:${createdAt}`;
+}
+
+/**
+ * Derive authentication key from password using PBKDF2.
+ * This key is sent to the server for authentication (never the raw password).
+ * @param password - The user's raw password
+ * @param createdAt - Session creation timestamp (session.createdAt)
+ * @returns Hex string of the derived auth key (256-bit)
+ */
+export async function deriveAuthKey(
+  password: string,
+  createdAt: string,
+): Promise<string> {
+  const encoder = new TextEncoder();
+  const salt = buildSalt(AUTH_CONTEXT, createdAt);
+  const keyMaterial = await window.crypto.subtle.importKey(
+    "raw",
+    encoder.encode(password),
+    "PBKDF2",
+    false,
+    ["deriveBits"],
+  );
+
+  const derivedBits = await window.crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt: encoder.encode(salt),
+      iterations: PASSWORD_PBKDF2_ITERATIONS,
+      hash: "SHA-256",
+    },
+    keyMaterial,
+    256,
+  );
+
+  return arrayBufferToHex(derivedBits);
+}
+
+/**
+ * Derive encryption key from password using PBKDF2.
+ * This key is used for E2EE and NEVER sent to the server.
+ * @param password - The user's raw password
+ * @param createdAt - Session creation timestamp (session.createdAt)
+ * @returns CryptoKey for AES-GCM encryption/decryption
+ */
+export async function deriveEncKey(
+  password: string,
+  createdAt: string,
+): Promise<CryptoKey> {
+  const encoder = new TextEncoder();
+  const salt = buildSalt(ENC_CONTEXT, createdAt);
+  const keyMaterial = await window.crypto.subtle.importKey(
+    "raw",
+    encoder.encode(password),
+    "PBKDF2",
+    false,
+    ["deriveKey"],
+  );
+
+  return window.crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt: encoder.encode(salt),
+      iterations: PASSWORD_PBKDF2_ITERATIONS,
+      hash: "SHA-256",
+    },
+    keyMaterial,
+    { name: ALGORITHM, length: KEY_LENGTH },
+    true,
+    ["encrypt", "decrypt"],
+  );
+}
+
+/**
+ * Derive both auth and encryption keys from a single password.
+ * This is the main function to use when user enters their password.
+ * @param password - The user's raw password
+ * @param createdAt - Session creation timestamp (session.createdAt)
+ * @returns Object containing authKey (string) and encKey (CryptoKey)
+ */
+export async function deriveKeysFromPassword(
+  password: string,
+  createdAt: string,
+): Promise<{
+  authKey: string;
+  encKey: CryptoKey;
+}> {
+  const [authKey, encKey] = await Promise.all([
+    deriveAuthKey(password, createdAt),
+    deriveEncKey(password, createdAt),
+  ]);
+
+  return { authKey, encKey };
+}
+
+/**
+ * Helper function to convert ArrayBuffer to hex string.
+ */
+function arrayBufferToHex(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 export type EncryptedData = {
   ciphertext: string;
   iv: string;
@@ -34,6 +153,10 @@ export async function generateKey(): Promise<EncryptionKey> {
   return { key, salt };
 }
 
+/**
+ * Derive an encryption key from a password using PBKDF2.
+ * The salt should be derived from the session ID for consistent key derivation.
+ */
 export async function deriveKeyFromPassword(
   password: string,
   salt?: string,
@@ -64,16 +187,28 @@ export async function deriveKeyFromPassword(
   return { key, salt: actualSalt };
 }
 
+/**
+ * Derive a salt from the session ID for PBKDF2 key derivation.
+ * This ensures the same password + session always generates the same key.
+ * The salt is derived deterministically from the sessionId.
+ */
 export function deriveSaltFromSessionId(sessionId: string): string {
   const encoder = new TextEncoder();
   const data = encoder.encode(sessionId);
+
+  // Create a deterministic salt from the session ID
+  // This ensures the same session always uses the same salt for key derivation
   const hashArray = new Uint8Array(SALT_LENGTH);
   for (let i = 0; i < SALT_LENGTH; i++) {
-    const charCode = data[i % data.length];
-    if (charCode !== undefined) {
-      hashArray[i] = charCode ^ (i * 17) % 256;
-    }
+    // Mix multiple bytes of the session ID with position-based variation
+    const byte1 = data[i % data.length] || 0;
+    const byte2 = data[(i * 7) % data.length] || 0;
+    const byte3 = data[(i * 13) % data.length] || 0;
+
+    // XOR and mix bits to create more variation
+    hashArray[i] = (byte1 ^ byte2 ^ byte3 ^ (i * 17)) % 256;
   }
+
   return arrayBufferToBase64(hashArray);
 }
 
@@ -264,35 +399,11 @@ function getAllStoredKeys(): Record<string, string> {
   }
 }
 
+/**
+ * Generate a random encryption key for sharing (for non-password-based encryption).
+ * @deprecated Use password-based E2EE instead for better security.
+ */
 export function generateEncryptionKeyForSharing(): string {
   const rawKey = window.crypto.getRandomValues(new Uint8Array(32));
   return arrayBufferToBase64(rawKey);
-}
-
-export function parseEncryptionKeyFromUrl(): string | null {
-  if (typeof window === "undefined") return null;
-  const hash = window.location.hash;
-  if (hash.startsWith("#key=")) {
-    return hash.substring(5);
-  }
-  return null;
-}
-
-export function buildUrlWithEncryptionKey(
-  baseUrl: string,
-  keyString: string,
-): string {
-  return `${baseUrl}#key=${keyString}`;
-}
-
-export function getCookiePassword(): string | null {
-  if (typeof document === "undefined") return null;
-  const cookies = document.cookie.split(";");
-  for (const cookie of cookies) {
-    const [name, value] = cookie.trim().split("=");
-    if (name === "password" && value) {
-      return decodeURIComponent(value);
-    }
-  }
-  return null;
 }

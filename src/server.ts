@@ -100,7 +100,6 @@ app.prepare().then(() => {
   io.on("connection", async (socket) => {
     const session = await getSessionWithCookieString(
       socket.handshake.headers.cookie ?? "",
-      true,
     );
     if (!session) return;
 
@@ -165,7 +164,6 @@ app.prepare().then(() => {
       // TODO: move this to HTTP
       const session = await getSessionWithCookieString(
         socket.handshake.headers.cookie ?? "",
-        true,
       );
       if (!session) return;
       socketSendUpdateContentOrder(session, contentOrder, socket.id);

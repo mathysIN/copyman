@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { Switch } from "~/components/ui/switch";
 import { Label } from "~/components/ui/label";
 import { cn } from "~/utils/helpers";
+import { deriveAuthKey, deriveEncKey } from "~/lib/client/encryption";
 
 import imageCreate from "~/../public/create.png";
 import imageInSession from "~/../public/insession.png";
@@ -66,65 +67,134 @@ export function PreSession() {
     }
 
     setLoading(true);
-    const result:
-      | (SessionType & {
-        hasPassword: boolean;
-        isValidPassword: boolean;
-        createNewSession: boolean;
-      })
-      | undefined = await fetch(
-        `/api/sessions?sessionId=${sessionValue}&password=${passwordValue}&join=${joinSession}`,
-        {},
-      )
-        .then((res) => res.json())
-        .catch(() => { });
-    setLoading(false);
-    if (
-      !result ||
-      (!result.createNewSession && (!result.sessionId || !result.createdAt))
-    ) {
-      setErrorMessage("Session inexistante");
+
+    // First, check if session exists and get session info (including createdAt)
+    const checkResult: {
+      valid: boolean;
+      hasPassword: boolean;
+      isEncrypted: boolean;
+      createNewSession: boolean;
+      createdAt?: string;
+    } = await fetch(`/api/sessions?sessionId=${sessionValue}`)
+      .then((res) => res.json())
+      .catch(() => ({ valid: false, createNewSession: false }));
+
+    if (!checkResult || (!checkResult.createNewSession && !joinSession)) {
+      setLoading(false);
+      if (!checkResult?.createNewSession && joinSession === "create") {
+        setErrorMessage("Ce nom de session est déjà utilisé");
+      } else if (
+        checkResult?.createNewSession === false &&
+        joinSession === "join"
+      ) {
+        setErrorMessage("Session inexistante");
+      } else {
+        setErrorMessage("Erreur lors de la vérification de la session");
+      }
       return;
     }
 
-    if (!result.createNewSession) {
-      if (!joinSession) {
-        setErrorMessage("Ce nom de session est déjà utilisé");
-        return;
+    // Derive authKey and encKey from password
+    let authKey: string | undefined;
+    let encKey: CryptoKey | undefined;
+
+    // Track the timestamp used for key derivation to ensure consistency
+    let keyDerivationTimestamp: string | undefined;
+
+    if (passwordValue) {
+      if (joinSession === "join" && checkResult.createdAt) {
+        // For joining, use existing session's createdAt
+        keyDerivationTimestamp = checkResult.createdAt;
+        authKey = await deriveAuthKey(passwordValue, keyDerivationTimestamp);
+        encKey = await deriveEncKey(passwordValue, keyDerivationTimestamp);
+        console.log(
+          "[CLIENT JOIN] Derived keys with timestamp:",
+          keyDerivationTimestamp,
+          "authKey preview:",
+          authKey.substring(0, 16),
+        );
+      } else if (joinSession === "create") {
+        // For creating, use current timestamp - must be consistent between derivation and server storage
+        keyDerivationTimestamp = Date.now().toString();
+        authKey = await deriveAuthKey(passwordValue, keyDerivationTimestamp);
+        encKey = await deriveEncKey(passwordValue, keyDerivationTimestamp);
+        console.log(
+          "[CLIENT CREATE] Derived keys with timestamp:",
+          keyDerivationTimestamp,
+          "authKey preview:",
+          authKey.substring(0, 16),
+        );
       }
-      if (result.hasPassword && !result.isValidPassword) {
+    }
+
+    // Verify auth key if session has password AND user entered a password
+    if (checkResult.hasPassword && joinSession === "join" && passwordValue) {
+      const verifyResult = await fetch(
+        `/api/sessions/verify-password?sessionId=${sessionValue}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ authKey }),
+        },
+      ).then((res) => res.json());
+
+      if (!verifyResult.valid) {
+        setLoading(false);
         setErrorMessage("Mot de passe incorrect");
         return;
       }
     }
 
     console.log(
-      "[E2EE] Creating session with encryption:",
+      "[E2EE] Creating/joining session with encryption:",
       enableEncryption && joinSession === "create",
     );
 
+    // Join/create session with authKey in POST body
     const postResult = await fetch("/api/sessions", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        Accept: "application/json",
-      },
-      body: new URLSearchParams({
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         session: sessionValue,
-        password: passwordValue,
-        join: `${joinSession == "join"}`,
-        create: "true"
+        authKey,
+        join: joinSession === "join",
+        create: "true",
+        isEncrypted: enableEncryption && joinSession === "create",
+        createdAt:
+          joinSession === "create" && keyDerivationTimestamp
+            ? keyDerivationTimestamp
+            : undefined,
       }),
     }).then((res) => res.json());
+
     if (postResult?.error) {
+      setLoading(false);
       if (postResult.error === "session_exists") {
         setErrorMessage("Ce nom de session est déjà utilisé");
+      } else if (
+        postResult.error === "invalid_auth_key" ||
+        postResult.error === "auth_key_required"
+      ) {
+        setErrorMessage("Mot de passe incorrect");
       } else {
         setErrorMessage("Erreur lors de la création de la session");
       }
       return;
     }
 
+    // Store encryption key for E2EE auto-enable
+    // Export the key and store in sessionStorage (not localStorage) for security
+    if (encKey && (enableEncryption || checkResult.isEncrypted)) {
+      console.log("[PreSession] Storing encryption key for E2EE auto-enable");
+      const { exportKey } = await import("~/lib/client/encryption");
+      const exportedKey = await exportKey(encKey);
+      sessionStorage.setItem(
+        `e2ee_key_${sessionValue.toLowerCase()}`,
+        exportedKey,
+      );
+    }
+
+    setLoading(false);
     window.location.href = "/";
   };
 
@@ -136,11 +206,8 @@ export function PreSession() {
 
     const postResult = await fetch("/api/sessions", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        Accept: "application/json",
-      },
-      body: new URLSearchParams({
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         temporary: "true",
       }),
     }).then((res) => res.json());
@@ -154,6 +221,7 @@ export function PreSession() {
     setTempLoading(false);
     window.location.href = "/";
   };
+
   return (
     <>
       <form
@@ -197,6 +265,18 @@ export function PreSession() {
                 placeholder="mot de passe"
               />
             </span>
+            {joinSession === "create" && (
+              <div className="flex items-center gap-2 text-sm">
+                <Switch
+                  checked={enableEncryption}
+                  onCheckedChange={setEnableEncryption}
+                  id="encryption-toggle"
+                />
+                <Label htmlFor="encryption-toggle" className="cursor-pointer">
+                  Chiffrement de bout en bout (E2EE)
+                </Label>
+              </div>
+            )}
             <div className="h-2" />
             <div className="flex w-full flex-col items-center justify-center">
               <button
@@ -346,8 +426,6 @@ export function PreSession() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <div className="h-20" />
-      <InstallButton />
       <div className="h-20" />
     </>
   );

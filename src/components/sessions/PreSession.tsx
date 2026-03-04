@@ -20,6 +20,10 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faQuestionCircle,
   faAngleLeft,
+  faDesktop,
+  faTerminal,
+  faMobileScreen,
+  faDownload,
 } from "@fortawesome/free-solid-svg-icons";
 import {
   Dialog,
@@ -49,6 +53,29 @@ export function PreSession() {
   const [loading, setLoading] = useState(false);
   const [tempLoading, setTempLoading] = useState(false);
   const [enableEncryption, setEnableEncryption] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<Event | null>(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener(
+        "beforeinstallprompt",
+        handleBeforeInstallPrompt,
+      );
+    };
+  }, []);
+
+  const handleInstallClick = () => {
+    if (installPrompt) {
+      (installPrompt as any).prompt();
+    }
+  };
 
   const sumbitForm = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -374,7 +401,49 @@ export function PreSession() {
         )}
       </form>
 
-      <div className="h-20" />
+      <div className="h-12" />
+
+      <div className="w-full px-4">
+        <p className="mb-3 text-center text-xs text-white/60">
+          Disponible sur :
+        </p>
+        <div className="flex justify-center gap-4">
+          <a
+            href="/"
+            className="flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-lg bg-white/5 transition-colors hover:bg-white/10"
+          >
+            <FontAwesomeIcon icon={faDesktop} className="text-lg" />
+            <span className="text-[10px]">Web</span>
+          </a>
+          <a
+            href="https://ldm.copyman.fr"
+            className="flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-lg bg-white/5 transition-colors hover:bg-white/10"
+          >
+            <FontAwesomeIcon icon={faMobileScreen} className="text-lg" />
+            <span className="text-[10px]">LDM</span>
+          </a>
+          <a
+            href="https://github.com/mathysIN/copyman-cli"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-lg bg-white/5 transition-colors hover:bg-white/10"
+          >
+            <FontAwesomeIcon icon={faTerminal} className="text-lg" />
+            <span className="text-[10px]">CLI</span>
+          </a>
+          {installPrompt && (
+            <button
+              onClick={handleInstallClick}
+              className="flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-lg bg-white/5 transition-colors hover:bg-white/10"
+            >
+              <FontAwesomeIcon icon={faDownload} className="text-lg" />
+              <span className="text-[10px]">Installer</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="h-8" />
 
       <Dialog>
         <DialogTrigger>

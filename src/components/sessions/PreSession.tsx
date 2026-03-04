@@ -491,6 +491,11 @@ export function PreSession() {
                     "Pas besoin de compte, tout est rapide et pratique. Parfait pour une utilisation simple et collaborative."
                   }
                 </p>
+                <p className="py-2 text-sm text-green-400">
+                  <strong>Chiffrement de bout en bout (E2EE)</strong> : Copyman
+                  supporte le chiffrement de bout en bout pour sécuriser vos
+                  sessions avec un mot de passe.
+                </p>
               </div>
             </div>
           </DialogHeader>

@@ -279,10 +279,10 @@ export async function POST(req: Request) {
     // Generate and set session token for authentication
     const sessionToken = await setSessionToken(session.sessionId);
     cookies().set("session_token", sessionToken, {
+      expires: Date.now() + 10 * 365 * 24 * 60 * 60 * 1000,
       httpOnly: true,
       secure: env.COPYMAN_ENV === "production",
       sameSite: "strict",
-      // No expiry = session cookie (expires when browser closes)
     });
 
     // DO NOT set password cookie - we use session tokens instead
@@ -358,6 +358,7 @@ export async function PATCH(req: Request) {
   // Generate new session token
   const newToken = await setSessionToken(session.sessionId);
   cookies().set("session_token", newToken, {
+    expires: Date.now() + 10 * 365 * 24 * 60 * 60 * 1000,
     httpOnly: true,
     secure: env.COPYMAN_ENV === "production",
     sameSite: "strict",

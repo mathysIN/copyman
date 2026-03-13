@@ -2,6 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Prevent layout shift during font loading */
+html {
+  font-family:
+    var(--font-sans),
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+}
+
+/* Hide content until fonts load to prevent FOUT */
+.font-loading {
+  opacity: 0;
+}
+
+.font-loaded {
+  opacity: 1;
+  transition: opacity 0.1s ease-out;
+}
+
 /* Show elements only when browser is offline (class added by ServiceWorkerRegister) */
 .offline-only {
   display: none;

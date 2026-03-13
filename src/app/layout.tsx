@@ -3,20 +3,27 @@ import { Inter } from "next/font/google";
 import { Toaster } from "~/components/ui/toaster";
 import ServiceWorkerRegister from "~/components/ServiceWorkerRegister";
 import React from "react";
-import { config } from '@fortawesome/fontawesome-svg-core'
-import '@fortawesome/fontawesome-svg-core/styles.css'
-config.autoAddCss = false
-
+import { config } from "@fortawesome/fontawesome-svg-core";
+import "@fortawesome/fontawesome-svg-core/styles.css";
+config.autoAddCss = false;
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
+  display: "swap",
+  preload: true,
 });
 
 export const metadata = {
   title: "Copyman",
   description: "Yes",
   icons: [{ rel: "icon", url: "/favicon.png" }],
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
 };
 
 export default function RootLayout({
@@ -29,9 +36,8 @@ export default function RootLayout({
 
   return (
     <html lang="en" className="overflow-x-hidden">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
       <body
-        className={`bg-brand relative overflow-x-hidden font-sans ${inter.variable}`}
+        className={`relative overflow-x-hidden bg-brand font-sans ${inter.variable} antialiased`}
       >
         {React.cloneElement(children as React.ReactElement, {
           offline: isOffline,

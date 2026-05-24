@@ -706,11 +706,11 @@ const ContentRenderer = ({
             </button>
             <a
               target="_blank"
-              href={content.isEncrypted ? undefined : attachmentURL}
-              aria-disabled={content.isEncrypted}
-              tabIndex={content.isEncrypted ? -1 : undefined}
+              href={content.isEncrypted || !contentType ? undefined : attachmentURL}
+              aria-disabled={content.isEncrypted || !contentType}
+              tabIndex={content.isEncrypted || !contentType ? -1 : undefined}
               className={cn(
-                content.isEncrypted && "pointer-events-none text-black/40",
+                (content.isEncrypted || !contentType) && "pointer-events-none text-black/40",
                 "flex w-8 items-center justify-center rounded bg-neutral-100 py-1 transition-colors hover:bg-neutral-200 active:scale-90 active:opacity-75",
               )}
               title="Ouvrir dans un nouvel onglet"

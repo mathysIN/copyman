@@ -96,6 +96,8 @@ const ContentRenderer = ({
   const [audioPlaying, setAudioPlaying] = useState(false);
   const controls = useDragControls();
   const fileNameInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isInView, setIsInView] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
   const [attachmentPath, setAttachmentPath] = useState(content.attachmentPath);
   const [attachmentURL, setAttachmentURL] = useState(content.attachmentURL);
@@ -111,6 +113,23 @@ const ContentRenderer = ({
   const needsDecryption = content.isEncrypted && !encryptionKey;
 
   useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setIsInView(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
     setNewName(content.attachmentPath);
     setAttachmentPath(content.attachmentPath);
   }, [content.attachmentPath]);
@@ -120,6 +139,7 @@ const ContentRenderer = ({
   }, [content.attachmentURL]);
 
   useEffect(() => {
+    if (!isInView) return;
     let objectUrl: string | null = null;
 
     const decrypt = async () => {
@@ -177,6 +197,7 @@ const ContentRenderer = ({
     content.id,
     encryptionKey,
     isEncrypted,
+    isInView,
   ]);
 
   const getExtension = (url: string) => {
@@ -246,6 +267,7 @@ const ContentRenderer = ({
   const contentType = getContentType(attachmentURL);
 
   useEffect(() => {
+    if (!isInView) return;
     const loadTextContent = async () => {
       if (contentType !== "text" && contentType !== "csv") {
         setTextContent(null);
@@ -312,6 +334,7 @@ const ContentRenderer = ({
     encryptionKey,
     decryptedUrl,
     content.encryptedIv,
+    isInView,
   ]);
 
   const displayUrl = isEncrypted ? decryptedUrl : attachmentURL;
@@ -364,6 +387,7 @@ const ContentRenderer = ({
   const [htmlContent, setHtmlContent] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!isInView) return;
     const loadDocumentContent = async () => {
       if (contentType !== "pdf" && !isHtmlFile(attachmentPath)) {
         setPdfObjectUrl(null);
@@ -409,6 +433,7 @@ const ContentRenderer = ({
     encryptionKey,
     decryptedUrl,
     content.encryptedIv,
+    isInView,
   ]);
 
   const isHtmlFile = (path: string) => {
@@ -463,6 +488,7 @@ const ContentRenderer = ({
               <img
                 src={decryptedUrl}
                 alt="Content"
+                loading="lazy"
                 className="inset-0 h-full w-full cursor-pointer rounded-lg object-cover"
               />
             </PhotoView>
@@ -473,6 +499,7 @@ const ContentRenderer = ({
             <img
               src={attachmentURL}
               alt="Content"
+              loading="lazy"
               className="inset-0 h-full w-full cursor-pointer rounded-lg object-cover"
             />
           </PhotoView>
@@ -626,6 +653,7 @@ const ContentRenderer = ({
       onDragEnd={() => setDragging(false)}
     >
       <div
+        ref={containerRef}
         className={`${deleting && "animate-pulse cursor-wait opacity-75"} ${dragging && "scale-105 shadow-2xl"} space-y h-fit rounded-md border-2 border-gray-300 bg-white p-2 text-gray-900 transition-all`}
       >
         {(() => {

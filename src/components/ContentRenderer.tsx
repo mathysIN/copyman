@@ -139,7 +139,7 @@ const ContentRenderer = ({
   }, [content.attachmentURL]);
 
   useEffect(() => {
-    if (!isInView) return;
+    if (!isInView || !contentType) return;
     let objectUrl: string | null = null;
 
     const decrypt = async () => {
@@ -342,9 +342,15 @@ const ContentRenderer = ({
   const handleDownload = async () => {
     try {
       let blob: Blob;
-      if (isEncrypted && encryptionKey && content.encryptedIv && decryptedUrl) {
-        const response = await fetch(decryptedUrl);
-        blob = await response.blob();
+      if (isEncrypted && encryptionKey && content.encryptedIv) {
+        if (decryptedUrl) {
+          const response = await fetch(decryptedUrl);
+          blob = await response.blob();
+        } else {
+          const response = await fetch(attachmentURL);
+          const encryptedBlob = await response.blob();
+          blob = await decryptFile(encryptedBlob, content.encryptedIv, encryptionKey);
+        }
       } else {
         const response = await fetch(attachmentURL);
         blob = await response.blob();

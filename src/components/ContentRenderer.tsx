@@ -387,7 +387,8 @@ const ContentRenderer = ({
         }
 
         if (contentType === "pdf") {
-          const url = URL.createObjectURL(blob);
+          const pdfBlob = blob.type === "application/pdf" ? blob : new Blob([blob], { type: "application/pdf" });
+          const url = URL.createObjectURL(pdfBlob);
           setPdfObjectUrl(url);
           return () => URL.revokeObjectURL(url);
         } else if (isHtmlFile(attachmentPath)) {
@@ -675,7 +676,7 @@ const ContentRenderer = ({
             </button>
             <a
               target="_blank"
-              href={attachmentURL}
+              href={content.isEncrypted ? undefined : attachmentURL}
               aria-disabled={content.isEncrypted}
               tabIndex={content.isEncrypted ? -1 : undefined}
               className={cn(

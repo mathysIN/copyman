@@ -478,6 +478,7 @@ const ContentRenderer = ({
           <video
             src={srcUrl}
             controls
+            preload="none"
             className="absolute inset-0 h-full w-full object-cover"
           />
         );
@@ -522,6 +523,7 @@ const ContentRenderer = ({
               onPause={() => setAudioPlaying(false)}
               src={srcUrl}
               controls
+              preload="none"
               className={`${randomGradient} ${audioPlaying && "animate-gradient"} absolute inset-0 h-full w-full bg-opacity-25 bg-[length:200%_auto] object-cover`}
             ></audio>
           </>

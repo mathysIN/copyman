@@ -418,14 +418,51 @@ export class Session {
 }
 
 export async function deleteSession(sessionId: string) {
-  const contentKeys = await contents.keys(`session:${sessionId}:content:*`);
-  if (contentKeys.length > 0) {
-    const pipeline = redis.pipeline();
-    for (const key of contentKeys) {
-      pipeline.del(key);
+  const sessionData = await sessions.hgetall(sessionId);
+  if (sessionData) {
+    const session = new Session(sessionData);
+    const allContent = await session.getAllContent();
+
+    const attachments = allContent.filter(
+      (c): c is Extract<ContentType, { type: "attachment" }> =>
+        c.type === "attachment",
+    );
+    if (attachments.length > 0) {
+      const { S3Client, DeleteObjectCommand } = await import(
+        "@aws-sdk/client-s3"
+      );
+      const r2 = new S3Client({
+        region: env.R2_REGION,
+        endpoint: env.R2_ENDPOINT,
+        credentials: {
+          accessKeyId: env.R2_ACCESS_KEY_ID,
+          secretAccessKey: env.R2_SECRET_ACCESS_KEY,
+        },
+      });
+
+      for (const content of attachments) {
+        try {
+          await r2.send(
+            new DeleteObjectCommand({
+              Bucket: env.R2_BUCKET_NAME,
+              Key: content.fileKey,
+            }),
+          );
+        } catch (e) {
+          console.error(
+            `Failed to delete R2 file ${content.fileKey} for session ${sessionId}:`,
+            e,
+          );
+        }
+      }
     }
-    await pipeline.exec();
+
+    for (const content of allContent) {
+      await session.deleteContent(content.id);
+    }
   }
+
+  await clearSessionToken(sessionId);
   return sessions.del(sessionId);
 }
 
@@ -521,8 +558,8 @@ export async function setSessionToken(
   if (expirySeconds !== undefined && expirySeconds > 0) {
     await redis.set(fullKey, "1", { ex: expirySeconds });
   } else {
-    // No expiry = infinite (for persistent sessions)
-    await redis.set(fullKey, "1");
+    // Default 30 days for persistent sessions (not infinite!)
+    await redis.set(fullKey, "1", { ex: 30 * 24 * 60 * 60 });
   }
 
   return rawToken;

@@ -109,6 +109,7 @@ app.prepare().then(() => {
       socket.emit("sessionDeleted");
       socket.leave(session.sessionId);
       socket.disconnect();
+      await deleteSession(session.sessionId);
       return;
     }
 
@@ -140,16 +141,31 @@ app.prepare().then(() => {
     }
 
     socket.on("hello", async () => {
+      const startHello = performance.now();
+
+      const startContent = performance.now();
       const allContent = await session.getAllContent();
+      console.log(
+        `[DEBUG SOCKET] getAllContent (${allContent.length} items): ${(performance.now() - startContent).toFixed(2)}ms`,
+      );
+
       if (allContent.length > 0) {
         socket.emit("addContent", allContent);
       }
 
+      const startOrder = performance.now();
       const contentOrder = await session.getContentOrder();
+      console.log(
+        `[DEBUG SOCKET] getContentOrder: ${(performance.now() - startOrder).toFixed(2)}ms`,
+      );
+
       if (contentOrder.length > 0) {
         socket.emit("updatedContentOrder", contentOrder);
       }
       socketSendRoomInsight(room);
+      console.log(
+        `[DEBUG SOCKET] hello TOTAL: ${(performance.now() - startHello).toFixed(2)}ms`,
+      );
     });
 
     socket.on("disconnect", () => {

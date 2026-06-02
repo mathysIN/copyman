@@ -7,51 +7,29 @@ import { type ContentOrder, type ContentType } from "~/server/db/redis";
 import { type Exception } from "~/utils/types";
 
 export default async function HomePage() {
-  console.log("[DEBUG PAGE] loading page");
-  const startTotal = performance.now();
-
   let error: undefined | Exception;
-
-  const startSession = performance.now();
   const session = await getSessionWithCookies(cookies()).catch((e) => {
     error = e;
     return null;
   });
-  console.log(
-    `[DEBUG PAGE] getSessionWithCookies: ${(performance.now() - startSession).toFixed(2)}ms`,
-  );
 
   let sessionContents: ContentType[] = [];
   let sessionContentOrder: ContentOrder = [];
 
   if (session) {
-    const startContent = performance.now();
     sessionContents = await session.getAllContent();
-    console.log(
-      `[DEBUG PAGE] getAllContent (${sessionContents.length} items): ${(performance.now() - startContent).toFixed(2)}ms`,
-    );
-
-    const startOrder = performance.now();
     sessionContentOrder = await session.getContentOrder();
-    console.log(
-      `[DEBUG PAGE] getContentOrder (${sessionContentOrder.length} items): ${(performance.now() - startOrder).toFixed(2)}ms`,
-    );
   }
-
-  console.log(
-    `[DEBUG PAGE] TOTAL: ${(performance.now() - startTotal).toFixed(2)}ms`,
-  );
   const bgImageURL = session?.imageBackground;
 
   const showingSession = !error && session;
 
-  console.log("page loaded");
   return (
     <>
       <div
         className="absolute -z-10 h-full w-full"
         style={{
-          background: `url('${bgImageURL}'), black`,
+          background: `url('${bgImageURL}'), text-white bg-black`,
           backgroundSize: "cover",
         }}
       ></div>

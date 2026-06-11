@@ -480,6 +480,29 @@ export function ActiveSession({
     return uploadedFiles;
   }
 
+  async function uploadFilesToFolder(
+    files: File[],
+    folderId: string,
+  ): Promise<void> {
+    const uploadedFiles = await uploadFiles(files);
+    if (!uploadedFiles || uploadedFiles.length === 0) return;
+
+    for (const file of uploadedFiles) {
+      await fetch(`/api/content/move`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Socket-User-Id": socketUserId ?? "",
+        },
+        body: JSON.stringify({
+          contentId: file.id,
+          folderId,
+        }),
+      });
+      onMoveContentToFolder(file.id, folderId);
+    }
+  }
+
   useEffect(() => {
     document.addEventListener("paste", onPasteGlobal);
     document.addEventListener("dragover", onDragOver);
@@ -1677,6 +1700,9 @@ export function ActiveSession({
                     onContentReorder={onReorderFolderContents}
                     onMoveContentOut={onMoveContentOutOfFolder}
                     socketUserId={socketUserId}
+                    onUploadFilesToFolder={(files) =>
+                      uploadFilesToFolder(files, folder.id)
+                    }
                     renderContentItem={(
                       content,
                       folderId,

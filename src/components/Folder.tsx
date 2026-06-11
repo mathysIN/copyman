@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Reorder, useDragControls, AnimatePresence } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -9,6 +9,7 @@ import {
   faChevronDown,
   faChevronUp,
   faTrash,
+  faPlus,
 } from "@fortawesome/free-solid-svg-icons";
 import type {
   FolderType,
@@ -53,6 +54,7 @@ interface FolderProps {
     onMoveContentOut?: (contentId: string, folderId: string) => void,
   ) => React.ReactNode;
   socketUserId?: string;
+  onUploadFilesToFolder?: (files: File[]) => void;
 }
 
 export function Folder({
@@ -64,6 +66,7 @@ export function Folder({
   onMoveContentOut,
   renderContentItem,
   socketUserId,
+  onUploadFilesToFolder,
 }: FolderProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -72,6 +75,14 @@ export function Folder({
   const [isDeleting, setIsDeleting] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const controls = useDragControls();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    onUploadFilesToFolder?.(Array.from(files));
+    e.target.value = "";
+  };
 
   const handleNameChange = async (newName: string) => {
     if (!newName.trim()) return;
@@ -265,14 +276,52 @@ export function Folder({
                   </div>
                 ))}
               </Reorder.Group>
+              {onUploadFilesToFolder && (
+                <div className="border-t border-amber-200/50 px-3 pb-3">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={handleFileInputChange}
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-amber-300 py-2 text-sm font-medium text-amber-600 transition-colors hover:border-amber-400 hover:bg-amber-50 hover:text-amber-700 active:scale-[0.98]"
+                    title="Ajouter des fichiers dans ce dossier"
+                  >
+                    <FontAwesomeIcon icon={faPlus} className="h-3.5 w-3.5" />
+                    Ajouter des fichiers
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </AnimatePresence>
 
         {/* Empty state */}
         {isExpanded && contents.length === 0 && (
-          <div className="border-t border-amber-200/50 p-4 text-center text-sm text-gray-500">
-            Le dossier est vide...
+          <div className="border-t border-amber-200/50 p-4">
+            <p className="mb-3 text-center text-sm text-gray-500">Le dossier est vide...</p>
+            {onUploadFilesToFolder && (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={handleFileInputChange}
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-amber-300 py-2 text-sm font-medium text-amber-600 transition-colors hover:border-amber-400 hover:bg-amber-50 hover:text-amber-700 active:scale-[0.98]"
+                  title="Ajouter des fichiers dans ce dossier"
+                >
+                  <FontAwesomeIcon icon={faPlus} className="h-3.5 w-3.5" />
+                  Ajouter des fichiers
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>

@@ -76,14 +76,18 @@ export function socketSendUpdateContentOrder(
   senderSocketId: string,
 ) {
   if (!globalForSocket.io) return;
+
+  // Deduplicate order server-side before saving
+  const deduplicatedOrder = [...new Set(contentOrder)];
+
   const room = rooms.get(session.sessionId);
   if (!room) return;
   for (const keyVal of room) {
     const [id] = keyVal;
     if (id === senderSocketId) continue;
-    globalForSocket.io.to(id).emit("updatedContentOrder", contentOrder);
+    globalForSocket.io.to(id).emit("updatedContentOrder", deduplicatedOrder);
   }
-  session.setContentOrder(contentOrder);
+  session.setContentOrder(deduplicatedOrder);
 }
 
 export function socketSendRoomInsight(room: Room) {

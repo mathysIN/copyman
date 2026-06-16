@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faFolder,
@@ -8,6 +7,26 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import type { FolderType } from "~/server/db/redis";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+  DialogTrigger,
+} from "~/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "~/components/ui/alert-dialog";
 
 interface MultiselectActionBarProps {
   selectedCount: number;
@@ -18,6 +37,47 @@ interface MultiselectActionBarProps {
   onCancel: () => void;
 }
 
+function MoveFolderList({
+  folders,
+  onMove,
+}: {
+  folders: FolderType[];
+  onMove: (folderId: string | null) => void;
+}) {
+  return (
+    <div className="flex max-h-64 flex-col gap-2 overflow-y-auto">
+      <DialogClose asChild>
+        <button
+          onClick={() => onMove(null)}
+          className="flex items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-gray-50"
+        >
+          <FontAwesomeIcon icon={faFolder} className="h-5 w-5 text-gray-400" />
+          <span>À la racine</span>
+        </button>
+      </DialogClose>
+      {folders.map((folder) => (
+        <DialogClose key={folder.id} asChild>
+          <button
+            onClick={() => onMove(folder.id)}
+            className="flex items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-gray-50"
+          >
+            <FontAwesomeIcon icon={faFolder} className="h-5 w-5 text-amber-500" />
+            <span>{folder.name}</span>
+            <span className="ml-auto text-xs text-gray-400">
+              {folder.targetType === "note" ? "Notes" : "Fichiers"}
+            </span>
+          </button>
+        </DialogClose>
+      ))}
+      {folders.length === 0 && (
+        <p className="py-4 text-center text-gray-500">
+          Aucun dossier disponible
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function MultiselectActionBar({
   selectedCount,
   selectedType,
@@ -26,9 +86,6 @@ export function MultiselectActionBar({
   onDelete,
   onCancel,
 }: MultiselectActionBarProps) {
-  const [showMoveDialog, setShowMoveDialog] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
   const filteredFolders = selectedType
     ? folders.filter((f) => f.targetType === selectedType)
     : folders;
@@ -42,27 +99,64 @@ export function MultiselectActionBar({
 
         <div className="h-6 w-px bg-gray-200" />
 
-        <button
-          onClick={() => setShowMoveDialog(true)}
-          disabled={selectedType === "mixed"}
-          className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-amber-600 transition-colors hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-40"
-          title={
-            selectedType === "mixed"
-              ? "Impossible de déplacer des types mixtes"
-              : "Déplacer vers un dossier"
-          }
-        >
-          <FontAwesomeIcon icon={faFolder} className="h-4 w-4" />
-          <span>Déplacer</span>
-        </button>
+        <Dialog>
+          <DialogTrigger asChild>
+            <button
+              disabled={selectedType === "mixed"}
+              className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-amber-600 transition-colors hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-40"
+              title={
+                selectedType === "mixed"
+                  ? "Impossible de déplacer des types mixtes"
+                  : "Déplacer vers un dossier"
+              }
+            >
+              <FontAwesomeIcon icon={faFolder} className="h-4 w-4" />
+              <span>Déplacer</span>
+            </button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Déplacer vers un dossier</DialogTitle>
+              <DialogDescription>
+                Choisissez un dossier de destination pour les éléments
+                sélectionnés.
+              </DialogDescription>
+            </DialogHeader>
+            <MoveFolderList
+              folders={filteredFolders}
+              onMove={onMove}
+            />
+          </DialogContent>
+        </Dialog>
 
-        <button
-          onClick={() => setShowDeleteConfirm(true)}
-          className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-red-500 transition-colors hover:bg-red-50"
-        >
-          <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-          <span>Supprimer</span>
-        </button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <button className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-red-500 transition-colors hover:bg-red-50">
+              <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+              <span>Supprimer</span>
+            </button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                Supprimer {selectedCount} élément
+                {selectedCount > 1 ? "s" : ""} ?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Cette action ne pourra pas être annulée.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Annuler</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={onDelete}
+                className="bg-red-500 hover:bg-red-600"
+              >
+                Confirmer
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <div className="h-6 w-px bg-gray-200" />
 
@@ -74,97 +168,6 @@ export function MultiselectActionBar({
           <span>Annuler</span>
         </button>
       </div>
-
-      {showMoveDialog && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30"
-          onClick={() => setShowMoveDialog(false)}
-        >
-          <div
-            className="mx-4 w-full max-w-sm rounded-xl border bg-white p-4 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="mb-3 text-lg font-semibold">
-              Déplacer vers un dossier
-            </h3>
-            <div className="flex max-h-64 flex-col gap-2 overflow-y-auto">
-              <button
-                onClick={() => {
-                  onMove(null);
-                  setShowMoveDialog(false);
-                }}
-                className="flex items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-gray-50"
-              >
-                <FontAwesomeIcon
-                  icon={faFolder}
-                  className="h-5 w-5 text-gray-400"
-                />
-                <span>À la racine</span>
-              </button>
-              {filteredFolders.map((folder) => (
-                <button
-                  key={folder.id}
-                  onClick={() => {
-                    onMove(folder.id);
-                    setShowMoveDialog(false);
-                  }}
-                  className="flex items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-gray-50"
-                >
-                  <FontAwesomeIcon
-                    icon={faFolder}
-                    className="h-5 w-5 text-amber-500"
-                  />
-                  <span>{folder.name}</span>
-                  <span className="ml-auto text-xs text-gray-400">
-                    {folder.targetType === "note" ? "Notes" : "Fichiers"}
-                  </span>
-                </button>
-              ))}
-              {filteredFolders.length === 0 && (
-                <p className="py-4 text-center text-gray-500">
-                  Aucun dossier disponible
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showDeleteConfirm && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30"
-          onClick={() => setShowDeleteConfirm(false)}
-        >
-          <div
-            className="mx-4 w-full max-w-sm rounded-xl border bg-white p-4 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="mb-2 text-lg font-semibold">
-              Supprimer {selectedCount} élément{selectedCount > 1 ? "s" : ""} ?
-            </h3>
-            <p className="mb-4 text-sm text-gray-500">
-              Cette action ne pourra pas être annulée.
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="rounded-lg border px-4 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-50"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={() => {
-                  onDelete();
-                  setShowDeleteConfirm(false);
-                }}
-                className="rounded-lg bg-red-500 px-4 py-2 text-sm text-white transition-colors hover:bg-red-600"
-              >
-                Confirmer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

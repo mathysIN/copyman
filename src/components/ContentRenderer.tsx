@@ -103,14 +103,22 @@ const ContentRenderer = ({
   const [audioPlaying, setAudioPlaying] = useState(false);
   const controls = useDragControls();
   const fileNameInputRef = useRef<HTMLInputElement>(null);
+  const justLongPressedRef = useRef(false);
 
   const longPress = useLongPress({
-    onLongPress: () => onToggleSelection?.(content.id),
+    onLongPress: () => {
+      justLongPressedRef.current = true;
+      onToggleSelection?.(content.id);
+    },
     threshold: 1000,
     moveThreshold: 10,
   });
 
   const handleContainerClick = (e: React.MouseEvent) => {
+    if (justLongPressedRef.current) {
+      justLongPressedRef.current = false;
+      return;
+    }
     if (!isMultiSelectMode) return;
     const target = e.target as HTMLElement;
     if (target.closest("button, a, input, textarea, [role='button']")) return;
@@ -684,7 +692,7 @@ const ContentRenderer = ({
         ref={containerRef}
         onClick={handleContainerClick}
         {...longPress}
-        className={`${deleting && "animate-pulse cursor-wait opacity-75"} ${dragging && "scale-105 shadow-2xl"} ${isSelected && "border-blue-400 bg-blue-50"} space-y h-fit touch-none rounded-md border-2 border-gray-300 bg-white p-2 text-gray-900 transition-all`}
+        className={`${deleting && "animate-pulse cursor-wait opacity-75"} ${dragging && "scale-105 shadow-2xl"} ${isSelected ? "border-blue-400 bg-blue-50" : isMultiSelectMode ? "border-gray-400 hover:border-blue-300" : "border-gray-300 hover:border-gray-400"} space-y h-fit touch-none rounded-md border-2 bg-white p-2 text-gray-900 transition-all`}
       >
         {(() => {
           const rendered = renderContent();

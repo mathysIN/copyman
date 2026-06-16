@@ -160,14 +160,22 @@ export function Task({
   const [isFocused, setIsFocused] = useState(false);
   const [pleaseDontFocusBro, setPleaseDontFocusBro] = useState(false);
   const controls = useDragControls();
+  const justLongPressedRef = useRef(false);
 
   const longPress = useLongPress({
-    onLongPress: () => onToggleSelection?.(content.id),
+    onLongPress: () => {
+      justLongPressedRef.current = true;
+      onToggleSelection?.(content.id);
+    },
     threshold: 1000,
     moveThreshold: 10,
   });
 
   const handleContainerClick = (e: React.MouseEvent) => {
+    if (justLongPressedRef.current) {
+      justLongPressedRef.current = false;
+      return;
+    }
     if (!isMultiSelectMode) return;
     const target = e.target as HTMLElement;
     if (target.closest("button, a, input, textarea, [role='button']")) return;
@@ -556,7 +564,7 @@ export function Task({
         key={content.id}
         onClick={handleContainerClick}
         {...longPress}
-        className={`${deleting && "animate-pulse cursor-wait opacity-75"} ${dragging && "scale-105 shadow-2xl"} ${isSelected && "border-blue-400 bg-blue-50"} flex flex-col gap-2 rounded-md border-2 border-gray-300 bg-white px-2 py-2 text-black transition-all`}
+        className={`${deleting && "animate-pulse cursor-wait opacity-75"} ${dragging && "scale-105 shadow-2xl"} ${isSelected ? "border-blue-400 bg-blue-50" : isMultiSelectMode ? "border-gray-400 hover:border-blue-300" : "border-gray-300 hover:border-gray-400"} flex flex-col gap-2 rounded-md border-2 bg-white px-2 py-2 text-black transition-all`}
       >
         <div className="relative flex flex-col gap-2">{textEditContent()}</div>
         {linksWithMeta.length > 0 && (

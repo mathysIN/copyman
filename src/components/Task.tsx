@@ -146,7 +146,7 @@ export function Task({
   const [timerId, setTimerId] = useState<NodeJS.Timeout | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [modifying, setModifying] = useState(false);
-  const [extractedLinks, setExtractedLinks] = useState<Set<string>>();
+  const extractedLinksRef = useRef<Set<string> | undefined>(undefined);
   const [linksWithMeta, setLinksWithMetaData] = useState<LinksWithMeta[]>([]);
   const [renderedMarkdown, setRenderedMarkdown] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -238,64 +238,52 @@ export function Task({
 
   async function renderLinks(value: string) {
     const links = extractLinksFromString(value);
-    if (extractedLinks && areSetEqual(links, extractedLinks)) return;
-    setExtractedLinks(links);
+    if (extractedLinksRef.current && areSetEqual(links, extractedLinksRef.current)) return;
+    extractedLinksRef.current = links;
 
-    const _linksWithMeta: LinksWithMeta[] = [];
-    [].map(() => {
-      return {};
-    });
-    setLinksWithMetaData(
-      Array.from(links).map((link) => {
+    const _linksWithMeta: LinksWithMeta[] = await Promise.all(
+      Array.from(links).map(async (link) => {
+        const copymanURL = allContent.find(
+          (c) => c.type == "attachment" && c.attachmentURL == link,
+        );
+        if (copymanURL && copymanURL.type == "attachment") {
+          return {
+            link,
+            metadata: {
+              title: copymanURL.attachmentPath,
+              image: isImageURL(copymanURL.attachmentURL)
+                ? copymanURL.attachmentURL
+                : undefined,
+            },
+          } as LinksWithMeta;
+        }
+
+        const metadata = await getLinkMetadataFromClient(link);
+        if (
+          metadata?.title &&
+          ((metadata.image && metadata.url) ||
+            (metadata.favicons?.[0]))
+        ) {
+          return {
+            link,
+            metadata: {
+              title: metadata.title,
+              image: metadata.image
+                ? metadata.url + metadata.image
+                : metadata.favicons[0].href,
+            },
+          } as LinksWithMeta;
+        }
+
         return {
-          link: link,
+          link,
           metadata: {
             title: new URL(link).hostname,
           },
-        };
+        } as LinksWithMeta;
       }),
     );
-    for (const link of links) {
-      const copymanURL = allContent.find(
-        (c) => c.type == "attachment" && c.attachmentURL == link,
-      );
-      if (copymanURL && copymanURL.type == "attachment") {
-        _linksWithMeta.push({
-          link: link,
-          metadata: {
-            title: copymanURL.attachmentPath,
-            image: isImageURL(copymanURL.attachmentURL)
-              ? copymanURL.attachmentURL
-              : undefined,
-          },
-        });
-      } else {
-        const metadata = await getLinkMetadataFromClient(link);
 
-        if (
-          metadata &&
-          ((metadata["image"] && metadata["url"]) ||
-            (metadata["favicons"] && metadata["favicons"][0])) &&
-          metadata["title"]
-        )
-          _linksWithMeta.push({
-            link: link,
-            metadata: {
-              title: metadata["title"],
-              image: metadata["image"]
-                ? metadata["url"] + metadata["image"]
-                : metadata["favicons"][0]["href"],
-            },
-          });
-        else
-          _linksWithMeta.push({
-            link: link,
-            metadata: {
-              title: new URL(link).hostname,
-            },
-          });
-      }
-    }
     setLinksWithMetaData(_linksWithMeta);
   }
   const handleChangeEvent = (e: React.ChangeEvent<HTMLTextAreaElement>) => {

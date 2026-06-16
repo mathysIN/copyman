@@ -1,7 +1,7 @@
 import axios, { type AxiosResponse } from "axios";
 import { toast } from "~/hooks/use-toast";
 import { type AttachmentType } from "~/server/db/redis";
-import { encryptFile, type EncryptionKey } from "~/lib/client/encryption";
+import { encryptFile } from "~/lib/client/encryption";
 
 export type EncryptFileFunction = (
   file: File,

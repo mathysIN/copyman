@@ -141,17 +141,17 @@ export function Folder({
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="text-amber-600 transition-colors hover:text-amber-800"
+              className="flex items-center gap-3 text-amber-600 transition-colors hover:text-amber-800"
             >
               <FontAwesomeIcon
-                icon={isExpanded ? faChevronDown : faChevronUp}
+                icon={isExpanded ? faChevronUp : faChevronDown}
                 className="h-4 w-4"
               />
+              <FontAwesomeIcon
+                icon={isExpanded ? faFolderOpen : faFolder}
+                className="h-5 w-5 text-amber-500"
+              />
             </button>
-            <FontAwesomeIcon
-              icon={isExpanded ? faFolderOpen : faFolder}
-              className="h-5 w-5 text-amber-500"
-            />
 
             <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
               <DialogTrigger asChild>

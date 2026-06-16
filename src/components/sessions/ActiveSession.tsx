@@ -30,7 +30,6 @@ import {
   deleteAllCookies,
   sortAttachments,
   toPlural,
-  uuidv4Insecure,
 } from "~/lib/utils";
 import {
   type AttachmentType,
@@ -50,7 +49,7 @@ import { DialogClose } from "@radix-ui/react-dialog";
 import { type User } from "~/server";
 import Upload from "~/components/Upload";
 import { EncryptionSettings } from "~/components/EncryptionSettings";
-import { uploadFiles as realUploadFile } from "~/lib/client/uploadFile";
+import { useUpload } from "~/hooks/use-upload";
 import { api } from "~/utils/api";
 import { Progress } from "../ui/progress";
 import autoAnimate from "@formkit/auto-animate";
@@ -61,15 +60,6 @@ import {
 import { PhotoProvider } from "react-photo-view";
 import { UAParser } from "ua-parser-js";
 import { copyAndToast } from "~/lib/client/toast";
-
-type UploadProgress = {
-  id: string;
-  progress: number;
-  state: "active" | "error";
-  erroredAt?: Date;
-  finishedAt?: Date;
-  filename: string;
-};
 
 export function ActiveSession({
   session,
@@ -85,9 +75,6 @@ export function ActiveSession({
   const [isConnected, setIsConnected] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [roomUsers, setRoomUsers] = useState<User[]>([]);
-  const [uploadProgressPourcentage, setUploadProgressPourcentage] = useState<
-    UploadProgress[]
-  >([]);
   const [uploadPasteLoading, setUploadPasteLoading] = useState(false);
 
   const [hasPassword, setHasPassword] = useState(baseHasPassword);
@@ -137,6 +124,19 @@ export function ActiveSession({
     undefined,
     session.isEncrypted,
   );
+
+  const {
+    uploadFiles,
+    uploadFilesToFolder,
+    uploadProgress,
+  } = useUpload(
+    encryption.key,
+    socketUserId,
+    (attachments) => onNewContent(attachments),
+  );
+
+  const uploadFilesRef = useRef(uploadFiles);
+  uploadFilesRef.current = uploadFiles;
 
   const [showTrucs, setShowTrucs] = useState(true);
   const [showAutresTrucs, setShowAutresTrucs] = useState(true);
@@ -349,50 +349,6 @@ export function ActiveSession({
     uploadFiles(Array.from(files));
   }
 
-  function onPasteGlobal(event: ClipboardEvent): void {
-    const activeElement = document.activeElement as HTMLElement;
-
-    if (
-      activeElement.tagName !== "TEXTAREA" &&
-      activeElement.tagName !== "INPUT"
-    ) {
-      const clipboardData = event.clipboardData;
-      if (clipboardData) {
-        uploadClipboardData(clipboardData);
-      }
-    }
-  }
-
-  function onDragOver(e: DragEvent): void {
-    e.preventDefault();
-  }
-
-  async function onDrop(e: DragEvent): Promise<void> {
-    e.preventDefault();
-    const files = e.dataTransfer?.files;
-    if (files) await uploadFiles(Array.from(files));
-  }
-
-  async function uploadClipboardData(
-    clipboardData: DataTransfer,
-  ): Promise<void> {
-    const text = clipboardData.getData("text");
-    if (text) {
-      newTaskComponent.current?.addTask(text);
-    }
-
-    const attachments: AttachmentType[] = [];
-    const files: File[] = [];
-    for (const item of clipboardData.items) {
-      if (item.type.startsWith("image/")) {
-        const file = item.getAsFile();
-        if (!file) continue;
-        files.push(file);
-      }
-    }
-    uploadFiles(files);
-  }
-
   async function pasteImagesFromClipboard() {
     try {
       setUploadPasteLoading(true);
@@ -425,85 +381,48 @@ export function ActiveSession({
     }
   }
 
-  async function uploadFiles(files: File[]): Promise<AttachmentType[] | null> {
-    const uploadId = crypto?.randomUUID?.() ?? uuidv4Insecure();
-
-    const uploadedFiles = await realUploadFile(
-      files,
-      (progress: number) => {
-        const firstFile = files[0];
-        if (!firstFile) return;
-        setUploadProgressPourcentage((prev) => {
-          const next = [...prev];
-
-          const index = next.findIndex((p) => p.id === uploadId);
-          const previous = next[index];
-
-          if (previous) {
-            if (progress >= 100 && !previous.finishedAt) {
-              previous.finishedAt = new Date();
-            }
-            if (!previous.finishedAt) {
-              previous.finishedAt = new Date();
-            }
-            next[index] = { ...previous, finishedAt: new Date(), progress };
-          } else {
-            let uploadName: string;
-            if (files.length == 1) {
-              uploadName = firstFile.name;
-            } else {
-              uploadName = `${files.length} fichiers`;
-            }
-            next.push({
-              filename: uploadName,
-              id: uploadId,
-              progress: progress,
-              state: "active",
-            });
-          }
-
-          return next;
-        });
-      },
-      socketUserId,
-      encryption.key,
-    );
-
-    setUploadProgressPourcentage((prev) => {
-      const next = [...prev];
-      const index = next.findIndex((p) => p.id === uploadId);
-      next.splice(index, 1);
-      return next;
-    });
-
-    if (uploadedFiles) onNewContent(uploadedFiles);
-    return uploadedFiles;
-  }
-
-  async function uploadFilesToFolder(
-    files: File[],
-    folderId: string,
-  ): Promise<void> {
-    const uploadedFiles = await uploadFiles(files);
-    if (!uploadedFiles || uploadedFiles.length === 0) return;
-
-    for (const file of uploadedFiles) {
-      await fetch(`/api/content/move`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Socket-User-Id": socketUserId ?? "",
-        },
-        body: JSON.stringify({
-          contentId: file.id,
-          folderId,
-        }),
-      });
-      onMoveContentToFolder(file.id, folderId);
+  const uploadClipboardDataRef = useRef<((data: DataTransfer) => Promise<void>) | null>(null);
+  uploadClipboardDataRef.current = async (clipboardData: DataTransfer) => {
+    const text = clipboardData.getData("text");
+    if (text) {
+      newTaskComponent.current?.addTask(text);
     }
-  }
+
+    const files: File[] = [];
+    for (const item of clipboardData.items) {
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (!file) continue;
+        files.push(file);
+      }
+    }
+    uploadFiles(files);
+  };
 
   useEffect(() => {
+    const onPasteGlobal = (event: ClipboardEvent) => {
+      const activeElement = document.activeElement as HTMLElement;
+      if (
+        activeElement.tagName !== "TEXTAREA" &&
+        activeElement.tagName !== "INPUT"
+      ) {
+        const clipboardData = event.clipboardData;
+        if (clipboardData && uploadClipboardDataRef.current) {
+          uploadClipboardDataRef.current(clipboardData);
+        }
+      }
+    };
+
+    const onDragOver = (e: DragEvent) => {
+      e.preventDefault();
+    };
+
+    const onDrop = (e: DragEvent) => {
+      e.preventDefault();
+      const files = e.dataTransfer?.files;
+      if (files) uploadFilesRef.current(Array.from(files));
+    };
+
     document.addEventListener("paste", onPasteGlobal);
     document.addEventListener("dragover", onDragOver);
     document.addEventListener("drop", onDrop);
@@ -1648,13 +1567,28 @@ export function ActiveSession({
           <div
             className={`${showTrucs ? "flex" : "hidden"} flex-col gap-y-2 md:flex`}
           >
-            <div
-              ref={containerAnimationUploadingRef}
-              className="flex items-center gap-2"
-            >
-              <div className="flex-1">
+            <div>
+              <div
+                className="flex items-center gap-2"
+              >
                 <Upload onUploadingFiles={onUploadingFiles} />
-                {Array.from(uploadProgressPourcentage.values())
+                <PasteButton
+                  onPaste={pasteImagesFromClipboard}
+                  loading={uploadPasteLoading}
+                />
+                <CreateFolderButton
+                  targetType="attachment"
+                  onCreateFolder={(folder) => {
+                    onNewContent([folder], true);
+                  }}
+                  socketUserId={socketUserId}
+                  sessionId={session.sessionId}
+                />
+              </div>
+              <div
+                ref={containerAnimationUploadingRef}
+              >
+                {Array.from(uploadProgress.values())
                   .filter((progress) => progress.progress)
                   .map((progress) => (
                     <div className="mt-2">
@@ -1670,18 +1604,7 @@ export function ActiveSession({
                     </div>
                   ))}
               </div>
-              <PasteButton
-                onPaste={pasteImagesFromClipboard}
-                loading={uploadPasteLoading}
-              />
-              <CreateFolderButton
-                targetType="attachment"
-                onCreateFolder={(folder) => {
-                  onNewContent([folder], true);
-                }}
-                socketUserId={socketUserId}
-                sessionId={session.sessionId}
-              />
+
             </div>
             <div />
             <PhotoProvider>

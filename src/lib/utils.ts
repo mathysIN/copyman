@@ -9,7 +9,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function extractLinksFromString(input: string): Set<string> {
-  const regex = /(https?:\/\/[^\s]+)/g;
+  const regex = /https?:\/\/[^\s()!.,;:?<>{}[\]"']+/g;
   const links = input.match(regex) ?? [];
   return new Set(links);
 }

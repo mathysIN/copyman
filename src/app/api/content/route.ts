@@ -2,7 +2,6 @@ import { cookies } from "next/headers";
 import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { getSessionWithCookies } from "~/utils/authenticate";
-import { utapi } from "~/server/uploadthing";
 import r2Client from "~/server/r2";
 import {
   CopyObjectCommand,

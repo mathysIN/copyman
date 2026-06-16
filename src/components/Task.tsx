@@ -44,6 +44,7 @@ import {
 } from "~/components/ui/alert-dialog";
 import { copyAndToast } from "~/lib/client/toast";
 import { useToast } from "~/hooks/use-toast";
+import { useLongPress } from "~/hooks/use-long-press";
 import { Reorder, useDragControls } from "framer-motion";
 import { Dialog, DialogContent, DialogTrigger } from "./ui/dialog";
 import { MoveToFolderDialog } from "./Folder";
@@ -121,6 +122,9 @@ export function Task({
   isEncryptionEnabled,
   decryptNote,
   encryptionKey,
+  isMultiSelectMode = false,
+  isSelected = false,
+  onToggleSelection,
 }: {
   session: SessionType;
   content: NoteType;
@@ -136,6 +140,9 @@ export function Task({
   isEncryptionEnabled?: boolean;
   decryptNote?: DecryptNoteFunction;
   encryptionKey?: CryptoKey | null;
+  isMultiSelectMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelection?: (contentId: string) => void;
 }) {
   const { toast } = useToast();
   const [dragging, setDragging] = useState(false);
@@ -153,6 +160,19 @@ export function Task({
   const [isFocused, setIsFocused] = useState(false);
   const [pleaseDontFocusBro, setPleaseDontFocusBro] = useState(false);
   const controls = useDragControls();
+
+  const longPress = useLongPress({
+    onLongPress: () => onToggleSelection?.(content.id),
+    threshold: 1000,
+    moveThreshold: 10,
+  });
+
+  const handleContainerClick = (e: React.MouseEvent) => {
+    if (!isMultiSelectMode) return;
+    const target = e.target as HTMLElement;
+    if (target.closest("button, a, input, textarea, [role='button']")) return;
+    onToggleSelection?.(content.id);
+  };
 
   useEffect(() => {
     const decrypt = async () => {
@@ -222,6 +242,7 @@ export function Task({
       !decryptionError);
 
   const onMarkdownRenderClick = () => {
+    if (isMultiSelectMode) return;
     if (pleaseDontFocusBro || !canEdit) return;
     setIsFocused(true);
     textareaRef?.current?.focus();
@@ -533,7 +554,9 @@ export function Task({
     >
       <div
         key={content.id}
-        className={`${deleting && "animate-pulse cursor-wait opacity-75"} ${dragging && "scale-105 shadow-2xl"} flex flex-col gap-2 rounded-md border-2 border-gray-300 bg-white px-2 py-2 text-black transition-all`}
+        onClick={handleContainerClick}
+        {...longPress}
+        className={`${deleting && "animate-pulse cursor-wait opacity-75"} ${dragging && "scale-105 shadow-2xl"} ${isSelected && "border-blue-400 bg-blue-50"} flex flex-col gap-2 rounded-md border-2 border-gray-300 bg-white px-2 py-2 text-black transition-all`}
       >
         <div className="relative flex flex-col gap-2">{textEditContent()}</div>
         {linksWithMeta.length > 0 && (
@@ -671,26 +694,28 @@ export function Task({
             </AlertDialog>
           </div>
 
-          <div
-            className="flex cursor-grab touch-none flex-row items-center justify-center"
-            onPointerDown={(e) => controls?.start(e)}
-          >
-            <div className=" mt-[1px] cursor-grab">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 text-black"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <circle cx="5" cy="6" r="1.5" />
-                <circle cx="5" cy="12" r="1.5" />
-                <circle cx="5" cy="18" r="1.5" />
-                <circle cx="10" cy="6" r="1.5" />
-                <circle cx="10" cy="12" r="1.5" />
-                <circle cx="10" cy="18" r="1.5" />
-              </svg>
+          {!isMultiSelectMode && (
+            <div
+              className="flex cursor-grab touch-none flex-row items-center justify-center"
+              onPointerDown={(e) => controls?.start(e)}
+            >
+              <div className=" mt-[1px] cursor-grab">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 text-black"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <circle cx="5" cy="6" r="1.5" />
+                  <circle cx="5" cy="12" r="1.5" />
+                  <circle cx="5" cy="18" r="1.5" />
+                  <circle cx="10" cy="6" r="1.5" />
+                  <circle cx="10" cy="12" r="1.5" />
+                  <circle cx="10" cy="18" r="1.5" />
+                </svg>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </Reorder.Item>

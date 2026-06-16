@@ -38,6 +38,7 @@ import {
 } from "~/components/ui/alert-dialog";
 import { copyAndToast } from "~/lib/client/toast";
 import { useToast } from "~/hooks/use-toast";
+import { useLongPress } from "~/hooks/use-long-press";
 import { Reorder, useDragControls } from "framer-motion";
 import {
   Dialog,
@@ -77,6 +78,9 @@ const ContentRenderer = ({
   folderId,
   onMoveContentOut,
   encryptionKey,
+  isMultiSelectMode = false,
+  isSelected = false,
+  onToggleSelection,
 }: {
   content: AttachmentType;
   onContentDelete: (contentId: string) => any;
@@ -87,6 +91,9 @@ const ContentRenderer = ({
   folderId?: string;
   onMoveContentOut?: (contentId: string, folderId: string) => void;
   encryptionKey?: CryptoKey | null;
+  isMultiSelectMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelection?: (contentId: string) => void;
 }) => {
   const { toast } = useToast();
   const [dragging, setDragging] = useState(false);
@@ -96,6 +103,19 @@ const ContentRenderer = ({
   const [audioPlaying, setAudioPlaying] = useState(false);
   const controls = useDragControls();
   const fileNameInputRef = useRef<HTMLInputElement>(null);
+
+  const longPress = useLongPress({
+    onLongPress: () => onToggleSelection?.(content.id),
+    threshold: 1000,
+    moveThreshold: 10,
+  });
+
+  const handleContainerClick = (e: React.MouseEvent) => {
+    if (!isMultiSelectMode) return;
+    const target = e.target as HTMLElement;
+    if (target.closest("button, a, input, textarea, [role='button']")) return;
+    onToggleSelection?.(content.id);
+  };
   const containerRef = useRef<HTMLDivElement>(null);
   const [isInView, setIsInView] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
@@ -662,7 +682,9 @@ const ContentRenderer = ({
     >
       <div
         ref={containerRef}
-        className={`${deleting && "animate-pulse cursor-wait opacity-75"} ${dragging && "scale-105 shadow-2xl"} space-y h-fit rounded-md border-2 border-gray-300 bg-white p-2 text-gray-900 transition-all`}
+        onClick={handleContainerClick}
+        {...longPress}
+        className={`${deleting && "animate-pulse cursor-wait opacity-75"} ${dragging && "scale-105 shadow-2xl"} ${isSelected && "border-blue-400 bg-blue-50"} space-y h-fit touch-none rounded-md border-2 border-gray-300 bg-white p-2 text-gray-900 transition-all`}
       >
         {(() => {
           const rendered = renderContent();
@@ -828,26 +850,28 @@ const ContentRenderer = ({
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-            <div
-              className="flex cursor-grab touch-none flex-row items-center justify-center"
-              onPointerDown={(e) => controls?.start(e)}
-            >
-              <div className=" mt-[1px] cursor-grab">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-black"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <circle cx="5" cy="6" r="1.5" />
-                  <circle cx="5" cy="12" r="1.5" />
-                  <circle cx="5" cy="18" r="1.5" />
-                  <circle cx="10" cy="6" r="1.5" />
-                  <circle cx="10" cy="12" r="1.5" />
-                  <circle cx="10" cy="18" r="1.5" />
-                </svg>
+            {!isMultiSelectMode && (
+              <div
+                className="flex cursor-grab touch-none flex-row items-center justify-center"
+                onPointerDown={(e) => controls?.start(e)}
+              >
+                <div className=" mt-[1px] cursor-grab">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5 text-black"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <circle cx="5" cy="6" r="1.5" />
+                    <circle cx="5" cy="12" r="1.5" />
+                    <circle cx="5" cy="18" r="1.5" />
+                    <circle cx="10" cy="6" r="1.5" />
+                    <circle cx="10" cy="12" r="1.5" />
+                    <circle cx="10" cy="18" r="1.5" />
+                  </svg>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

@@ -40,6 +40,7 @@ import {
   type FolderType,
 } from "~/server/db/redis";
 import { Folder, CreateFolderButton } from "~/components/Folder";
+import { MultiselectActionBar } from "~/components/MultiselectActionBar";
 import { PasteButton } from "~/components/PasteButton";
 import { Reorder } from "framer-motion";
 import { useToast } from "~/hooks/use-toast";
@@ -124,6 +125,88 @@ export function ActiveSession({
     undefined,
     session.isEncrypted,
   );
+
+  const [selectedContentIds, setSelectedContentIds] = useState<string[]>([]);
+  const isMultiSelectMode = selectedContentIds.length > 0;
+
+  const handleToggleSelection = (contentId: string) => {
+    setSelectedContentIds((prev) =>
+      prev.includes(contentId)
+        ? prev.filter((id) => id !== contentId)
+        : [...prev, contentId],
+    );
+  };
+
+  const handleClearSelection = () => {
+    setSelectedContentIds([]);
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = [...selectedContentIds];
+    handleClearSelection();
+
+    await Promise.all(
+      ids.map(async (id) => {
+        const content = sessionContent.find((c) => c.id === id);
+        if (!content) return;
+        if (content.type === "note") {
+          await fetch("/api/notes", {
+            method: "DELETE",
+            headers: { "X-Socket-User-Id": socketUserId ?? "" },
+            body: JSON.stringify({ taskId: id }),
+          });
+        } else if (content.type === "attachment") {
+          await fetch(`/api/content?contentId=${id}`, {
+            headers: { "X-Socket-User-Id": socketUserId ?? "" },
+            method: "DELETE",
+          });
+        }
+        onDeleteContent(id, true);
+      }),
+    );
+  };
+
+  const handleBulkMove = async (folderId: string | null) => {
+    const ids = [...selectedContentIds];
+    handleClearSelection();
+
+    await Promise.all(
+      ids.map(async (id) => {
+        await fetch(`/api/content/move`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Socket-User-Id": socketUserId ?? "",
+          },
+          body: JSON.stringify({ contentId: id, folderId }),
+        });
+        onMoveContentToFolder(id, folderId);
+      }),
+    );
+  };
+
+  const selectedType = (() => {
+    if (selectedContentIds.length === 0) return null;
+    const types = new Set(
+      selectedContentIds.map((id) => {
+        const content = sessionContent.find((c) => c.id === id);
+        return content?.type === "folder" ? null : content?.type ?? null;
+      }),
+    );
+    types.delete(null);
+    if (types.size === 0) return null;
+    if (types.size === 1) return types.values().next().value as "note" | "attachment";
+    return "mixed";
+  })();
+
+  useEffect(() => {
+    if (!isMultiSelectMode) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleClearSelection();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [isMultiSelectMode]);
 
   const {
     uploadFiles,
@@ -1641,6 +1724,9 @@ export function ActiveSession({
                         folderId={folderId}
                         onMoveContentOut={onMoveContentOut}
                         encryptionKey={encryption.key}
+                        isMultiSelectMode={isMultiSelectMode}
+                        isSelected={selectedContentIds.includes(content.id)}
+                        onToggleSelection={handleToggleSelection}
                       />
                     )}
                   />
@@ -1655,6 +1741,9 @@ export function ActiveSession({
                       folders={attachmentFolders}
                       onMove={onMoveContentToFolder}
                       encryptionKey={encryption.key}
+                      isMultiSelectMode={isMultiSelectMode}
+                      isSelected={selectedContentIds.includes(content.id)}
+                      onToggleSelection={handleToggleSelection}
                     />
                   </div>
                 ))}
@@ -1741,6 +1830,9 @@ export function ActiveSession({
                       decryptNote={encryption.decryptNoteContent}
                       isEncryptionEnabled={encryption.isEnabled}
                       encryptionKey={encryption.key}
+                      isMultiSelectMode={isMultiSelectMode}
+                      isSelected={selectedContentIds.includes(content.id)}
+                      onToggleSelection={handleToggleSelection}
                     />
                   )}
                 />
@@ -1760,6 +1852,9 @@ export function ActiveSession({
                     decryptNote={encryption.decryptNoteContent}
                     isEncryptionEnabled={encryption.isEnabled}
                     encryptionKey={encryption.key}
+                    isMultiSelectMode={isMultiSelectMode}
+                    isSelected={selectedContentIds.includes(content.id)}
+                    onToggleSelection={handleToggleSelection}
                   />
                 </div>
               ))}
@@ -1767,6 +1862,16 @@ export function ActiveSession({
           </div>
         </div>
       </div>
+      {isMultiSelectMode && (
+        <MultiselectActionBar
+          selectedCount={selectedContentIds.length}
+          selectedType={selectedType}
+          folders={folders}
+          onMove={handleBulkMove}
+          onDelete={handleBulkDelete}
+          onCancel={handleClearSelection}
+        />
+      )}
     </div>
   );
 }

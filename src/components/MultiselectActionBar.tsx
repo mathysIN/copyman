@@ -1,5 +1,6 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faFolder,
@@ -90,9 +91,8 @@ export function MultiselectActionBar({
     ? folders.filter((f) => f.targetType === selectedType)
     : folders;
 
-  return (
-    <>
-      <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-xl border-2 border-gray-200 bg-white px-5 py-3 shadow-2xl">
+  return createPortal(
+    <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-xl border-2 border-gray-200 bg-white px-5 py-3 shadow-2xl">
         <span className="whitespace-nowrap text-sm font-medium text-gray-600">
           {selectedCount} sélectionné{selectedCount > 1 ? "s" : ""}
         </span>
@@ -167,7 +167,7 @@ export function MultiselectActionBar({
           <FontAwesomeIcon icon={faXmark} className="h-4 w-4" />
           <span>Annuler</span>
         </button>
-      </div>
-    </>
+      </div>,
+    document.body
   );
 }

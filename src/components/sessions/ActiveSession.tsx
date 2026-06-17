@@ -1853,7 +1853,7 @@ export function ActiveSession({
                     isEncryptionEnabled={encryption.isEnabled}
                     encryptionKey={encryption.key}
                     isMultiSelectMode={isMultiSelectMode}
-                    isSelected={selectedContentIds.includes(content.id)}
+                    isSelected={selectedContentIds.includes(note.id)}
                     onToggleSelection={handleToggleSelection}
                   />
                 </div>

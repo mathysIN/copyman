@@ -692,7 +692,7 @@ const ContentRenderer = ({
         ref={containerRef}
         onClick={handleContainerClick}
         {...longPress}
-        className={`${deleting && "animate-pulse cursor-wait opacity-75"} ${dragging && "scale-105 shadow-2xl"} ${isSelected ? "border-blue-400 bg-blue-50" : isMultiSelectMode ? "border-gray-400 hover:border-blue-300" : "border-gray-300 hover:border-gray-400"} space-y h-fit touch-none rounded-md border-2 bg-white p-2 text-gray-900 transition-all`}
+        className={`${deleting && "animate-pulse cursor-wait opacity-75"} ${dragging && "scale-105 shadow-2xl"} ${isSelected ? "bg-yellow-50 border-yellow-300 shadow-lg shadow-yellow-200/30" : isMultiSelectMode ? "border-gray-400 hover:border-yellow-200" : "border-gray-300 hover:border-gray-400"} space-y h-fit touch-none rounded-md border-2 bg-white p-2 text-gray-900 transition-all`}
       >
         {(() => {
           const rendered = renderContent();
@@ -806,7 +806,7 @@ const ContentRenderer = ({
           <div className="flex items-center gap-2 overflow-hidden ">
             <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
               <DialogTrigger asChild>
-                <button className="center flex-1 overflow-hidden whitespace-nowrap text-right align-middle text-sm text-gray-500 sm:w-64">
+                <button disabled={isMultiSelectMode} className="center flex-1 overflow-hidden whitespace-nowrap text-right align-middle text-sm text-gray-500 sm:max-w-64">
                   {attachmentPath}
                 </button>
               </DialogTrigger>

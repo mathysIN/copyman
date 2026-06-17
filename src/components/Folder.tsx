@@ -155,9 +155,11 @@ export function Folder({
 
             <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
               <DialogTrigger asChild>
-                <button className="flex-1 truncate text-left font-medium text-gray-800 hover:text-amber-700">
-                  {folder.name}
-                </button>
+                <div className="flex=1 truncate">
+                  <button className=" text-left font-medium text-gray-800 hover:text-amber-700">
+                    {folder.name}
+                  </button>
+                </div>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>

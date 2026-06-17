@@ -99,6 +99,7 @@ const ContentRenderer = ({
   const [dragging, setDragging] = useState(false);
   const [isHolding, setIsHolding] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [isHtmlDragging, setIsHtmlDragging] = useState(false);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const controls = useDragControls();
@@ -293,6 +294,19 @@ const ContentRenderer = ({
   };
 
   const contentType = getContentType(attachmentURL);
+
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData("text/plain", content.id);
+    if (folderId) {
+      e.dataTransfer.setData("text/x-copyman-source-folder", folderId);
+    }
+    e.dataTransfer.effectAllowed = "move";
+    setIsHtmlDragging(true);
+  };
+
+  const handleDragEnd = () => {
+    setIsHtmlDragging(false);
+  };
 
   useEffect(() => {
     if (!isInView) return;
@@ -692,26 +706,48 @@ const ContentRenderer = ({
         ref={containerRef}
         onClick={handleContainerClick}
         {...longPress}
-        className={`${deleting && "animate-pulse cursor-wait opacity-75"} ${dragging && "scale-105 shadow-2xl"} ${isSelected ? "bg-yellow-50 border-yellow-300 shadow-lg shadow-yellow-200/30" : isMultiSelectMode ? "border-gray-400 hover:border-yellow-200" : "border-gray-300 hover:border-gray-400"} space-y h-fit touch-none rounded-md border-2 bg-white p-2 text-gray-900 transition-all`}
+        className={`${deleting && "animate-pulse cursor-wait opacity-75"} ${dragging && "scale-105 shadow-2xl"} ${isHtmlDragging && "opacity-50"} ${isSelected ? "bg-yellow-50 border-yellow-300 shadow-lg shadow-yellow-200/30" : isMultiSelectMode ? "border-gray-400 hover:border-yellow-200" : "border-gray-300 hover:border-gray-400"} space-y h-fit touch-none rounded-md border-2 bg-white p-2 text-gray-900 transition-all`}
       >
         {(() => {
           const rendered = renderContent();
           const isTextOrCsv = contentType === "text" || contentType === "csv";
-          return rendered ? (
+          const hasPreview = rendered !== null;
+          return hasPreview ? (
             <>
               <div
                 className={`relative flex w-full max-w-full justify-center ${isTextOrCsv ? "min-h-[80px]" : "h-0"}`}
                 style={isTextOrCsv ? {} : { paddingTop: "40%" }}
               >
                 <div
+                  draggable
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
                   className={`${isTextOrCsv ? "relative w-full" : "absolute inset-0"} overflow-hidden rounded-lg`}
+                  title="Glisser pour déplacer dans un dossier"
                 >
                   {rendered}
                 </div>
               </div>
               <div className="h-2" />
             </>
-          ) : null;
+          ) : (
+            <div
+              draggable
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              className="flex cursor-grab items-center justify-center rounded-lg bg-gray-50 py-4 active:cursor-grabbing"
+              title="Glisser pour déplacer dans un dossier"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="5" cy="6" r="1.5" />
+                <circle cx="5" cy="12" r="1.5" />
+                <circle cx="5" cy="18" r="1.5" />
+                <circle cx="10" cy="6" r="1.5" />
+                <circle cx="10" cy="12" r="1.5" />
+                <circle cx="10" cy="18" r="1.5" />
+              </svg>
+            </div>
+          );
         })()}
         <div className="flex flex-row justify-between gap-4">
           <div className="flex flex-row gap-x-1 text-sm">

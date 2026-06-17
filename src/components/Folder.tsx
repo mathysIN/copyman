@@ -48,6 +48,7 @@ interface FolderProps {
   onFolderDelete: (folderId: string) => void;
   onContentReorder: (folderId: string, newOrder: ContentType[]) => void;
   onMoveContentOut: (contentId: string, folderId: string) => void;
+  onMoveContentIn?: (contentId: string, folderId: string) => void;
   renderContentItem: (
     content: ContentType,
     folderId?: string,
@@ -64,12 +65,14 @@ export function Folder({
   onFolderDelete,
   onContentReorder,
   onMoveContentOut,
+  onMoveContentIn,
   renderContentItem,
   socketUserId,
   onUploadFilesToFolder,
 }: FolderProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
   const [folderName, setFolderName] = useState(folder.name);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -115,6 +118,31 @@ export function Folder({
     onFolderDelete(folder.id);
   };
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    const contentId = e.dataTransfer.getData("text/plain");
+    if (contentId && onMoveContentIn) {
+      onMoveContentIn(contentId, folder.id);
+    }
+  };
+
   const handleContentReorder = (newOrder: ContentType[]) => {
     const newContentIds = newOrder.map((c) => c.id);
     const updatedFolder = { ...folder, contentIds: newContentIds };
@@ -134,7 +162,11 @@ export function Folder({
       onDragEnd={() => setIsDragging(false)}
     >
       <div
-        className={`${isDragging && "scale-105 shadow-2xl"} ${isDeleting && "animate-pulse opacity-75"} rounded-lg border-2 border-amber-300 bg-gradient-to-br from-amber-50 to-orange-50 transition-all`}
+        onDragOver={handleDragOver}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`${isDragging && "scale-105 shadow-2xl"} ${isDeleting && "animate-pulse opacity-75"} ${isDragOver && "!border-amber-500 !bg-amber-100"} rounded-lg border-2 border-amber-300 bg-gradient-to-br from-amber-50 to-orange-50 transition-all`}
       >
         {/* Folder Header */}
         <div className="flex items-center justify-between p-3">
@@ -431,19 +463,7 @@ export function MoveToFolderDialog({
 }: MoveToFolderDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleMove = async (folderId: string | null) => {
-    await fetch(`/api/content/move`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Socket-User-Id": socketUserId ?? "",
-      },
-      body: JSON.stringify({
-        contentId: content.id,
-        folderId,
-      }),
-    });
-
+  const handleMove = (folderId: string | null) => {
     onMove(content.id, folderId);
     setIsOpen(false);
   };

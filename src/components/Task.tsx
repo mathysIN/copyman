@@ -146,6 +146,7 @@ export function Task({
 }) {
   const { toast } = useToast();
   const [dragging, setDragging] = useState(false);
+  const [isHtmlDragging, setIsHtmlDragging] = useState(false);
   const [value, setValue] = useState(content.content ?? "");
   const [decryptedValue, setDecryptedValue] = useState<string | null>(null);
   const [isDecrypting, setIsDecrypting] = useState(false);
@@ -232,6 +233,16 @@ export function Task({
   const handleBlur = async () => {
     setIsFocused(false);
     renderMarkdown();
+  };
+
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData("text/plain", content.id);
+    e.dataTransfer.effectAllowed = "move";
+    setIsHtmlDragging(true);
+  };
+
+  const handleDragEnd = () => {
+    setIsHtmlDragging(false);
   };
 
   const renderMarkdown = async () => {
@@ -564,9 +575,17 @@ export function Task({
         key={content.id}
         onClick={handleContainerClick}
         {...longPress}
-        className={`${deleting && "animate-pulse cursor-wait opacity-75"} ${dragging && "scale-105 shadow-2xl"} ${isSelected ? "bg-yellow-50 border-yellow-300 shadow-lg shadow-yellow-200/30" : isMultiSelectMode ? "border-gray-400 hover:border-yellow-200" : "border-gray-300 hover:border-gray-400"} flex flex-col gap-2 rounded-md border-2 bg-white px-2 py-2 text-black transition-all`}
+        className={`${deleting && "animate-pulse cursor-wait opacity-75"} ${dragging && "scale-105 shadow-2xl"} ${isHtmlDragging && "opacity-50"} ${isSelected ? "bg-yellow-50 border-yellow-300 shadow-lg shadow-yellow-200/30" : isMultiSelectMode ? "border-gray-400 hover:border-yellow-200" : "border-gray-300 hover:border-gray-400"} flex flex-col gap-2 rounded-md border-2 bg-white px-2 py-2 text-black transition-all`}
       >
-        <div className="relative flex flex-col gap-2">{textEditContent()}</div>
+        <div
+          draggable
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          className="relative flex flex-col gap-2"
+          title="Glisser pour déplacer dans un dossier"
+        >
+          {textEditContent()}
+        </div>
         {linksWithMeta.length > 0 && (
           <div className="flex flex-row flex-wrap">
             {linksWithMeta.map((link) => (

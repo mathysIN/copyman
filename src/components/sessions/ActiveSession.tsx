@@ -9,7 +9,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Loader2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AddNewTask, type AddNewTaskRef } from "~/components/AddNewTask";
 import ContentRenderer from "~/components/ContentRenderer";
 import { Task as Note } from "~/components/Task";
@@ -301,17 +301,20 @@ export function ActiveSession({
     });
   }
 
-  function onUpdateContentOrder(order: ContentOrder, emit = true): void {
-    const deduplicatedOrder = [...new Set(order)];
-    if (emit) socket.emit("updatedContentOrder", deduplicatedOrder);
-    setContentOrder(deduplicatedOrder);
-    void saveOfflineSession({
-      sessionId: session.sessionId,
-      content: sessionContent,
-      order: deduplicatedOrder,
-      updatedAt: Date.now(),
-    });
-  }
+  const onUpdateContentOrder = useCallback(
+    (order: ContentOrder, emit = true): void => {
+      const deduplicatedOrder = [...new Set(order)];
+      if (emit) socket.emit("updatedContentOrder", deduplicatedOrder);
+      setContentOrder(deduplicatedOrder);
+      void saveOfflineSession({
+        sessionId: session.sessionId,
+        content: sessionContent,
+        order: deduplicatedOrder,
+        updatedAt: Date.now(),
+      });
+    },
+    [session.sessionId, sessionContent],
+  );
 
   function onRoomInsight(room: { users: User[] }): void {
     setRoomUsers(room.users);
@@ -518,48 +521,78 @@ export function ActiveSession({
   }, []);
 
   // Get folders and content
-  const folders: FolderType[] = sessionContent
-    .filter((c: ContentType): c is FolderType => c.type === "folder")
-    .sort((a, b) => sortAttachments(a, b, contentOrder));
-
-  const attachmentFolders = folders.filter(
-    (f) => f.targetType === "attachment",
+  const folders: FolderType[] = useMemo(
+    () =>
+      sessionContent
+        .filter((c: ContentType): c is FolderType => c.type === "folder")
+        .sort((a, b) => sortAttachments(a, b, contentOrder)),
+    [sessionContent, contentOrder],
   );
-  const noteFolders = folders.filter((f) => f.targetType === "note");
+
+  const attachmentFolders = useMemo(
+    () => folders.filter((f) => f.targetType === "attachment"),
+    [folders],
+  );
+  const noteFolders = useMemo(
+    () => folders.filter((f) => f.targetType === "note"),
+    [folders],
+  );
 
   // Get root-level content (not in folders)
-  const attachmentContent: AttachmentType[] = sessionContent
-    .filter(
-      (c: ContentType): c is AttachmentType =>
-        c.type === "attachment" && !c.folderId,
-    )
-    .sort((a, b) => sortAttachments(a, b, contentOrder));
+  const attachmentContent: AttachmentType[] = useMemo(
+    () =>
+      sessionContent
+        .filter(
+          (c: ContentType): c is AttachmentType =>
+            c.type === "attachment" && !c.folderId,
+        )
+        .sort((a, b) => sortAttachments(a, b, contentOrder)),
+    [sessionContent, contentOrder],
+  );
 
-  const noteContent: NoteType[] = sessionContent
-    .filter((c: ContentType): c is NoteType => c.type === "note" && !c.folderId)
-    .sort((a, b) => sortAttachments(a, b, contentOrder));
+  const noteContent: NoteType[] = useMemo(
+    () =>
+      sessionContent
+        .filter(
+          (c: ContentType): c is NoteType => c.type === "note" && !c.folderId,
+        )
+        .sort((a, b) => sortAttachments(a, b, contentOrder)),
+    [sessionContent, contentOrder],
+  );
 
   // Get content inside folders
-  const getFolderContents = (folderId: string): ContentType[] => {
-    const folder = folders.find((f) => f.id === folderId);
-    if (!folder) return [];
+  const getFolderContents = useCallback(
+    (folderId: string): ContentType[] => {
+      const folder = folders.find((f) => f.id === folderId);
+      if (!folder) return [];
 
-    return sessionContent
-      .filter(
-        (c) =>
-          (c.type === "attachment" || c.type === "note") &&
-          c.folderId === folderId,
-      )
-      .sort((a, b) => {
-        const indexA = folder.contentIds.indexOf(a.id);
-        const indexB = folder.contentIds.indexOf(b.id);
-        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-        if (indexA === -1 && indexB === -1)
-          return parseInt(b.createdAt) - parseInt(a.createdAt);
-        if (indexA === -1) return 1;
-        return -1;
-      });
-  };
+      return sessionContent
+        .filter(
+          (c) =>
+            (c.type === "attachment" || c.type === "note") &&
+            c.folderId === folderId,
+        )
+        .sort((a, b) => {
+          const indexA = folder.contentIds.indexOf(a.id);
+          const indexB = folder.contentIds.indexOf(b.id);
+          if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+          if (indexA === -1 && indexB === -1)
+            return parseInt(b.createdAt) - parseInt(a.createdAt);
+          if (indexA === -1) return 1;
+          return -1;
+        });
+    },
+    [folders, sessionContent],
+  );
+
+  const attachmentValues = useMemo(
+    () => [...attachmentFolders, ...attachmentContent],
+    [attachmentFolders, attachmentContent],
+  );
+  const noteValues = useMemo(
+    () => [...noteFolders, ...noteContent],
+    [noteFolders, noteContent],
+  );
 
   // Folder management functions
   function onCreateFolder(folder: FolderType): void {
@@ -615,6 +648,26 @@ export function ActiveSession({
     contentId: string,
     folderId: string | null,
   ): void {
+    const content = sessionContent.find((c) => c.id === contentId);
+    if (
+      !content ||
+      (content.type !== "attachment" && content.type !== "note")
+    ) return;
+
+    if (folderId) {
+      const targetFolder = folders.find((f) => f.id === folderId);
+      if (!targetFolder || targetFolder.targetType !== content.type) return;
+    }
+
+    fetch(`/api/content/move`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Socket-User-Id": socketUserId ?? "",
+      },
+      body: JSON.stringify({ contentId, folderId }),
+    });
+
     setSessionContent((prev) =>
       prev.map((c) => {
         if (
@@ -643,7 +696,6 @@ export function ActiveSession({
     }
 
     // If moving out of a folder, remove from that folder's contentIds
-    const content = sessionContent.find((c) => c.id === contentId);
     if (
       content &&
       (content.type === "attachment" || content.type === "note") &&
@@ -696,11 +748,14 @@ export function ActiveSession({
     sendPasswordRequest("");
   }
 
-  function onReorderContent(newValues: ContentType[]): void {
-    const newOrder = newValues.map((v) => v.id);
-    setContentOrder(newOrder);
-    onUpdateContentOrder(newOrder, true);
-  }
+  const onReorderContent = useCallback(
+    (newValues: ContentType[]): void => {
+      const newOrder = newValues.map((v) => v.id);
+      setContentOrder(newOrder);
+      onUpdateContentOrder(newOrder, true);
+    },
+    [onUpdateContentOrder],
+  );
 
   async function sendPasswordRequest(
     newPassword: string,
@@ -943,7 +998,17 @@ export function ActiveSession({
   }
 
   return (
-    <div className="w-full max-w-[1250px] select-none px-4 pb-10">
+    <div
+      className="w-full max-w-[1250px] select-none px-4 pb-10"
+      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
+      onDrop={(e) => {
+        e.preventDefault();
+        const contentId = e.dataTransfer.getData("text/plain");
+        if (contentId) {
+          onMoveContentToFolder(contentId, null);
+        }
+      }}
+    >
       <Dialog open={warningModalOpen} onOpenChange={setWarningModalOpen}>
         <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
@@ -1692,63 +1757,64 @@ export function ActiveSession({
             <div />
             <PhotoProvider>
               <Reorder.Group
-                values={[...attachmentFolders, ...attachmentContent]}
+                values={attachmentValues}
                 className="flex flex-col gap-y-2 transition-none"
                 onReorder={onReorderContent}
               >
                 {attachmentFolders.map((folder) => (
-                  <Folder
-                    key={folder.id}
-                    folder={folder}
-                    contents={getFolderContents(folder.id)}
-                    onFolderUpdate={onUpdateFolder}
-                    onFolderDelete={onDeleteFolder}
-                    onContentReorder={onReorderFolderContents}
-                    onMoveContentOut={onMoveContentOutOfFolder}
-                    socketUserId={socketUserId}
-                    onUploadFilesToFolder={(files) =>
-                      uploadFilesToFolder(files, folder.id)
-                    }
-                    renderContentItem={(
-                      content,
-                      folderId,
-                      onMoveContentOut,
-                    ) => (
+                    <Folder
+                      key={folder.id}
+                      folder={folder}
+                      contents={getFolderContents(folder.id)}
+                      onFolderUpdate={onUpdateFolder}
+                      onFolderDelete={onDeleteFolder}
+                      onContentReorder={onReorderFolderContents}
+                      onMoveContentOut={onMoveContentOutOfFolder}
+                      onMoveContentIn={onMoveContentToFolder}
+                      socketUserId={socketUserId}
+                      onUploadFilesToFolder={(files) =>
+                        uploadFilesToFolder(files, folder.id)
+                      }
+                      renderContentItem={(
+                        content,
+                        folderId,
+                        onMoveContentOut,
+                      ) => (
+                        <ContentRenderer
+                          content={content as AttachmentType}
+                          onContentDelete={onDeleteContent}
+                          onContentUpdate={onUpdateContent}
+                          socketUserId={socketUserId}
+                          folders={attachmentFolders}
+                          onMove={onMoveContentToFolder}
+                          folderId={folderId}
+                          onMoveContentOut={onMoveContentOut}
+                          encryptionKey={encryption.key}
+                          isMultiSelectMode={isMultiSelectMode}
+                          isSelected={selectedContentIds.includes(content.id)}
+                          onToggleSelection={handleToggleSelection}
+                        />
+                      )}
+                    />
+                  ))}
+                  {attachmentContent.map((content) => (
+                    <div key={content.id} className="group relative">
                       <ContentRenderer
-                        content={content as AttachmentType}
+                        content={content}
                         onContentDelete={onDeleteContent}
                         onContentUpdate={onUpdateContent}
                         socketUserId={socketUserId}
                         folders={attachmentFolders}
                         onMove={onMoveContentToFolder}
-                        folderId={folderId}
-                        onMoveContentOut={onMoveContentOut}
                         encryptionKey={encryption.key}
                         isMultiSelectMode={isMultiSelectMode}
                         isSelected={selectedContentIds.includes(content.id)}
                         onToggleSelection={handleToggleSelection}
                       />
-                    )}
-                  />
-                ))}
-                {attachmentContent.map((content) => (
-                  <div key={content.id} className="group relative">
-                    <ContentRenderer
-                      content={content}
-                      onContentDelete={onDeleteContent}
-                      onContentUpdate={onUpdateContent}
-                      socketUserId={socketUserId}
-                      folders={attachmentFolders}
-                      onMove={onMoveContentToFolder}
-                      encryptionKey={encryption.key}
-                      isMultiSelectMode={isMultiSelectMode}
-                      isSelected={selectedContentIds.includes(content.id)}
-                      onToggleSelection={handleToggleSelection}
-                    />
-                  </div>
-                ))}
-              </Reorder.Group>
-            </PhotoProvider>
+                    </div>
+                  ))}
+                </Reorder.Group>
+              </PhotoProvider>
           </div>
         </div>
         <div className={`flex min-w-0 flex-1 flex-col gap-y-2 `}>
@@ -1800,65 +1866,66 @@ export function ActiveSession({
             </div>
             <div />
             <Reorder.Group
-              values={[...noteFolders, ...noteContent]}
+              values={noteValues}
               className="flex flex-col gap-y-2 transition-none"
               onReorder={onReorderContent}
             >
               {noteFolders.map((folder) => (
-                <Folder
-                  key={folder.id}
-                  folder={folder}
-                  contents={getFolderContents(folder.id)}
-                  onFolderUpdate={onUpdateFolder}
-                  onFolderDelete={onDeleteFolder}
-                  onContentReorder={onReorderFolderContents}
-                  onMoveContentOut={onMoveContentOutOfFolder}
-                  socketUserId={socketUserId}
-                  renderContentItem={(content, folderId, onMoveContentOut) => (
+                  <Folder
+                    key={folder.id}
+                    folder={folder}
+                    contents={getFolderContents(folder.id)}
+                    onFolderUpdate={onUpdateFolder}
+                    onFolderDelete={onDeleteFolder}
+                    onContentReorder={onReorderFolderContents}
+                    onMoveContentOut={onMoveContentOutOfFolder}
+                    onMoveContentIn={onMoveContentToFolder}
+                    socketUserId={socketUserId}
+                    renderContentItem={(content, folderId, onMoveContentOut) => (
+                      <Note
+                        session={session}
+                        allContent={sessionContent}
+                        content={content as NoteType}
+                        socketUserId={socketUserId}
+                        onDeleteTask={onDeleteContent}
+                        onUpdateTask={onUpdateContent}
+                        folders={noteFolders}
+                        onMove={onMoveContentToFolder}
+                        folderId={folderId}
+                        onMoveContentOut={onMoveContentOut}
+                        encryptNote={encryption.encryptNoteContent}
+                        decryptNote={encryption.decryptNoteContent}
+                        isEncryptionEnabled={encryption.isEnabled}
+                        encryptionKey={encryption.key}
+                        isMultiSelectMode={isMultiSelectMode}
+                        isSelected={selectedContentIds.includes(content.id)}
+                        onToggleSelection={handleToggleSelection}
+                      />
+                    )}
+                  />
+                ))}
+                {noteContent.map((note) => (
+                  <div key={note.id} className="group relative">
                     <Note
                       session={session}
                       allContent={sessionContent}
-                      content={content as NoteType}
+                      content={note}
                       socketUserId={socketUserId}
                       onDeleteTask={onDeleteContent}
                       onUpdateTask={onUpdateContent}
                       folders={noteFolders}
                       onMove={onMoveContentToFolder}
-                      folderId={folderId}
-                      onMoveContentOut={onMoveContentOut}
                       encryptNote={encryption.encryptNoteContent}
                       decryptNote={encryption.decryptNoteContent}
                       isEncryptionEnabled={encryption.isEnabled}
                       encryptionKey={encryption.key}
                       isMultiSelectMode={isMultiSelectMode}
-                      isSelected={selectedContentIds.includes(content.id)}
+                      isSelected={selectedContentIds.includes(note.id)}
                       onToggleSelection={handleToggleSelection}
                     />
-                  )}
-                />
-              ))}
-              {noteContent.map((note) => (
-                <div key={note.id} className="group relative">
-                  <Note
-                    session={session}
-                    allContent={sessionContent}
-                    content={note}
-                    socketUserId={socketUserId}
-                    onDeleteTask={onDeleteContent}
-                    onUpdateTask={onUpdateContent}
-                    folders={noteFolders}
-                    onMove={onMoveContentToFolder}
-                    encryptNote={encryption.encryptNoteContent}
-                    decryptNote={encryption.decryptNoteContent}
-                    isEncryptionEnabled={encryption.isEnabled}
-                    encryptionKey={encryption.key}
-                    isMultiSelectMode={isMultiSelectMode}
-                    isSelected={selectedContentIds.includes(note.id)}
-                    onToggleSelection={handleToggleSelection}
-                  />
-                </div>
-              ))}
-            </Reorder.Group>
+                  </div>
+                ))}
+              </Reorder.Group>
           </div>
         </div>
       </div>

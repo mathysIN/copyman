@@ -259,6 +259,7 @@ export async function serverMoveContentToFolder(
   if (folderId) {
     const folder = await session.getContent(folderId);
     if (folder && folder.type === "folder") {
+      if (folder.targetType !== content.type) return null;
       const folderData = folder;
       if (!folderData.contentIds.includes(contentId)) {
         await session.updateFolder(folderId, {

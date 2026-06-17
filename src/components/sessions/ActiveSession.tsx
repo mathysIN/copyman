@@ -394,6 +394,9 @@ export function ActiveSession({
     socket.on("encryptionStateChanged", (isEncrypted: boolean) => {
       setNewEncryptionState(isEncrypted);
       setEncryptionChangedModalOpen(true);
+      if (!isEncrypted) {
+        encryption.disableEncryption();
+      }
     });
 
     socket.on("passwordChanged", () => {

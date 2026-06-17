@@ -146,6 +146,7 @@ export function EncryptionSettings({
       });
 
       if (response.ok) {
+        encryption.disableEncryption();
         toast({
           description: "Chiffrement désactivé",
         });

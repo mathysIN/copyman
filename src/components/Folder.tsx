@@ -173,7 +173,7 @@ export function Folder({
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="flex items-center gap-3 text-amber-600 transition-colors hover:text-amber-800"
+              className="flex items-center gap-3 text-amber-600 transition-colors hover:text-amber-700"
             >
               <FontAwesomeIcon
                 icon={isExpanded ? faChevronUp : faChevronDown}
@@ -181,7 +181,7 @@ export function Folder({
               />
               <FontAwesomeIcon
                 icon={isExpanded ? faFolderOpen : faFolder}
-                className="h-5 w-5 text-amber-500"
+                className="h-5 w-5"
               />
             </button>
 

@@ -16,7 +16,7 @@ import {
 import { PhotoProvider, PhotoView } from "react-photo-view";
 import "react-photo-view/dist/react-photo-view.css";
 
-import { use, useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { AttachmentType, FolderType } from "~/server/db/redis";
 import {
   cn,
@@ -132,6 +132,25 @@ const ContentRenderer = ({
   const [attachmentURL, setAttachmentURL] = useState(content.attachmentURL);
   const [newName, setNewName] = useState(content.attachmentPath);
   const [renaming, setRenaming] = useState(false);
+  const originalExtension = useMemo(() => {
+    const dot = content.attachmentPath.lastIndexOf(".");
+    return dot > 0 ? content.attachmentPath.slice(dot) : "";
+  }, [content.attachmentPath]);
+
+  useEffect(() => {
+    if (renameOpen) {
+      setNewName(content.attachmentPath);
+      requestAnimationFrame(() => {
+        const input = fileNameInputRef.current;
+        if (input) {
+          const dot = content.attachmentPath.lastIndexOf(".");
+          const end = dot > 0 ? dot : content.attachmentPath.length;
+          input.setSelectionRange(0, end);
+          input.focus();
+        }
+      });
+    }
+  }, [renameOpen, content.attachmentPath]);
   const [decryptedUrl, setDecryptedUrl] = useState<string | null>(null);
   const [decryptionError, setDecryptionError] = useState(false);
   const [textContent, setTextContent] = useState<string | null>(null);
@@ -420,14 +439,13 @@ const ContentRenderer = ({
         method: "PATCH",
       },
     ).then(() => {
-      const newObject = {
-        ...content,
-        attachmentPath: newName,
-        attachmentURL: getCDNUrlFromFileKey(newValue, content.fileKey),
-      };
-      setAttachmentPath(newName);
+      setAttachmentPath(newValue);
       setAttachmentURL(getCDNUrlFromFileKey(newValue, content.fileKey));
-      onContentUpdate(newObject);
+      onContentUpdate({
+        ...content,
+        attachmentPath: newValue,
+        attachmentURL: getCDNUrlFromFileKey(newValue, content.fileKey),
+      });
     });
   };
 

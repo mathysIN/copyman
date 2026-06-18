@@ -31,6 +31,7 @@ export default async function HomePage() {
         style={{
           background: `url('${bgImageURL}'), #287d7c`,
           backgroundSize: "cover",
+          backgroundAttachment: "fixed"
         }}
       ></div>
       <main className="relative flex min-h-screen flex-col text-white backdrop-blur-md">

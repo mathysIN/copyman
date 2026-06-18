@@ -532,6 +532,16 @@ const ContentRenderer = ({
         );
       case "image":
         if (isEncrypted && decryptedUrl) {
+          if (isMultiSelectMode) {
+            return (
+              <img
+                src={decryptedUrl}
+                alt="Content"
+                loading="lazy"
+                className="inset-0 h-full w-full rounded-lg object-cover"
+              />
+            );
+          }
           return (
             <PhotoView src={decryptedUrl}>
               <img
@@ -541,6 +551,16 @@ const ContentRenderer = ({
                 className="inset-0 h-full w-full cursor-pointer rounded-lg object-cover"
               />
             </PhotoView>
+          );
+        }
+        if (isMultiSelectMode) {
+          return (
+            <img
+              src={attachmentURL}
+              alt="Content"
+              loading="lazy"
+              className="inset-0 h-full w-full rounded-lg object-cover"
+            />
           );
         }
         return (
@@ -841,11 +861,17 @@ const ContentRenderer = ({
           </div>
           <div className="flex items-center gap-2 overflow-hidden ">
             <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
-              <DialogTrigger asChild>
-                <button disabled={isMultiSelectMode} className="center flex-1 overflow-hidden whitespace-nowrap text-right align-middle text-sm text-gray-500 sm:max-w-64">
+              {isMultiSelectMode ? (
+                <span className="center flex-1 overflow-hidden whitespace-nowrap text-right align-middle text-sm text-gray-500 sm:max-w-64">
                   {attachmentPath}
-                </button>
-              </DialogTrigger>
+                </span>
+              ) : (
+                <DialogTrigger asChild>
+                  <button className="center flex-1 overflow-hidden whitespace-nowrap text-right align-middle text-sm text-gray-500 sm:max-w-64">
+                    {attachmentPath}
+                  </button>
+                </DialogTrigger>
+              )}
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Renommer le fichier</DialogTitle>

@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { Reorder, useDragControls, AnimatePresence } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+  faDownload,
   faFolder,
   faFolderOpen,
   faChevronDown,
@@ -40,22 +41,24 @@ import {
   DialogClose,
 } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
+import { type UUID } from "crypto";
 
 interface FolderProps {
   folder: FolderType;
   contents: ContentType[];
   onFolderUpdate: (folder: FolderType) => void;
   onFolderDelete: (folderId: string) => void;
-  onContentReorder: (folderId: string, newOrder: ContentType[]) => void;
-  onMoveContentOut: (contentId: string, folderId: string) => void;
-  onMoveContentIn?: (contentId: string, folderId: string) => void;
+  onContentReorder: (folderId: UUID, newOrder: ContentType[]) => void;
+  onMoveContentOut: (contentId: UUID, folderId: string) => void;
+  onMoveContentIn?: (contentId: UUID, folderId: string) => void;
   renderContentItem: (
     content: ContentType,
     folderId?: string,
-    onMoveContentOut?: (contentId: string, folderId: string) => void,
+    onMoveContentOut?: (contentId: UUID, folderId: string) => void,
   ) => React.ReactNode;
   socketUserId?: string;
   onUploadFilesToFolder?: (files: File[]) => void;
+  onDownloadFolder?: (folderId: string) => void;
 }
 
 export function Folder({
@@ -69,6 +72,7 @@ export function Folder({
   renderContentItem,
   socketUserId,
   onUploadFilesToFolder,
+  onDownloadFolder,
 }: FolderProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -139,7 +143,7 @@ export function Folder({
     setIsDragOver(false);
     const contentId = e.dataTransfer.getData("text/plain");
     if (contentId && onMoveContentIn) {
-      onMoveContentIn(contentId, folder.id);
+      onMoveContentIn(contentId as UUID, folder.id);
     }
   };
 
@@ -242,6 +246,15 @@ export function Folder({
           </div>
 
           <div className="flex items-center gap-2">
+            {onDownloadFolder && (
+              <button
+                onClick={() => onDownloadFolder(folder.id)}
+                className="w-8 min-w-min rounded bg-blue-400 py-1 text-white transition-colors hover:bg-blue-500 active:scale-90 active:opacity-75"
+                title="Télécharger le dossier"
+              >
+                <FontAwesomeIcon icon={faDownload} />
+              </button>
+            )}
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <button
@@ -451,7 +464,7 @@ export function CreateFolderButton({
 interface MoveToFolderDialogProps {
   content: ContentType;
   folders: FolderType[];
-  onMove: (contentId: string, folderId: string | null) => void;
+  onMove: (contentId: UUID, folderId: string | null) => void;
   socketUserId?: string;
 }
 

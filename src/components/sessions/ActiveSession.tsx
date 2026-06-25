@@ -61,6 +61,8 @@ import {
 import { PhotoProvider } from "react-photo-view";
 import { UAParser } from "ua-parser-js";
 import { copyAndToast } from "~/lib/client/toast";
+import { downloadAttachmentsAsZip } from "~/lib/client/download";
+import { type UUID } from "crypto";
 
 export function ActiveSession({
   session,
@@ -126,10 +128,10 @@ export function ActiveSession({
     session.isEncrypted,
   );
 
-  const [selectedContentIds, setSelectedContentIds] = useState<string[]>([]);
+  const [selectedContentIds, setSelectedContentIds] = useState<UUID[]>([]);
   const isMultiSelectMode = selectedContentIds.length > 0;
 
-  const handleToggleSelection = (contentId: string) => {
+  const handleToggleSelection = (contentId: UUID) => {
     setSelectedContentIds((prev) =>
       prev.includes(contentId)
         ? prev.filter((id) => id !== contentId)
@@ -169,21 +171,50 @@ export function ActiveSession({
   const handleBulkMove = async (folderId: string | null) => {
     const ids = [...selectedContentIds];
     handleClearSelection();
-
-    await Promise.all(
-      ids.map(async (id) => {
-        await fetch(`/api/content/move`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Socket-User-Id": socketUserId ?? "",
-          },
-          body: JSON.stringify({ contentId: id, folderId }),
-        });
-        onMoveContentToFolder(id, folderId);
-      }),
-    );
+    ids.forEach((id) => onMoveContentToFolder(id, folderId));
   };
+
+  const handleBulkDownload = useCallback(() => {
+    const ids = [...selectedContentIds];
+    handleClearSelection();
+
+    const attachments = ids
+      .map((id) => sessionContent.find((c) => c.id === id))
+      .filter((c): c is AttachmentType => c?.type === "attachment");
+
+    if (attachments.length > 0) {
+      downloadAttachmentsAsZip(attachments, encryption.key);
+    }
+  }, [selectedContentIds, sessionContent, encryption.key]);
+
+  const handleFolderDownload = useCallback(
+    (folderId: string) => {
+      const folder = sessionContent.find(
+        (c): c is FolderType => c.type === "folder" && c.id === folderId,
+      );
+      if (!folder) return;
+
+      const attachments = sessionContent
+        .filter(
+          (c): c is AttachmentType =>
+            c.type === "attachment" && c.folderId === folderId,
+        )
+        .sort((a, b) => {
+          const indexA = folder.contentIds.indexOf(a.id);
+          const indexB = folder.contentIds.indexOf(b.id);
+          if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+          if (indexA === -1 && indexB === -1)
+            return parseInt(b.createdAt) - parseInt(a.createdAt);
+          if (indexA === -1) return 1;
+          return -1;
+        });
+
+      if (attachments.length > 0) {
+        downloadAttachmentsAsZip(attachments, encryption.key, `folder-${folder.name}.zip`);
+      }
+    },
+    [sessionContent, encryption.key],
+  );
 
   const selectedType = (() => {
     if (selectedContentIds.length === 0) return null;
@@ -265,6 +296,13 @@ export function ActiveSession({
       });
       return next;
     });
+
+    const newIds = content
+      .filter((c) => c.type !== "folder")
+      .map((c) => c.id);
+    if (newIds.length > 0) {
+      onUpdateContentOrder([...newIds, ...contentOrder], true);
+    }
   }
 
   function onContentRename(
@@ -630,7 +668,7 @@ export function ActiveSession({
   }
 
   function onReorderFolderContents(
-    folderId: string,
+    folderId: UUID,
     newContents: ContentType[],
   ): void {
     const folder = folders.find((f) => f.id === folderId);
@@ -643,12 +681,18 @@ export function ActiveSession({
       prev.map((c) => (c.id === folderId ? updatedFolder : c)),
     );
 
-    // Emit socket event
-    socket.emit("updatedContent", updatedFolder);
+    fetch(`/api/folders`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Socket-User-Id": socketUserId ?? "",
+      },
+      body: JSON.stringify({ folderId, contentIds: newContentIds }),
+    });
   }
 
   function onMoveContentToFolder(
-    contentId: string,
+    contentId: UUID,
     folderId: string | null,
   ): void {
     const content = sessionContent.find((c) => c.id === contentId);
@@ -694,7 +738,11 @@ export function ActiveSession({
         setSessionContent((prev) =>
           prev.map((c) => (c.id === folderId ? updatedFolder : c)),
         );
-        socket.emit("updatedContent", updatedFolder);
+      }
+      // Remove from root contentOrder
+      const newOrder = contentOrder.filter((id) => id !== contentId);
+      if (newOrder.length !== contentOrder.length) {
+        onUpdateContentOrder(newOrder, true);
       }
     }
 
@@ -713,12 +761,16 @@ export function ActiveSession({
         setSessionContent((prev) =>
           prev.map((c) => (c.id === oldFolder.id ? updatedFolder : c)),
         );
-        socket.emit("updatedContent", updatedFolder);
       }
+    }
+
+    // Add to root contentOrder when moving out of a folder
+    if (!folderId && content.folderId) {
+      onUpdateContentOrder([contentId, ...contentOrder], true);
     }
   }
 
-  function onMoveContentOutOfFolder(contentId: string, folderId: string): void {
+  function onMoveContentOutOfFolder(contentId: UUID, folderId: string): void {
     onMoveContentToFolder(contentId, null);
   }
 
@@ -1008,7 +1060,7 @@ export function ActiveSession({
         e.preventDefault();
         const contentId = e.dataTransfer.getData("text/plain");
         if (contentId) {
-          onMoveContentToFolder(contentId, null);
+          onMoveContentToFolder(contentId as UUID, null);
         }
       }}
     >
@@ -1765,59 +1817,60 @@ export function ActiveSession({
                 onReorder={onReorderContent}
               >
                 {attachmentFolders.map((folder) => (
-                    <Folder
-                      key={folder.id}
-                      folder={folder}
-                      contents={getFolderContents(folder.id)}
-                      onFolderUpdate={onUpdateFolder}
-                      onFolderDelete={onDeleteFolder}
-                      onContentReorder={onReorderFolderContents}
-                      onMoveContentOut={onMoveContentOutOfFolder}
-                      onMoveContentIn={onMoveContentToFolder}
-                      socketUserId={socketUserId}
-                      onUploadFilesToFolder={(files) =>
-                        uploadFilesToFolder(files, folder.id)
-                      }
-                      renderContentItem={(
-                        content,
-                        folderId,
-                        onMoveContentOut,
-                      ) => (
-                        <ContentRenderer
-                          content={content as AttachmentType}
-                          onContentDelete={onDeleteContent}
-                          onContentUpdate={onUpdateContent}
-                          socketUserId={socketUserId}
-                          folders={attachmentFolders}
-                          onMove={onMoveContentToFolder}
-                          folderId={folderId}
-                          onMoveContentOut={onMoveContentOut}
-                          encryptionKey={encryption.key}
-                          isMultiSelectMode={isMultiSelectMode}
-                          isSelected={selectedContentIds.includes(content.id)}
-                          onToggleSelection={handleToggleSelection}
-                        />
-                      )}
-                    />
-                  ))}
-                  {attachmentContent.map((content) => (
-                    <div key={content.id} className="group relative">
+                  <Folder
+                    key={folder.id}
+                    folder={folder}
+                    contents={getFolderContents(folder.id)}
+                    onFolderUpdate={onUpdateFolder}
+                    onFolderDelete={onDeleteFolder}
+                    onContentReorder={onReorderFolderContents}
+                    onMoveContentOut={onMoveContentOutOfFolder}
+                    onMoveContentIn={onMoveContentToFolder}
+                    socketUserId={socketUserId}
+                    onUploadFilesToFolder={(files) =>
+                      uploadFilesToFolder(files, folder.id)
+                    }
+                    onDownloadFolder={handleFolderDownload}
+                    renderContentItem={(
+                      content,
+                      folderId,
+                      onMoveContentOut,
+                    ) => (
                       <ContentRenderer
-                        content={content}
+                        content={content as AttachmentType}
                         onContentDelete={onDeleteContent}
                         onContentUpdate={onUpdateContent}
                         socketUserId={socketUserId}
                         folders={attachmentFolders}
                         onMove={onMoveContentToFolder}
+                        folderId={folderId}
+                        onMoveContentOut={onMoveContentOut}
                         encryptionKey={encryption.key}
                         isMultiSelectMode={isMultiSelectMode}
                         isSelected={selectedContentIds.includes(content.id)}
                         onToggleSelection={handleToggleSelection}
                       />
-                    </div>
-                  ))}
-                </Reorder.Group>
-              </PhotoProvider>
+                    )}
+                  />
+                ))}
+                {attachmentContent.map((content) => (
+                  <div key={content.id} className="group relative">
+                    <ContentRenderer
+                      content={content}
+                      onContentDelete={onDeleteContent}
+                      onContentUpdate={onUpdateContent}
+                      socketUserId={socketUserId}
+                      folders={attachmentFolders}
+                      onMove={onMoveContentToFolder}
+                      encryptionKey={encryption.key}
+                      isMultiSelectMode={isMultiSelectMode}
+                      isSelected={selectedContentIds.includes(content.id)}
+                      onToggleSelection={handleToggleSelection}
+                    />
+                  </div>
+                ))}
+              </Reorder.Group>
+            </PhotoProvider>
           </div>
         </div>
         <div className={`flex min-w-0 flex-1 flex-col gap-y-2 `}>
@@ -1874,61 +1927,61 @@ export function ActiveSession({
               onReorder={onReorderContent}
             >
               {noteFolders.map((folder) => (
-                  <Folder
-                    key={folder.id}
-                    folder={folder}
-                    contents={getFolderContents(folder.id)}
-                    onFolderUpdate={onUpdateFolder}
-                    onFolderDelete={onDeleteFolder}
-                    onContentReorder={onReorderFolderContents}
-                    onMoveContentOut={onMoveContentOutOfFolder}
-                    onMoveContentIn={onMoveContentToFolder}
-                    socketUserId={socketUserId}
-                    renderContentItem={(content, folderId, onMoveContentOut) => (
-                      <Note
-                        session={session}
-                        allContent={sessionContent}
-                        content={content as NoteType}
-                        socketUserId={socketUserId}
-                        onDeleteTask={onDeleteContent}
-                        onUpdateTask={onUpdateContent}
-                        folders={noteFolders}
-                        onMove={onMoveContentToFolder}
-                        folderId={folderId}
-                        onMoveContentOut={onMoveContentOut}
-                        encryptNote={encryption.encryptNoteContent}
-                        decryptNote={encryption.decryptNoteContent}
-                        isEncryptionEnabled={encryption.isEnabled}
-                        encryptionKey={encryption.key}
-                        isMultiSelectMode={isMultiSelectMode}
-                        isSelected={selectedContentIds.includes(content.id)}
-                        onToggleSelection={handleToggleSelection}
-                      />
-                    )}
-                  />
-                ))}
-                {noteContent.map((note) => (
-                  <div key={note.id} className="group relative">
+                <Folder
+                  key={folder.id}
+                  folder={folder}
+                  contents={getFolderContents(folder.id)}
+                  onFolderUpdate={onUpdateFolder}
+                  onFolderDelete={onDeleteFolder}
+                  onContentReorder={onReorderFolderContents}
+                  onMoveContentOut={onMoveContentOutOfFolder}
+                  onMoveContentIn={onMoveContentToFolder}
+                  socketUserId={socketUserId}
+                  renderContentItem={(content, folderId, onMoveContentOut) => (
                     <Note
                       session={session}
                       allContent={sessionContent}
-                      content={note}
+                      content={content as NoteType}
                       socketUserId={socketUserId}
                       onDeleteTask={onDeleteContent}
                       onUpdateTask={onUpdateContent}
                       folders={noteFolders}
                       onMove={onMoveContentToFolder}
+                      folderId={folderId}
+                      onMoveContentOut={onMoveContentOut}
                       encryptNote={encryption.encryptNoteContent}
                       decryptNote={encryption.decryptNoteContent}
                       isEncryptionEnabled={encryption.isEnabled}
                       encryptionKey={encryption.key}
                       isMultiSelectMode={isMultiSelectMode}
-                      isSelected={selectedContentIds.includes(note.id)}
+                      isSelected={selectedContentIds.includes(content.id)}
                       onToggleSelection={handleToggleSelection}
                     />
-                  </div>
-                ))}
-              </Reorder.Group>
+                  )}
+                />
+              ))}
+              {noteContent.map((note) => (
+                <div key={note.id} className="group relative">
+                  <Note
+                    session={session}
+                    allContent={sessionContent}
+                    content={note}
+                    socketUserId={socketUserId}
+                    onDeleteTask={onDeleteContent}
+                    onUpdateTask={onUpdateContent}
+                    folders={noteFolders}
+                    onMove={onMoveContentToFolder}
+                    encryptNote={encryption.encryptNoteContent}
+                    decryptNote={encryption.decryptNoteContent}
+                    isEncryptionEnabled={encryption.isEnabled}
+                    encryptionKey={encryption.key}
+                    isMultiSelectMode={isMultiSelectMode}
+                    isSelected={selectedContentIds.includes(note.id)}
+                    onToggleSelection={handleToggleSelection}
+                  />
+                </div>
+              ))}
+            </Reorder.Group>
           </div>
         </div>
       </div>
@@ -1939,6 +1992,7 @@ export function ActiveSession({
           folders={folders}
           onMove={handleBulkMove}
           onDelete={handleBulkDelete}
+          onDownload={handleBulkDownload}
           onCancel={handleClearSelection}
         />
       )}

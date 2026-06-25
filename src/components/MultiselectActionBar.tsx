@@ -3,6 +3,7 @@
 import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+  faDownload,
   faFolder,
   faTrash,
   faXmark,
@@ -35,6 +36,7 @@ interface MultiselectActionBarProps {
   folders: FolderType[];
   onMove: (folderId: string | null) => void;
   onDelete: () => void;
+  onDownload: () => void;
   onCancel: () => void;
 }
 
@@ -85,6 +87,7 @@ export function MultiselectActionBar({
   folders,
   onMove,
   onDelete,
+  onDownload,
   onCancel,
 }: MultiselectActionBarProps) {
   const filteredFolders = selectedType
@@ -128,6 +131,15 @@ export function MultiselectActionBar({
             />
           </DialogContent>
         </Dialog>
+
+        <button
+          onClick={onDownload}
+          className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-blue-600 transition-colors hover:bg-blue-50"
+          title="Télécharger les fichiers sélectionnés"
+        >
+          <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
+          <span>Télécharger</span>
+        </button>
 
         <AlertDialog>
           <AlertDialogTrigger asChild>

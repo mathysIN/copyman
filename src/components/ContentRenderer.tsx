@@ -52,6 +52,7 @@ import {
 } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { MoveToFolderDialog } from "./Folder";
+import { type UUID } from "crypto";
 
 const GRADIENTS = [
   "bg-gradient-to-r from-green-400 to-blue-500",
@@ -87,13 +88,13 @@ const ContentRenderer = ({
   onContentUpdate: (content: AttachmentType) => any;
   socketUserId?: string;
   folders?: FolderType[];
-  onMove?: (contentId: string, folderId: string | null) => void;
+  onMove?: (contentId: UUID, folderId: string | null) => void;
   folderId?: string;
-  onMoveContentOut?: (contentId: string, folderId: string) => void;
+  onMoveContentOut?: (contentId: UUID, folderId: string) => void;
   encryptionKey?: CryptoKey | null;
   isMultiSelectMode?: boolean;
   isSelected?: boolean;
-  onToggleSelection?: (contentId: string) => void;
+  onToggleSelection?: (contentId: UUID) => void;
 }) => {
   const { toast } = useToast();
   const [dragging, setDragging] = useState(false);

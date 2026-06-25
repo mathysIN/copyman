@@ -48,6 +48,7 @@ import { useLongPress } from "~/hooks/use-long-press";
 import { Reorder, useDragControls } from "framer-motion";
 import { Dialog, DialogContent, DialogTrigger } from "./ui/dialog";
 import { MoveToFolderDialog } from "./Folder";
+import { type UUID } from "crypto";
 
 function _renderMarkdown(markdown: string): string {
   const headerRegex = /^(#+)\s(.+)/gm;
@@ -133,16 +134,16 @@ export function Task({
   onDeleteTask?: (taskId: string) => any;
   onUpdateTask?: (task: NoteType) => any;
   folders?: FolderType[];
-  onMove?: (contentId: string, folderId: string | null) => void;
+  onMove?: (contentId: UUID, folderId: string | null) => void;
   folderId?: string;
-  onMoveContentOut?: (contentId: string, folderId: string) => void;
+  onMoveContentOut?: (contentId: UUID, folderId: string) => void;
   encryptNote?: EncryptNoteFunction;
   isEncryptionEnabled?: boolean;
   decryptNote?: DecryptNoteFunction;
   encryptionKey?: CryptoKey | null;
   isMultiSelectMode?: boolean;
   isSelected?: boolean;
-  onToggleSelection?: (contentId: string) => void;
+  onToggleSelection?: (contentId: UUID) => void;
 }) {
   const { toast } = useToast();
   const [dragging, setDragging] = useState(false);
